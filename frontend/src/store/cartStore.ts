@@ -31,6 +31,7 @@ interface CartState {
   getTotalItems: () => number;
   getTotalPrice: () => number;
   getCartItems: () => BookCartItem[];
+  getTotalQuantity: () => number;
 }
 
 export const useCartStore = create<CartState>()(
@@ -134,6 +135,16 @@ export const useCartStore = create<CartState>()(
       getTotalItems: () => get().cart?.totalItems || 0,
       getTotalPrice: () => get().cart?.totalPrice || 0,
       getCartItems: () => get().cart?.items || [],
+
+      // Thêm hàm tính tổng số lượng sản phẩm
+      getTotalQuantity: () => {
+        const cart = get().cart;
+        if (!cart || !cart.items) return 0;
+        return cart.items.reduce(
+          (total: number, item: BookCartItem) => total + item.quantity,
+          0
+        );
+      },
     }),
     {
       name: "cart-storage", // Persist the whole cart object from API

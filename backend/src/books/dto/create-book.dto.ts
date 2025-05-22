@@ -37,7 +37,30 @@ export class CreateBookDto {
   @IsNotEmpty()
   description: string;
 
-  @ApiProperty({ description: 'The price of the book', example: 19.99 })
+  @ApiProperty({
+    description: 'The original price of the book before discount',
+    example: 24.99,
+  })
+  @IsNumber()
+  @Min(0)
+  originalPrice: number;
+
+  @ApiPropertyOptional({
+    description: 'Discount rate for the book (percentage)',
+    example: 10,
+    minimum: 0,
+    maximum: 100,
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  discountRate?: number;
+
+  @ApiProperty({
+    description: 'The current price of the book after discount',
+    example: 19.99,
+  })
   @IsNumber()
   @Min(0)
   price: number;
@@ -101,18 +124,6 @@ export class CreateBookDto {
   @IsOptional()
   @IsDateString()
   preOrderReleaseDate?: Date;
-
-  @ApiPropertyOptional({
-    description: 'Discount percentage for the book',
-    example: 10,
-    minimum: 0,
-    maximum: 100,
-  })
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  @Max(100)
-  discountPercentage?: number;
 
   @ApiPropertyOptional({ description: 'Is the book featured?', default: false })
   @IsOptional()

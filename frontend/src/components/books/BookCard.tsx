@@ -12,9 +12,11 @@ import {
   Stack,
   IconButton,
   CircularProgress,
+  Badge,
 } from "@mui/material";
 import BookmarkAddOutlinedIcon from "@mui/icons-material/BookmarkAddOutlined";
 import BookmarkAddedIcon from "@mui/icons-material/BookmarkAdded";
+import InventoryIcon from "@mui/icons-material/Inventory";
 import { useNavigate } from "react-router-dom";
 import { Book } from "../../api/books";
 import { useCartStore } from "../../store/cartStore";
@@ -62,34 +64,61 @@ const BookCard: React.FC<BookCardProps> = ({ book, variant = "default" }) => {
   const coverImage =
     book.coverImage || "https://via.placeholder.com/150x200?text=No+Image";
 
-  // Display first category if available
-  const primaryCategory =
-    book.category && book.category.length > 0 ? book.category[0] : null;
+  // Display first genre if available
+  const primaryGenre =
+    book.genres && book.genres.length > 0 ? book.genres[0] : null;
+
+  // Check if book is on sale
+  const isOnSale = book.discountRate > 0;
 
   return (
     <Card
       sx={{
-        height: variant === "compact" ? 360 : 450,
+        width: "100%",
+        height: variant === "compact" ? 380 : 520,
         display: "flex",
         flexDirection: "column",
         transition: "transform 0.2s",
         "&:hover": {
           transform: "scale(1.02)",
         },
+        position: "relative",
       }}
       elevation={2}
     >
-      <CardMedia
-        component="img"
-        height={variant === "compact" ? 140 : 200}
-        image={coverImage}
-        alt={book.title}
-        sx={{ objectFit: "contain", pt: 2 }}
-      />
-      <CardContent sx={{ flexGrow: 1 }}>
-        {primaryCategory && (
+      <Box sx={{ position: "relative" }}>
+        {isOnSale && (
+          <Badge
+            sx={{
+              position: "absolute",
+              top: 12,
+              right: 12,
+              zIndex: 1,
+              "& .MuiBadge-badge": {
+                fontSize: "0.8rem",
+                height: "24px",
+                minWidth: "24px",
+                padding: "0 8px",
+                borderRadius: "12px",
+                fontWeight: "bold",
+              },
+            }}
+            badgeContent={`-${book.discountRate}%`}
+            color="error"
+          />
+        )}
+        <CardMedia
+          component="img"
+          height={variant === "compact" ? 140 : 200}
+          image={coverImage}
+          alt={book.title}
+          sx={{ objectFit: "contain", pt: 2 }}
+        />
+      </Box>
+      <CardContent sx={{ flexGrow: 1, pb: 0 }}>
+        {primaryGenre && (
           <Chip
-            label={primaryCategory}
+            label={primaryGenre}
             size="small"
             sx={{ mb: 1 }}
             color="primary"
@@ -143,33 +172,75 @@ const BookCard: React.FC<BookCardProps> = ({ book, variant = "default" }) => {
           </Typography>
         )}
 
-        <Typography variant="h6" color="primary" sx={{ mt: 1 }}>
-          ${book.price.toFixed(2)}
-        </Typography>
+        <Box sx={{ display: "flex", alignItems: "center", mt: 1, mb: 1 }}>
+          <InventoryIcon fontSize="small" color="action" sx={{ mr: 0.5 }} />
+          <Typography
+            variant="body2"
+            color={book.stock > 0 ? "success.main" : "error.main"}
+          >
+            {book.stock > 0 ? `In stock: ${book.stock} items` : "Out of stock"}
+          </Typography>
+        </Box>
+
+        <Box sx={{ mt: 1 }}>
+          {isOnSale ? (
+            <Stack direction="column" spacing={0.5}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <Typography variant="h6" color="error.main">
+                  ${book.price.toFixed(2)}
+                </Typography>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    bgcolor: "error.main",
+                    color: "white",
+                    px: 0.7,
+                    py: 0.3,
+                    borderRadius: 1,
+                    fontWeight: "bold",
+                  }}
+                >
+                  -{book.discountRate}%
+                </Typography>
+              </Box>
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ textDecoration: "line-through" }}
+              >
+                ${book.originalPrice.toFixed(2)}
+              </Typography>
+            </Stack>
+          ) : (
+            <Typography variant="h6" color="primary">
+              ${book.price.toFixed(2)}
+            </Typography>
+          )}
+        </Box>
       </CardContent>
 
-      <CardActions sx={{ p: 2, pt: 0, justifyContent: "space-between" }}>
-        <Stack direction="row" spacing={1} sx={{ flexGrow: 1 }}>
-          <Button
-            size="small"
-            color="primary"
-            variant="outlined"
-            onClick={handleViewDetails}
-            sx={{ flexGrow: 1 }}
-          >
-            Details
-          </Button>
-          <Button
-            size="small"
-            color="primary"
-            variant="contained"
-            onClick={handleAddToCart}
-            disabled={alreadyInCart}
-            sx={{ flexGrow: 1 }}
-          >
-            {alreadyInCart ? "In Cart" : "Add to Cart"}
-          </Button>
-        </Stack>
+      <CardActions
+        sx={{ p: 2, pt: 1, display: "flex", justifyContent: "space-between" }}
+      >
+        <Button
+          size="small"
+          color="primary"
+          variant="outlined"
+          onClick={handleViewDetails}
+          sx={{ flexGrow: 0.5 }}
+        >
+          Details
+        </Button>
+        <Button
+          size="small"
+          color="primary"
+          variant="contained"
+          onClick={handleAddToCart}
+          disabled={alreadyInCart || book.stock <= 0}
+          sx={{ flexGrow: 0.5, mx: 1 }}
+        >
+          {alreadyInCart ? "In Cart" : "Add to Cart"}
+        </Button>
         <IconButton
           aria-label={
             bookInWishlist ? "Remove from wishlist" : "Add to wishlist"
@@ -177,7 +248,8 @@ const BookCard: React.FC<BookCardProps> = ({ book, variant = "default" }) => {
           onClick={handleToggleWishlist}
           disabled={wishlistLoading}
           color="secondary"
-          sx={{ ml: 1 }}
+          sx={{ flexShrink: 0 }}
+          size="medium"
         >
           {wishlistLoading ? (
             <CircularProgress size={24} color="inherit" />

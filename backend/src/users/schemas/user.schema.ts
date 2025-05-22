@@ -2,7 +2,10 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Schema as MongooseSchema } from 'mongoose';
 import * as bcrypt from 'bcrypt';
 
-export type UserDocument = User & Document;
+// Mở rộng UserDocument để bao gồm phương thức comparePassword
+export interface UserDocument extends User, Document {
+  comparePassword(candidatePassword: string): Promise<boolean>;
+}
 
 @Schema({ timestamps: true })
 export class User {
@@ -36,10 +39,7 @@ export class User {
   @Prop({ type: Number, default: 0 })
   loyaltyPoints: number;
 
-  // Custom method to compare passwords
-  async comparePassword(candidatePassword: string): Promise<boolean> {
-    return bcrypt.compare(candidatePassword, this.password);
-  }
+  // Phương thức comparePassword được di chuyển sang schema methods
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
@@ -58,6 +58,13 @@ UserSchema.pre<UserDocument>('save', async function (next) {
     next(error as Error);
   }
 });
+
+// Đăng ký phương thức comparePassword vào schema methods
+UserSchema.methods.comparePassword = async function (
+  candidatePassword: string,
+): Promise<boolean> {
+  return bcrypt.compare(candidatePassword, this.password);
+};
 
 // Add a virtual field for the user's full name
 UserSchema.virtual('isAdmin').get(function () {

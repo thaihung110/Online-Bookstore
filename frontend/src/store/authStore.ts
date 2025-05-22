@@ -8,6 +8,7 @@ import {
   RegisterRequest,
   AuthResponse,
 } from "../api/auth";
+import api from "../api/axios";
 
 type User = AuthResponse["user"];
 
@@ -41,7 +42,12 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null });
         try {
           const credentials: LoginRequest = { email, password };
+          console.log("Đang đăng nhập với:", email);
+          console.log("API URL:", api.defaults.baseURL);
+
           const response = await apiLogin(credentials);
+          console.log("Đăng nhập thành công:", response);
+
           localStorage.setItem("token", response.token); // Store token
           set({
             token: response.token,
@@ -49,12 +55,21 @@ export const useAuthStore = create<AuthState>()(
             isAuthenticated: true,
             isLoading: false,
           });
-        } catch (error) {
+        } catch (error: any) {
+          console.error("Chi tiết lỗi đăng nhập:", error);
+
+          let errorMessage = "Đã xảy ra lỗi trong quá trình đăng nhập";
+
+          // Sử dụng thông báo lỗi chi tiết từ axios interceptor nếu có
+          if (error.userMessage) {
+            errorMessage = error.userMessage;
+          } else if (error.message === "Network Error") {
+            errorMessage =
+              "Lỗi kết nối: Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối của bạn hoặc trạng thái máy chủ.";
+          }
+
           set({
-            error:
-              error instanceof Error
-                ? error.message
-                : "An error occurred during login",
+            error: errorMessage,
             isLoading: false,
             isAuthenticated: false,
             token: null,
@@ -67,7 +82,11 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null });
         try {
           const userData: RegisterRequest = { username, email, password };
+          console.log("Đang đăng ký với:", email);
+
           const response = await apiRegister(userData);
+          console.log("Đăng ký thành công:", response);
+
           localStorage.setItem("token", response.token); // Store token
           set({
             token: response.token,
@@ -75,12 +94,24 @@ export const useAuthStore = create<AuthState>()(
             isAuthenticated: true,
             isLoading: false,
           });
-        } catch (error) {
+        } catch (error: any) {
+          console.error("Chi tiết lỗi đăng ký:", error);
+
+          let errorMessage = "Đã xảy ra lỗi trong quá trình đăng ký";
+
+          // Sử dụng thông báo lỗi chi tiết từ axios interceptor nếu có
+          if (error.userMessage) {
+            errorMessage = error.userMessage;
+          } else if (error.message === "Network Error") {
+            errorMessage =
+              "Lỗi kết nối: Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối của bạn hoặc trạng thái máy chủ.";
+          } else if (error.response?.data?.message) {
+            // Có thể là lỗi xác thực hoặc email/username đã tồn tại
+            errorMessage = error.response.data.message;
+          }
+
           set({
-            error:
-              error instanceof Error
-                ? error.message
-                : "An error occurred during registration",
+            error: errorMessage,
             isLoading: false,
             isAuthenticated: false,
             token: null,
@@ -108,20 +139,28 @@ export const useAuthStore = create<AuthState>()(
         }
         set({ isLoading: true, error: null });
         try {
+          console.log("Đang lấy thông tin người dùng hiện tại");
           const user = await apiGetCurrentUser();
+          console.log("Đã nhận thông tin người dùng:", user);
           set({
             user,
             isAuthenticated: true,
             isLoading: false,
           });
-        } catch (error) {
+        } catch (error: any) {
+          console.error("Chi tiết lỗi khi lấy thông tin người dùng:", error);
+
+          let errorMessage = "Không thể lấy thông tin người dùng";
+
+          // Sử dụng thông báo lỗi chi tiết từ axios interceptor nếu có
+          if (error.userMessage) {
+            errorMessage = error.userMessage;
+          }
+
           // If fetching user fails (e.g., invalid token), log out
           localStorage.removeItem("token");
           set({
-            error:
-              error instanceof Error
-                ? error.message
-                : "Failed to fetch user data",
+            error: errorMessage,
             isLoading: false,
             isAuthenticated: false,
             token: null,

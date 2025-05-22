@@ -8,12 +8,11 @@ import {
   Put,
   Query,
   UseGuards,
-  ParseUUIDPipe,
-  ParseIntPipe,
 } from '@nestjs/common';
 import { BooksService } from './books.service';
 import { CreateBookDto } from './dto/create-book.dto';
 import { UpdateBookDto } from './dto/update-book.dto';
+import { QueryBookDto } from './dto/query-book.dto';
 import {
   ApiTags,
   ApiOperation,
@@ -43,6 +42,17 @@ export class BooksController {
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   create(@Body() createBookDto: CreateBookDto) {
     return this.booksService.create(createBookDto);
+  }
+
+  @Get('genres')
+  @ApiOperation({ summary: 'Get all unique book genres' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of all genres.',
+    type: [String],
+  })
+  async getAllGenres() {
+    return this.booksService.getAllGenres();
   }
 
   @Get('featured')
@@ -75,39 +85,24 @@ export class BooksController {
 
   @Get()
   @ApiOperation({
-    summary: 'Get all books with optional filtering and pagination',
-  })
-  @ApiQuery({ name: 'genre', required: false, description: 'Filter by genre' })
-  @ApiQuery({
-    name: 'author',
-    required: false,
-    description: 'Filter by author (case-insensitive search)',
-  })
-  @ApiQuery({
-    name: 'page',
-    required: false,
-    description: 'Page number for pagination',
-    type: Number,
-    example: 1,
-  })
-  @ApiQuery({
-    name: 'limit',
-    required: false,
-    description: 'Number of items per page',
-    type: Number,
-    example: 10,
+    summary: 'Get all books with advanced filtering, searching and sorting',
   })
   @ApiResponse({ status: 200, description: 'List of books.', type: [Book] })
-  findAll(
-    @Query()
-    query: {
-      genre?: string;
-      author?: string;
-      page?: string;
-      limit?: string;
-    },
-  ) {
-    return this.booksService.findAll(query);
+  findAll(@Query() queryDto: QueryBookDto) {
+    console.log(
+      'BooksController: Received query params:',
+      JSON.stringify(queryDto),
+    );
+
+    // Check specifically for genres query param
+    if (queryDto.genres) {
+      console.log(
+        'BooksController: Received genres filter:',
+        Array.isArray(queryDto.genres) ? queryDto.genres : [queryDto.genres],
+      );
+    }
+
+    return this.booksService.findAll(queryDto);
   }
 
   @Get(':id')

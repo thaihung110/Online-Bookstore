@@ -49,14 +49,12 @@ export class OrdersService {
         book: new Types.ObjectId(book.id) as any, // Cast to any to satisfy schema type if strict
         quantity: itemDto.quantity,
         price: book.price,
-        discount: book.discountPercentage || 0,
+        discount: book.discountRate || 0,
         title: book.title,
         author: book.author,
       } as OrderItem);
       subtotal +=
-        book.price *
-        itemDto.quantity *
-        (1 - (book.discountPercentage || 0) / 100);
+        book.price * itemDto.quantity * (1 - (book.discountRate || 0) / 100);
     }
 
     if (processedOrderItems.length === 0) {

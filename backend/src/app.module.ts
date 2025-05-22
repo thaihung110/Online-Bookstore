@@ -9,6 +9,9 @@ import { BooksModule } from './books';
 import { CartsModule } from './carts';
 import { OrdersModule } from './orders';
 import { WishlistsModule } from './wishlists/wishlists.module';
+import { PaymentsModule } from './payments/payments.module';
+import { BooksUpdater } from './scripts/update-books';
+import { Book, BookSchema } from './books/schemas/book.schema';
 
 @Module({
   imports: [
@@ -29,6 +32,8 @@ import { WishlistsModule } from './wishlists/wishlists.module';
       }),
     }),
 
+    MongooseModule.forFeature([{ name: Book.name, schema: BookSchema }]),
+
     // Feature modules
     UsersModule,
     AuthModule,
@@ -36,8 +41,9 @@ import { WishlistsModule } from './wishlists/wishlists.module';
     CartsModule,
     OrdersModule,
     WishlistsModule,
+    PaymentsModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, BooksUpdater],
 })
 export class AppModule {}

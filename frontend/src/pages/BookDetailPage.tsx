@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from "react";
 import {
   Container,
-  Grid,
-  Typography,
   Box,
+  Typography,
   Paper,
   Button,
   Rating,
@@ -21,11 +20,13 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import BookmarkIcon from "@mui/icons-material/Bookmark";
 import BookmarkBorderIcon from "@mui/icons-material/BookmarkBorder";
+import PaymentIcon from "@mui/icons-material/Payment";
 
 import MainLayout from "../components/layouts/MainLayout";
 import { useBookStore } from "../store/bookStore";
 import { useCartStore } from "../store/cartStore";
 import { useWishlistStore } from "../store/wishlistStore";
+import { buyNow } from "../utils/checkout";
 
 const BookDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -57,6 +58,21 @@ const BookDetailPage: React.FC = () => {
   const handleAddToCart = () => {
     if (currentBook) {
       addItem(currentBook);
+    }
+  };
+
+  const handleBuyNow = async () => {
+    if (currentBook) {
+      try {
+        // Sử dụng hàm utility buyNow để xử lý
+        const success = await buyNow(currentBook, addItem, isInCart);
+        if (success) {
+          // Nếu thành công, chuyển đến trang checkout
+          navigate("/checkout");
+        }
+      } catch (error) {
+        console.error("Error during buy now process:", error);
+      }
     }
   };
 
@@ -119,10 +135,24 @@ const BookDetailPage: React.FC = () => {
     );
   }
 
+  // Log thông tin sách để debug
+  console.log("Book detail data:", currentBook);
+
   // Placeholder image if no cover is available
   const coverImage =
     currentBook.coverImage ||
     "https://via.placeholder.com/400x600?text=No+Image+Available";
+
+  // Kiểm tra xem sách có đang giảm giá không với xử lý an toàn
+  const hasDiscountRate =
+    currentBook.discountRate !== undefined && currentBook.discountRate !== null;
+  const isOnSale = hasDiscountRate && currentBook.discountRate > 0;
+
+  // Đảm bảo có originalPrice hoặc fallback về price
+  const originalPrice =
+    currentBook.originalPrice !== undefined
+      ? currentBook.originalPrice
+      : currentBook.price;
 
   return (
     <MainLayout>
@@ -136,8 +166,10 @@ const BookDetailPage: React.FC = () => {
         </Button>
 
         <Paper elevation={3} sx={{ p: { xs: 2, sm: 3, md: 4 } }}>
-          <Grid container spacing={{ xs: 3, md: 5 }}>
-            <Grid size={{ xs: 12, md: 4 }}>
+          <Box
+            sx={{ display: "flex", flexWrap: "wrap", gap: { xs: 3, md: 5 } }}
+          >
+            <Box sx={{ width: { xs: "100%", md: "30%" } }}>
               <Box
                 sx={{
                   display: "flex",
@@ -177,6 +209,16 @@ const BookDetailPage: React.FC = () => {
                       : "Add to Cart"}
                   </Button>
                   <Button
+                    variant="contained"
+                    color="secondary"
+                    fullWidth
+                    size="large"
+                    startIcon={<PaymentIcon />}
+                    onClick={handleBuyNow}
+                  >
+                    Buy Now
+                  </Button>
+                  <Button
                     variant="outlined"
                     color="secondary"
                     fullWidth
@@ -199,9 +241,9 @@ const BookDetailPage: React.FC = () => {
                   </Button>
                 </Stack>
               </Box>
-            </Grid>
+            </Box>
 
-            <Grid size={{ xs: 12, md: 8 }}>
+            <Box sx={{ width: { xs: "100%", md: "65%" } }}>
               <Typography
                 variant="h3"
                 component="h1"
@@ -222,7 +264,7 @@ const BookDetailPage: React.FC = () => {
                 </MuiLink>
               </Typography>
 
-              {currentBook.category && currentBook.category.length > 0 && (
+              {currentBook.genres && currentBook.genres.length > 0 && (
                 <Box
                   sx={{
                     mb: 2,
@@ -239,12 +281,12 @@ const BookDetailPage: React.FC = () => {
                   >
                     Categories:
                   </Typography>
-                  {currentBook.category.map((cat) => (
+                  {currentBook.genres.map((genre) => (
                     <Chip
-                      key={cat}
-                      label={cat}
+                      key={genre}
+                      label={genre}
                       component={RouterLink}
-                      to={`/books?category=${encodeURIComponent(cat)}`}
+                      to={`/books?genres=${encodeURIComponent(genre)}`}
                       clickable
                       color="info"
                       variant="outlined"
@@ -280,13 +322,47 @@ const BookDetailPage: React.FC = () => {
                 currentBook.price ? (
                   <Divider orientation="vertical" flexItem />
                 ) : null}
-                <Typography
-                  variant="h4"
-                  color="primary.main"
-                  sx={{ fontWeight: "bold" }}
-                >
-                  ${currentBook.price.toFixed(2)}
-                </Typography>
+
+                {/* Hiển thị giá và discount */}
+                <Box>
+                  {isOnSale ? (
+                    <Stack direction="row" spacing={1} alignItems="center">
+                      <Typography
+                        variant="h4"
+                        color="error.main"
+                        sx={{ fontWeight: "bold" }}
+                      >
+                        ${currentBook.price.toFixed(2)}
+                      </Typography>
+
+                      <Chip
+                        label={`-${currentBook.discountRate}%`}
+                        color="error"
+                        size="small"
+                        sx={{ fontWeight: "bold" }}
+                      />
+
+                      <Typography
+                        variant="h6"
+                        color="text.secondary"
+                        sx={{
+                          textDecoration: "line-through",
+                          fontWeight: "medium",
+                        }}
+                      >
+                        ${originalPrice.toFixed(2)}
+                      </Typography>
+                    </Stack>
+                  ) : (
+                    <Typography
+                      variant="h4"
+                      color="primary.main"
+                      sx={{ fontWeight: "bold" }}
+                    >
+                      ${currentBook.price.toFixed(2)}
+                    </Typography>
+                  )}
+                </Box>
               </Stack>
 
               <Divider sx={{ my: 3 }} />
@@ -321,44 +397,41 @@ const BookDetailPage: React.FC = () => {
               >
                 Product Details
               </Typography>
-              <Grid
-                container
-                spacing={1}
-                sx={{ maxWidth: { xs: "100%", sm: 600 } }}
-              >
+              <Box sx={{ maxWidth: { xs: "100%", sm: 600 } }}>
                 {[
                   { label: "Publisher", value: currentBook.publisher },
                   {
                     label: "Published Date",
                     value: currentBook.publishedDate
                       ? new Date(currentBook.publishedDate).toLocaleDateString()
-                      : "N/A",
+                      : `${currentBook.publicationYear}`,
                   },
                   { label: "ISBN-13", value: currentBook.isbn },
-                  { label: "Pages", value: currentBook.pageCount },
+                  { label: "Pages", value: currentBook.pageCount || "N/A" },
                 ].map((detail) =>
                   detail.value ? (
-                    <React.Fragment key={detail.label}>
-                      <Grid size={{ xs: 5, sm: 3 }}>
-                        <Typography
-                          variant="body2"
-                          color="text.secondary"
-                          sx={{ fontWeight: "medium" }}
-                        >
-                          {detail.label}
-                        </Typography>
-                      </Grid>
-                      <Grid size={{ xs: 7, sm: 9 }}>
-                        <Typography variant="body2">
-                          {String(detail.value)}
-                        </Typography>
-                      </Grid>
-                    </React.Fragment>
+                    <Box
+                      key={detail.label}
+                      sx={{
+                        display: "flex",
+                        mb: 1,
+                        "& > :first-of-type": {
+                          width: { xs: "40%", sm: "30%" },
+                          color: "text.secondary",
+                          fontWeight: "medium",
+                        },
+                      }}
+                    >
+                      <Typography variant="body2">{detail.label}</Typography>
+                      <Typography variant="body2">
+                        {String(detail.value)}
+                      </Typography>
+                    </Box>
                   ) : null
                 )}
-              </Grid>
-            </Grid>
-          </Grid>
+              </Box>
+            </Box>
+          </Box>
         </Paper>
       </Container>
     </MainLayout>
