@@ -21,18 +21,25 @@ import { Payment, PaymentSchema } from './schemas/payment.schema';
 // @ts-ignore
 import { Transaction, TransactionSchema } from './schemas/transaction.schema';
 
+import { PaymentLoggingService } from './services/payment-logging.service';
+
 @Module({
   imports: [
-    ConfigModule.forRoot({
-      isGlobal: true,
-    }),
+    ConfigModule,
     MongooseModule.forFeature([
       { name: Payment.name, schema: PaymentSchema },
       { name: Transaction.name, schema: TransactionSchema },
     ]),
   ],
   controllers: [PaymentsController],
-  providers: [PaymentsService, VnpayService, BankCardService],
+  providers: [
+    PaymentsService,
+    PaymentLoggingService,
+    {
+      provide: 'VnpayService',
+      useClass: VnpayService,
+    },
+  ],
   exports: [PaymentsService],
 })
 export class PaymentsModule {}

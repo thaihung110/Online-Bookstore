@@ -17,7 +17,8 @@ export class AddItemToCartDto {
   bookId: string;
 
   @ApiProperty({
-    description: 'The quantity of the book to add',
+    description:
+      'The quantity of the book to add (will be added to existing quantity if book already in cart)',
     example: 1,
     minimum: 1,
   })
@@ -25,15 +26,3 @@ export class AddItemToCartDto {
   @Min(1)
   quantity: number;
 }
-
-// Optional: DTO for updating item quantity, or use AddItemToCartDto
-// export class UpdateCartItemDto {
-//   @ApiProperty({
-//     description: 'The new quantity of the book in the cart',
-//     example: 2,
-//     minimum: 1,
-//   })
-//   @IsNumber()
-//   @Min(1)
-//   quantity: number;
-// }

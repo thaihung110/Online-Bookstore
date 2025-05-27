@@ -9,12 +9,27 @@ import { QueryBookDto, SortField, SortOrder } from './dto/query-book.dto';
 @Injectable()
 export class BooksService {
   private readonly logger = new Logger(BooksService.name);
+  private readonly VND_TO_USD_RATE = 25000;
 
   constructor(@InjectModel(Book.name) private bookModel: Model<BookDocument>) {}
 
+  // Helper method to convert prices from VND to USD
+  private convertPricesToUSD(book: any): any {
+    if (!book) return null;
+    const bookObj = book.toObject ? book.toObject() : { ...book };
+    return {
+      ...bookObj,
+      price: Number((bookObj.price / this.VND_TO_USD_RATE).toFixed(2)),
+      originalPrice: Number(
+        (bookObj.originalPrice / this.VND_TO_USD_RATE).toFixed(2),
+      ),
+    };
+  }
+
   async create(createBookDto: CreateBookDto): Promise<Book> {
     const newBook = new this.bookModel(createBookDto);
-    return newBook.save();
+    const savedBook = await newBook.save();
+    return this.convertPricesToUSD(savedBook);
   }
 
   async findAll(
@@ -23,7 +38,6 @@ export class BooksService {
     this.logger.log(`Finding books with filters: ${JSON.stringify(queryDto)}`);
 
     try {
-      // Build the filter object
       const filter: any = {};
 
       // Search term (match title or description or author)
@@ -121,7 +135,6 @@ export class BooksService {
         }
 
         // Sử dụng phương pháp tìm kiếm phù hợp nhất dựa trên kết quả thử nghiệm
-        // 1. Thử sử dụng tìm kiếm chính xác không phân biệt chữ hoa/thường
         const caseInsensitiveExactMatchCount =
           await this.bookModel.countDocuments({
             $or: genresArray.map((genre) => ({
@@ -133,14 +146,13 @@ export class BooksService {
           `Case-insensitive exact match count: ${caseInsensitiveExactMatchCount}`,
         );
 
-        // 2. Nếu không tìm thấy kết quả, sử dụng phương pháp tìm kiếm một phần
+        // Nếu không tìm thấy kết quả chính xác, sử dụng tìm kiếm một phần
         if (caseInsensitiveExactMatchCount === 0) {
           this.logger.log('No exact matches found, trying partial matching');
           filter.$or = genresArray.map((genre) => ({
             genres: { $regex: new RegExp(genre, 'i') },
           }));
         } else {
-          // Sử dụng phương pháp tìm kiếm chính xác không phân biệt chữ hoa/thường
           filter.$or = genresArray.map((genre) => ({
             genres: { $regex: new RegExp(`^${genre}$`, 'i') },
           }));
@@ -149,14 +161,14 @@ export class BooksService {
         this.logger.log(`Final filter object: ${JSON.stringify(filter)}`);
       }
 
-      // Price range filter
+      // Price range filter (convert USD to VND for query)
       if (queryDto.minPrice !== undefined || queryDto.maxPrice !== undefined) {
         filter.price = {};
         if (queryDto.minPrice !== undefined) {
-          filter.price.$gte = queryDto.minPrice;
+          filter.price.$gte = queryDto.minPrice * this.VND_TO_USD_RATE;
         }
         if (queryDto.maxPrice !== undefined) {
-          filter.price.$lte = queryDto.maxPrice;
+          filter.price.$lte = queryDto.maxPrice * this.VND_TO_USD_RATE;
         }
       }
 
@@ -211,8 +223,13 @@ export class BooksService {
         `Found ${books.length} books out of ${total} total matches`,
       );
 
+      // Convert prices to USD before returning
+      const transformedBooks = books.map((book) =>
+        this.convertPricesToUSD(book),
+      );
+
       return {
-        books,
+        books: transformedBooks,
         total,
         page,
         limit,
@@ -232,12 +249,20 @@ export class BooksService {
         this.logger.warn(`Adjusted limit from ${limit} to ${safeLimit}`);
       }
 
+      // Lấy sách có discount rate cao nhất và còn hàng
       const books = await this.bookModel
-        .find({ isFeatured: true })
+        .find({
+          discountRate: { $gt: 0 }, // Chỉ lấy sách đang giảm giá
+          stock: { $gt: 0 }, // Chỉ lấy sách còn hàng
+        })
+        .sort({ discountRate: -1 }) // Sắp xếp theo discount rate giảm dần
         .limit(safeLimit)
         .exec();
+
       this.logger.log(`Found ${books.length} featured books`);
-      return books;
+
+      // Convert prices to USD before returning
+      return books.map((book) => this.convertPricesToUSD(book));
     } catch (error) {
       this.logger.error(
         `Error finding featured books: ${error.message}`,
@@ -252,7 +277,7 @@ export class BooksService {
     if (!book) {
       throw new NotFoundException(`Book with ID "${id}" not found`);
     }
-    return book;
+    return this.convertPricesToUSD(book);
   }
 
   async update(id: string, updateBookDto: UpdateBookDto): Promise<Book> {
@@ -262,7 +287,7 @@ export class BooksService {
     if (!updatedBook) {
       throw new NotFoundException(`Book with ID "${id}" not found`);
     }
-    return updatedBook;
+    return this.convertPricesToUSD(updatedBook);
   }
 
   async remove(id: string): Promise<{ deleted: boolean; message?: string }> {
@@ -276,38 +301,29 @@ export class BooksService {
   async getAllGenres(): Promise<string[]> {
     this.logger.log('Getting all unique genres');
     try {
-      // Kiểm tra có dữ liệu nào trong collection không
       const booksCount = await this.bookModel.countDocuments();
       this.logger.log(`Total books in collection: ${booksCount}`);
 
-      // Lấy một số sách để kiểm tra
       const sampleBooks = await this.bookModel.find().limit(5).select('genres');
       this.logger.log(
         `Sample books genres: ${JSON.stringify(sampleBooks.map((book) => book.genres))}`,
       );
 
-      // Sử dụng MongoDB distinct để lấy tất cả giá trị duy nhất của trường genres
       const rawGenres = await this.bookModel.distinct('genres').exec();
       this.logger.log(
         `Found ${rawGenres.length} raw genres: ${JSON.stringify(rawGenres)}`,
       );
 
-      // Chuẩn hóa thể loại (đảm bảo không trùng lặp khi chỉ khác case)
       const genreMap = new Map<string, string>();
-
-      // Xử lý cẩn thận với các null/undefined/empty values
       const validGenres = rawGenres.filter(
         (genre) =>
           genre && typeof genre === 'string' && genre.trim().length > 0,
       );
 
       validGenres.forEach((genre) => {
-        // Chuẩn hóa: loại bỏ khoảng trắng, đảm bảo định dạng nhất quán
         const normalizedGenre = genre.trim();
-        // Sử dụng lowercase làm key để tránh trùng lặp chỉ khác case
         const lowerGenre = normalizedGenre.toLowerCase();
 
-        // Ưu tiên giữ lại version có chữ hoa ở đầu mỗi từ
         if (
           !genreMap.has(lowerGenre) ||
           (!isCapitalized(genreMap.get(lowerGenre)) &&
@@ -317,13 +333,11 @@ export class BooksService {
         }
       });
 
-      // Chuyển về mảng và sắp xếp
       const genres = Array.from(genreMap.values()).sort();
       this.logger.log(
         `Normalized ${genres.length} unique genres: ${JSON.stringify(genres)}`,
       );
 
-      // Debug: Kiểm tra số lượng sách theo từng thể loại đã chuẩn hóa
       const commonGenres = genres.slice(0, Math.min(5, genres.length));
       for (const genre of commonGenres) {
         const count = await this.bookModel.countDocuments({
@@ -335,7 +349,6 @@ export class BooksService {
       return genres;
     } catch (error) {
       this.logger.error(`Error getting genres: ${error.message}`, error.stack);
-      // Fallback khi có lỗi
       return [
         'Fiction',
         'Non-Fiction',

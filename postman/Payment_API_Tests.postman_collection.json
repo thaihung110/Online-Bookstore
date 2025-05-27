@@ -1,0 +1,233 @@
+{
+  "info": {
+    "_postman_id": "3e5f7a6b-2d9e-4c59-bb3e-e29d6c743d54",
+    "name": "Payment API Tests",
+    "description": "Collection for testing the payment APIs of the online bookstore",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Create Payment - Bank Card",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer YOUR_JWT_TOKEN_HERE",
+            "description": "Replace with a valid JWT token"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"orderId\": \"ORD-1234567890\",\n    \"paymentMethod\": \"BANK_CARD\",\n    \"amount\": 150000,\n    \"bankCardDetails\": {\n        \"cardNumber\": \"4111 1111 1111 1111\",\n        \"cardholderName\": \"NGUYEN VAN A\",\n        \"expiryDate\": \"12/25\",\n        \"cvv\": \"123\"\n    }\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3000/api/payments",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["api", "payments"]
+        },
+        "description": "Create a new payment using a bank card"
+      }
+    },
+    {
+      "name": "2. Create Payment - VNPAY",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer YOUR_JWT_TOKEN_HERE",
+            "description": "Replace with a valid JWT token"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"orderId\": \"ORD-9876543210\",\n    \"paymentMethod\": \"VNPAY\",\n    \"amount\": 200000,\n    \"vnpayDetails\": {\n        \"returnUrl\": \"http://localhost:3000/payment/vnpay-callback\"\n    }\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3000/api/payments",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["api", "payments"]
+        },
+        "description": "Create a new payment using VNPAY"
+      }
+    },
+    {
+      "name": "3. Process Payment",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer YOUR_JWT_TOKEN_HERE",
+            "description": "Replace with a valid JWT token"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:3000/api/payments/:id/process",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["api", "payments", ":id", "process"],
+          "variable": [
+            {
+              "key": "id",
+              "value": "PAYMENT_ID_FROM_STEP_1_OR_2",
+              "description": "Replace with the ID received from the Create Payment response"
+            }
+          ]
+        },
+        "description": "Process a payment after it's been created"
+      }
+    },
+    {
+      "name": "4. Get Payment by ID",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer YOUR_JWT_TOKEN_HERE",
+            "description": "Replace with a valid JWT token"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:3000/api/payments/:id",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["api", "payments", ":id"],
+          "variable": [
+            {
+              "key": "id",
+              "value": "PAYMENT_ID_FROM_STEP_1_OR_2",
+              "description": "Replace with the ID received from the Create Payment response"
+            }
+          ]
+        },
+        "description": "Get details of a specific payment by ID"
+      }
+    },
+    {
+      "name": "5. Get Transactions for Payment",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer YOUR_JWT_TOKEN_HERE",
+            "description": "Replace with a valid JWT token"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:3000/api/payments/:id/transactions",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["api", "payments", ":id", "transactions"],
+          "variable": [
+            {
+              "key": "id",
+              "value": "PAYMENT_ID_FROM_STEP_1_OR_2",
+              "description": "Replace with the ID received from the Create Payment response"
+            }
+          ]
+        },
+        "description": "Get all transactions for a specific payment"
+      }
+    },
+    {
+      "name": "6. VNPAY Callback (Simulate)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3000/api/payments/callback/vnpay?vnp_Amount=20000000&vnp_BankCode=NCB&vnp_BankTranNo=VNP13888165&vnp_CardType=ATM&vnp_OrderInfo=Thanh+toan+don+hang+ORD-9876543210&vnp_PayDate=20230701123456&vnp_ResponseCode=00&vnp_TmnCode=VNPAY_TMN_CODE&vnp_TransactionNo=13888165&vnp_TxnRef=20230701123456_PAYMENT_ID&vnp_SecureHash=GENERATED_HASH",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["api", "payments", "callback", "vnpay"],
+          "query": [
+            {
+              "key": "vnp_Amount",
+              "value": "20000000"
+            },
+            {
+              "key": "vnp_BankCode",
+              "value": "NCB"
+            },
+            {
+              "key": "vnp_BankTranNo",
+              "value": "VNP13888165"
+            },
+            {
+              "key": "vnp_CardType",
+              "value": "ATM"
+            },
+            {
+              "key": "vnp_OrderInfo",
+              "value": "Thanh+toan+don+hang+ORD-9876543210"
+            },
+            {
+              "key": "vnp_PayDate",
+              "value": "20230701123456"
+            },
+            {
+              "key": "vnp_ResponseCode",
+              "value": "00"
+            },
+            {
+              "key": "vnp_TmnCode",
+              "value": "VNPAY_TMN_CODE"
+            },
+            {
+              "key": "vnp_TransactionNo",
+              "value": "13888165"
+            },
+            {
+              "key": "vnp_TxnRef",
+              "value": "20230701123456_PAYMENT_ID"
+            },
+            {
+              "key": "vnp_SecureHash",
+              "value": "GENERATED_HASH"
+            }
+          ]
+        },
+        "description": "Simulate a callback from VNPAY (you'll need to update the payment ID and possibly the secure hash)"
+      }
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [""]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [""]
+      }
+    }
+  ]
+}

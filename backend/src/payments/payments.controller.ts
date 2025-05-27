@@ -8,6 +8,7 @@ import {
   HttpStatus,
   HttpCode,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -19,31 +20,96 @@ import { Request } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PaymentsService } from './payments.service';
 import { CreatePaymentDto } from './dto/create-payment.dto';
-import { Payment } from './schemas/payment.schema';
+import { VNPayCallbackDTO } from './dto/vnpay-callback.dto';
+import { Payment, PaymentDocument } from './schemas/payment.schema';
 import { Transaction } from './schemas/transaction.schema';
+import { VNPayIpnResponse } from './interfaces/vnpay-response.interface';
 
 @ApiTags('payments')
 @Controller('payments')
 export class PaymentsController {
   constructor(private readonly paymentsService: PaymentsService) {}
 
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
   @Post()
   @ApiOperation({ summary: 'Tạo thanh toán mới' })
   @ApiResponse({
-    status: HttpStatus.CREATED,
-    description: 'Thanh toán đã được tạo thành công',
+    status: 201,
+    description: 'Tạo thanh toán thành công',
     type: Payment,
   })
-  async createPayment(
+  async create(
     @Body() createPaymentDto: CreatePaymentDto,
-  ): Promise<Payment> {
-    return this.paymentsService.createPayment(createPaymentDto);
+    @Req() req: Request,
+  ) {
+    const ipAddr = req.ip || req.socket.remoteAddress || '127.0.0.1';
+    return this.paymentsService.createPayment(createPaymentDto, ipAddr);
   }
 
+  @Get()
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
+  @ApiOperation({ summary: 'Lấy danh sách thanh toán' })
+  @ApiResponse({ status: 200, description: 'Danh sách thanh toán' })
+  async findAll(): Promise<PaymentDocument[]> {
+    return this.paymentsService.findAll();
+  }
+
+  @Get(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Lấy thông tin thanh toán theo ID' })
+  @ApiResponse({ status: 200, description: 'Thông tin thanh toán' })
+  findOne(@Param('id') id: string) {
+    return this.paymentsService.findOne(id);
+  }
+
+  @Get('vnpay/callback')
+  @ApiOperation({
+    summary: 'Xử lý callback từ VNPay',
+    description:
+      'Xử lý kết quả thanh toán từ VNPay sau khi người dùng hoàn tất thanh toán',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Xử lý callback thành công',
+    type: Payment,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Dữ liệu không hợp lệ hoặc thanh toán thất bại',
+  })
+  handleVnpayCallback(@Query() query: VNPayCallbackDTO) {
+    return this.paymentsService.handleVnpayCallback(query);
+  }
+
+  @Get('vnpay/ipn')
+  @ApiOperation({
+    summary: 'Xử lý IPN từ VNPay',
+    description: 'Xử lý thông báo thanh toán tự động từ VNPay',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Xử lý IPN thành công',
+    schema: {
+      type: 'object',
+      properties: {
+        RspCode: {
+          type: 'string',
+          example: '00',
+          description: 'Mã phản hồi (00: thành công)',
+        },
+        Message: {
+          type: 'string',
+          example: 'Xác nhận thanh toán thành công',
+          description: 'Thông báo kết quả',
+        },
+      },
+    },
+  })
+  handleVnpayIpn(@Query() query: VNPayCallbackDTO): Promise<VNPayIpnResponse> {
+    return this.paymentsService.handleVnpayIpn(query);
+  }
+
   @Post(':id/process')
   @ApiOperation({ summary: 'Xử lý thanh toán' })
   @ApiResponse({
@@ -56,28 +122,34 @@ export class PaymentsController {
     return this.paymentsService.processPayment(id);
   }
 
-  @Post('callback/vnpay')
-  @ApiOperation({ summary: 'Xử lý callback từ VNPay' })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'Callback đã được xử lý thành công',
-  })
-  @HttpCode(HttpStatus.OK)
-  async vnpayCallback(@Req() request: Request): Promise<Payment> {
-    return this.paymentsService.handleCallback('VNPAY', request.query);
-  }
-
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @Get(':id')
-  @ApiOperation({ summary: 'Lấy thông tin thanh toán theo ID' })
+  @Post(':id/refund')
+  @ApiOperation({
+    summary: 'Yêu cầu hoàn tiền',
+    description: 'Tạo yêu cầu hoàn tiền cho một thanh toán đã hoàn thành',
+  })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'Thông tin thanh toán',
-    type: Payment,
+    description: 'Yêu cầu hoàn tiền đã được xử lý thành công',
+    schema: {
+      type: 'object',
+      properties: {
+        success: {
+          type: 'boolean',
+          example: true,
+          description: 'Trạng thái xử lý hoàn tiền',
+        },
+      },
+    },
   })
-  async getPayment(@Param('id') id: string): Promise<Payment> {
-    return this.paymentsService.findOne(id);
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'Không thể hoàn tiền cho thanh toán này',
+  })
+  async refundPayment(@Param('id') id: string): Promise<{ success: boolean }> {
+    const payment = await this.paymentsService.findOne(id);
+    return this.paymentsService.refundPayment(payment);
   }
 
   @UseGuards(JwtAuthGuard)

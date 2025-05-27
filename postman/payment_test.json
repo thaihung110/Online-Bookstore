@@ -1,0 +1,50 @@
+{
+  "info": {
+    "name": "Payment APIs",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Create Payment",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:3000/api/payments",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["api", "payments"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"orderId\": \"TEST123\",\n    \"amount\": 50000,\n    \"paymentMethod\": \"VNPAY\",\n    \"description\": \"Test thanh toán VNPay\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Get All Payments",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer your_jwt_token"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:3000/api/payments",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["api", "payments"]
+        }
+      }
+    }
+  ]
+}

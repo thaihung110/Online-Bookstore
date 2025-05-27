@@ -14,16 +14,16 @@ export class Book {
   @Prop({ required: true, trim: true })
   description: string;
 
-  @Prop({ required: true, min: 0 })
+  @Prop({ required: true, type: Number })
   originalPrice: number;
 
-  @Prop({ default: 0, min: 0, max: 100 })
+  @Prop({ type: Number, default: 0, min: 0, max: 100 })
   discountRate: number;
 
-  @Prop({ required: true, min: 0 })
+  @Prop({ required: true, type: Number })
   price: number;
 
-  @Prop({ required: true, default: 0, min: 0 })
+  @Prop({ required: true, type: Number, default: 0 })
   stock: number;
 
   @Prop({ required: true })
@@ -32,7 +32,7 @@ export class Book {
   @Prop({ required: true })
   publisher: string;
 
-  @Prop({ required: true })
+  @Prop({ required: true, type: Number })
   publicationYear: number;
 
   @Prop({ type: [String], index: true })
@@ -40,6 +40,9 @@ export class Book {
 
   @Prop()
   coverImage: string;
+
+  @Prop({ type: [Number], default: [] })
+  embedding: number[];
 
   @Prop({ default: false })
   isAvailableForPreOrder: boolean;

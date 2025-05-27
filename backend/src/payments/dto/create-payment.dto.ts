@@ -11,29 +11,7 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
-
-// DTO cho thông tin thẻ ngân hàng
-export class BankCardDetailsDto {
-  @ApiProperty({ description: 'Số thẻ ngân hàng' })
-  @IsString()
-  @IsNotEmpty()
-  cardNumber: string;
-
-  @ApiProperty({ description: 'Tên chủ thẻ' })
-  @IsString()
-  @IsNotEmpty()
-  cardholderName: string;
-
-  @ApiProperty({ description: 'Ngày hết hạn (MM/YY)' })
-  @IsString()
-  @IsNotEmpty()
-  expiryDate: string;
-
-  @ApiProperty({ description: 'Mã bảo mật CVV' })
-  @IsString()
-  @IsNotEmpty()
-  cvv: string;
-}
+import { PaymentMethod } from '../schemas/payment.schema';
 
 // DTO cho thông tin VNPay
 export class VNPayDetailsDto {
@@ -45,30 +23,41 @@ export class VNPayDetailsDto {
 
 // DTO chung cho việc tạo thanh toán
 export class CreatePaymentDto {
-  @ApiProperty({ description: 'ID của đơn hàng cần thanh toán' })
-  @IsString()
+  @ApiProperty({ example: '123', description: 'ID của đơn hàng' })
   @IsNotEmpty()
+  @IsString()
   orderId: string;
 
-  @ApiProperty({
-    description: 'Phương thức thanh toán',
-    enum: ['VNPAY', 'BANK_CARD'],
-  })
-  @IsEnum(['VNPAY', 'BANK_CARD'])
+  @ApiProperty({ enum: PaymentMethod, description: 'Phương thức thanh toán' })
   @IsNotEmpty()
-  paymentMethod: string;
+  @IsEnum(PaymentMethod)
+  paymentMethod: PaymentMethod;
 
-  @ApiProperty({ description: 'Số tiền thanh toán' })
+  @ApiProperty({ example: 100000, description: 'Số tiền thanh toán' })
+  @IsNotEmpty()
   @IsNumber()
-  @Min(1000) // Số tiền tối thiểu là 1000 VND
+  @Min(0)
   amount: number;
 
-  @ApiProperty({ description: 'Chi tiết thanh toán cho Bank Card' })
-  @ValidateIf((o) => o.paymentMethod === 'BANK_CARD')
-  @ValidateNested()
-  @Type(() => BankCardDetailsDto)
-  @IsObject()
-  bankCardDetails?: BankCardDetailsDto;
+  @ApiProperty({ description: 'Họ và tên người nhận' })
+  @IsNotEmpty()
+  @IsString()
+  fullName: string;
+
+  @ApiProperty({ description: 'Thành phố/Tỉnh' })
+  @IsNotEmpty()
+  @IsString()
+  city: string;
+
+  @ApiProperty({ description: 'Địa chỉ cụ thể' })
+  @IsNotEmpty()
+  @IsString()
+  address: string;
+
+  @ApiProperty({ description: 'Số điện thoại' })
+  @IsNotEmpty()
+  @IsString()
+  phone: string;
 
   @ApiProperty({ description: 'Chi tiết thanh toán cho VNPAY' })
   @ValidateIf((o) => o.paymentMethod === 'VNPAY')

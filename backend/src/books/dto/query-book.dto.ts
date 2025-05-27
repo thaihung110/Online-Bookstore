@@ -20,7 +20,6 @@ export enum SortField {
   PRICE = 'price',
   TITLE = 'title',
   PUBLICATION_YEAR = 'publicationYear',
-  AVERAGE_RATING = 'averageRating',
   CREATED_AT = 'createdAt',
 }
 
@@ -61,31 +60,13 @@ export class QueryBookDto {
     example: ['Fantasy', 'Adventure'],
   })
   @Transform(({ value }) => {
-    // Log input value for debug
-    console.log(
-      'QueryBookDto: transforming genres, input:',
-      value,
-      'type:',
-      typeof value,
-    );
-
-    // Nếu là string (từ URL param), chuyển thành array
     if (typeof value === 'string') {
-      // Xử lý chuỗi genres đúng cách, loại bỏ khoảng trắng và chuẩn hóa dữ liệu
       const splitGenres = value.split(',');
       const cleanedGenres = splitGenres
-        .map(
-          (genre) => genre.trim(), // Loại bỏ khoảng trắng ở đầu và cuối
-        )
-        .filter((genre) => genre.length > 0); // Loại bỏ chuỗi rỗng
-
-      console.log(
-        'QueryBookDto: split string to array and normalized:',
-        cleanedGenres,
-      );
+        .map((genre) => genre.trim())
+        .filter((genre) => genre.length > 0);
       return cleanedGenres;
     }
-    // Nếu đã là array, chuẩn hóa dữ liệu
     if (Array.isArray(value)) {
       const cleanedGenres = value
         .map((genre) => (typeof genre === 'string' ? genre.trim() : genre))
@@ -93,21 +74,20 @@ export class QueryBookDto {
           (genre) =>
             genre && (typeof genre === 'string' ? genre.length > 0 : true),
         );
-      console.log('QueryBookDto: normalized array:', cleanedGenres);
       return cleanedGenres;
     }
-    // Trường hợp khác, trả về array rỗng
-    console.log(
-      'QueryBookDto: returning empty array for value type:',
-      typeof value,
-    );
     return [];
   })
   @IsArray()
   @IsOptional()
   genres?: string[];
 
-  @ApiPropertyOptional({ description: 'Minimum price' })
+  @ApiPropertyOptional({
+    description:
+      'Minimum price in USD (price in VND will be converted to USD by dividing by 25000)',
+    minimum: 0,
+    maximum: 1000,
+  })
   @Type(() => Number)
   @IsNumber()
   @Min(0)
@@ -115,7 +95,12 @@ export class QueryBookDto {
   @IsOptional()
   minPrice?: number;
 
-  @ApiPropertyOptional({ description: 'Maximum price' })
+  @ApiPropertyOptional({
+    description:
+      'Maximum price in USD (price in VND will be converted to USD by dividing by 25000)',
+    minimum: 0,
+    maximum: 1000,
+  })
   @Type(() => Number)
   @IsNumber()
   @Min(0)
@@ -135,13 +120,15 @@ export class QueryBookDto {
   @IsOptional()
   maxYear?: number;
 
-  @ApiPropertyOptional({ description: 'Filter only in-stock books' })
+  @ApiPropertyOptional({ description: 'Filter only books with stock > 0' })
   @Type(() => Boolean)
   @IsBoolean()
   @IsOptional()
   inStock?: boolean;
 
-  @ApiPropertyOptional({ description: 'Filter only discounted books' })
+  @ApiPropertyOptional({
+    description: 'Filter only discounted books (discountRate > 0)',
+  })
   @Type(() => Boolean)
   @IsBoolean()
   @IsOptional()

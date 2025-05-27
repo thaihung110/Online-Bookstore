@@ -1,0 +1,221 @@
+{
+  "info": {
+    "_postman_id": "cart-api-collection",
+    "name": "Online Bookstore - Cart API Tests",
+    "description": "Collection for testing Cart APIs",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000/api",
+      "type": "string"
+    },
+    {
+      "key": "user_id",
+      "value": "your-user-id-here",
+      "type": "string"
+    },
+    {
+      "key": "book_id",
+      "value": "your-book-id-here",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Cart Operations",
+      "item": [
+        {
+          "name": "Get Cart",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/carts/{{user_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["carts", "{{user_id}}"]
+            },
+            "description": "Get user's cart"
+          }
+        },
+        {
+          "name": "Add Item to Cart",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"bookId\": \"{{book_id}}\",\n    \"quantity\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/carts/{{user_id}}/items",
+              "host": ["{{base_url}}"],
+              "path": ["carts", "{{user_id}}", "items"]
+            },
+            "description": "Add a new item to cart or update quantity if exists"
+          }
+        },
+        {
+          "name": "Update Item Quantity",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"quantity\": 3\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/carts/{{user_id}}/items/{{book_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["carts", "{{user_id}}", "items", "{{book_id}}"]
+            },
+            "description": "Update quantity of an item in cart"
+          }
+        },
+        {
+          "name": "Remove Item from Cart",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/carts/{{user_id}}/items/{{book_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["carts", "{{user_id}}", "items", "{{book_id}}"]
+            },
+            "description": "Remove an item from cart"
+          }
+        },
+        {
+          "name": "Clear Cart",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/carts/{{user_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["carts", "{{user_id}}"]
+            },
+            "description": "Remove all items from cart"
+          }
+        },
+        {
+          "name": "Cleanup Duplicate Items",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/carts/{{user_id}}/cleanup",
+              "host": ["{{base_url}}"],
+              "path": ["carts", "{{user_id}}", "cleanup"]
+            },
+            "description": "Cleanup duplicate items in cart"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Test Scenarios",
+      "item": [
+        {
+          "name": "Add New Item",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"bookId\": \"68329501dfe5dce70b76e862\",\n    \"quantity\": 2\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/carts/{{user_id}}/items",
+              "host": ["{{base_url}}"],
+              "path": ["carts", "{{user_id}}", "items"]
+            },
+            "description": "Test adding a new item to cart"
+          }
+        },
+        {
+          "name": "Add Existing Item (Quantity Addition)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"bookId\": \"68329501dfe5dce70b76e862\",\n    \"quantity\": 3\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/carts/{{user_id}}/items",
+              "host": ["{{base_url}}"],
+              "path": ["carts", "{{user_id}}", "items"]
+            },
+            "description": "Test adding an existing item (should add quantities)"
+          }
+        },
+        {
+          "name": "Add Item with Invalid Quantity",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"bookId\": \"68329501dfe5dce70b76e862\",\n    \"quantity\": 0\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/carts/{{user_id}}/items",
+              "host": ["{{base_url}}"],
+              "path": ["carts", "{{user_id}}", "items"]
+            },
+            "description": "Test adding item with invalid quantity (should fail)"
+          }
+        },
+        {
+          "name": "Add Non-existent Book",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"bookId\": \"000000000000000000000000\",\n    \"quantity\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/carts/{{user_id}}/items",
+              "host": ["{{base_url}}"],
+              "path": ["carts", "{{user_id}}", "items"]
+            },
+            "description": "Test adding non-existent book (should fail)"
+          }
+        }
+      ]
+    }
+  ]
+}
