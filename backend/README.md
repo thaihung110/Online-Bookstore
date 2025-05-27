@@ -1,98 +1,177 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Online Bookstore Backend
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+Backend cho hệ thống bán sách online sử dụng NestJS và tích hợp thanh toán VNPAY.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
-
-## Description
-
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
-
-## Project setup
+## Yêu Cầu Hệ Thống
 
 ```bash
-$ npm install
+- Node.js (>= 14.x)
+- MongoDB (>= 4.x)
+- npm hoặc yarn
 ```
 
-## Compile and run the project
+## Cài Đặt
+
+1. Clone repository và cài đặt dependencies:
 
 ```bash
-# development
-$ npm run start
+# Clone repository
+git clone <repository-url>
+cd online-bookstore/backend
 
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+# Cài đặt dependencies
+npm install
 ```
 
-## Run tests
+2. Cấu hình môi trường:
 
 ```bash
-# unit tests
-$ npm run test
+# Copy file .env.example thành .env
+cp .env.example .env
 
-# e2e tests
-$ npm run test:e2e
+# Cập nhật các biến môi trường trong file .env
+MONGODB_URI=mongodb://localhost:27017/bookstore
+JWT_SECRET=your_jwt_secret
 
-# test coverage
-$ npm run test:cov
+# Cấu hình VNPAY (Sandbox)
+VNPAY_TMN_CODE=your_tmn_code
+VNPAY_HASH_SECRET=your_hash_secret
+VNPAY_HOST=https://sandbox.vnpayment.vn/paymentv2/vpcpay.html
+VNPAY_TEST_MODE=true
+VNPAY_RETURN_URL=http://localhost:3000/payment/callback
+```
+
+## Chạy Ứng Dụng
+
+```bash
+# Development mode với hot-reload
+npm run start:dev
+
+# Production mode
+npm run build
+npm run start:prod
+```
+
+## API Endpoints
+
+### Thanh Toán (Payments)
+
+1. Tạo Thanh Toán Mới
+
+```http
+POST /payments
+Content-Type: application/json
+
+{
+  "orderId": "ORDER123",
+  "amount": 100000,
+  "paymentMethod": "VNPAY"
+}
+```
+
+2. Callback URL VNPAY
+
+```http
+GET /payments/vnpay/callback
+```
+
+3. IPN URL VNPAY
+
+```http
+GET /payments/vnpay/ipn
+```
+
+4. Hoàn Tiền
+
+```http
+POST /payments/:id/refund
+Authorization: Bearer <token>
+```
+
+## Testing
+
+```bash
+# Unit tests
+npm run test
+
+# E2E tests
+npm run test:e2e
+
+# Test coverage
+npm run test:cov
+```
+
+## Xử Lý Lỗi Thường Gặp
+
+1. Lỗi VNPAY Callback
+
+- Kiểm tra `VNPAY_RETURN_URL` đã cấu hình đúng chưa
+- Đảm bảo các tham số callback được sign đúng
+- Kiểm tra số tiền đã được nhân với 100
+
+2. Lỗi MongoDB Connection
+
+- Kiểm tra MongoDB đã chạy chưa
+- Verify `MONGODB_URI` trong .env
+
+3. Lỗi JWT
+
+- Đảm bảo `JWT_SECRET` đã được cấu hình
+- Kiểm tra token format trong request
+
+## Logging và Debug
+
+- Logs được lưu trong thư mục `logs/`
+- Mỗi payment transaction có unique correlationId
+- Chi tiết logs bao gồm:
+  - Payment creation
+  - VNPAY requests/responses
+  - Callback processing
+  - Error handling
+
+## VNPAY Test Cards
+
+```plaintext
+Ngân hàng: NCB
+Số thẻ: 9704198526191432198
+Tên chủ thẻ: NGUYEN VAN A
+Ngày phát hành: 07/15
+Mã OTP: 123456
+```
+
+## Môi Trường
+
+```bash
+# Development
+http://localhost:3000
+
+# Staging
+https://api-staging.your-domain.com
+
+# Production
+https://api.your-domain.com
 ```
 
 ## Deployment
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+1. Build ứng dụng:
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+npm run build
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+2. Cấu hình Production:
 
-## Resources
+- Cập nhật các biến môi trường production
+- Cấu hình VNPAY production endpoints
+- Setup MongoDB production connection
 
-Check out a few resources that may come in handy when working with NestJS:
+3. Start server:
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+```bash
+npm run start:prod
+```
 
 ## Support
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+Nếu bạn gặp vấn đề, vui lòng tạo issue trong repository hoặc liên hệ team phát triển.
