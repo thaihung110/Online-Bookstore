@@ -1,13 +1,19 @@
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { VNPay, HashAlgorithm, VnpLocale, ProductCode } from 'vnpay';
+import {
+  VNPay,
+  HashAlgorithm,
+  VnpLocale,
+  ProductCode,
+  dateFormat,
+} from 'vnpay';
 import {
   Payment,
   PaymentDocument,
   PaymentStatus,
 } from './schemas/payment.schema';
 import { IVnpayService } from './interfaces/vnpay-service.interface';
-import { VNPayCallbackDTO } from './dto/vnpay-callback.dto';
+
 import {
   PaymentLoggingService,
   PaymentLogType,
@@ -80,6 +86,9 @@ export class VnpayService implements IVnpayService {
     try {
       this.validatePayment(payment);
 
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+
       const requestData = {
         vnp_Amount: this.formatAmount(payment.amount),
         vnp_IpAddr: ipAddr,
@@ -88,6 +97,8 @@ export class VnpayService implements IVnpayService {
         vnp_OrderType: ProductCode.Other,
         vnp_ReturnUrl: this.configService.get<string>('VNPAY_RETURN_URL'),
         vnp_Locale: VnpLocale.VN,
+        vnp_CreateDate: dateFormat(new Date()),
+        vnp_ExpireDate: dateFormat(tomorrow),
       };
 
       this.paymentLoggingService.logPaymentFlow(PaymentLogType.VNPAY_REQUEST, {
@@ -97,7 +108,7 @@ export class VnpayService implements IVnpayService {
         requestData,
       });
 
-      const paymentUrl = await this.vnpay.buildPaymentUrl(requestData);
+      const paymentUrl = this.vnpay.buildPaymentUrl(requestData);
 
       this.paymentLoggingService.logPaymentFlow(PaymentLogType.VNPAY_RESPONSE, {
         paymentId: payment._id.toString(),
@@ -132,7 +143,7 @@ export class VnpayService implements IVnpayService {
 
   private formatAmount(amount: number): number {
     // Convert to smallest currency unit (VND doesn't have decimal points)
-    return Math.round(amount * 100);
+    return Math.round(amount);
   }
 
   async verifyReturnUrl(query: any) {
@@ -185,63 +196,6 @@ export class VnpayService implements IVnpayService {
     }
   }
 
-  async handleCallback(
-    data: VNPayCallbackDTO,
-  ): Promise<Partial<PaymentDocument>> {
-    try {
-      this.logger.log('Processing callback with data:', data);
-      const verify = await this.verifyReturnUrl(data);
-
-      if (!verify.isSuccess) {
-        throw new BadRequestException('Chữ ký không hợp lệ');
-      }
-
-      const orderId = data.vnp_TxnRef;
-      const amount = parseInt(data.vnp_Amount, 10) / 100;
-      const responseCode = data.vnp_ResponseCode;
-      const status =
-        responseCode === '00' ? PaymentStatus.COMPLETED : PaymentStatus.FAILED;
-
-      // Parse payment date
-      const paymentDate = this.parseVNPayDate(data.vnp_PayDate);
-
-      const paymentUpdate: Partial<PaymentDocument> = {
-        _id: orderId,
-        status,
-        amount,
-        transactionId: data.vnp_TransactionNo,
-        bankCode: data.vnp_BankCode,
-        bankTransactionNo: data.vnp_BankTranNo,
-        cardType: data.vnp_CardType,
-        paymentDate,
-        responseCode,
-        metadata: {
-          vnpayResponse: data,
-        },
-        completedAt:
-          status === PaymentStatus.COMPLETED ? paymentDate : undefined,
-      };
-
-      this.logger.log(`Payment status updated: ${status}`);
-      return paymentUpdate;
-    } catch (error) {
-      this.logger.error(`Error handling callback: ${error.message}`);
-      throw new BadRequestException('Không thể xử lý callback từ VNPay');
-    }
-  }
-
-  private parseVNPayDate(dateString: string): Date {
-    // VNPay date format: yyyyMMddHHmmss
-    const year = parseInt(dateString.substring(0, 4), 10);
-    const month = parseInt(dateString.substring(4, 6), 10) - 1; // JS months are 0-based
-    const day = parseInt(dateString.substring(6, 8), 10);
-    const hour = parseInt(dateString.substring(8, 10), 10);
-    const minute = parseInt(dateString.substring(10, 12), 10);
-    const second = parseInt(dateString.substring(12, 14), 10);
-
-    return new Date(year, month, day, hour, minute, second);
-  }
-
   async refund(payment: PaymentDocument): Promise<{ success: boolean }> {
     try {
       const refundData = {
@@ -288,17 +242,6 @@ export class VnpayService implements IVnpayService {
         },
       });
       throw new BadRequestException('Không thể xử lý yêu cầu hoàn tiền');
-    }
-  }
-
-  private validateRefund(payment: PaymentDocument): void {
-    if (!payment.completedAt) {
-      throw new BadRequestException(
-        'Chỉ có thể hoàn tiền cho giao dịch đã hoàn thành',
-      );
-    }
-    if (!payment.transactionId) {
-      throw new BadRequestException('Không tìm thấy mã giao dịch');
     }
   }
 
