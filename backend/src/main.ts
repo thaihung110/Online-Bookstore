@@ -10,7 +10,10 @@ async function bootstrap() {
   const port = configService.get<number>('PORT', 3000);
 
   // Enable CORS
-  app.enableCors();
+  app.enableCors({
+    origin: true, // Phản hồi lại origin header
+    credentials: true,
+  });
 
   // Apply global validation pipe
   app.useGlobalPipes(
