@@ -1,208 +1,227 @@
-import React from "react";
+import React, { memo, useState } from "react";
 import {
   Card,
   CardContent,
   CardMedia,
   Typography,
-  Button,
-  CardActions,
   Box,
   Rating,
   Chip,
-  Stack,
   IconButton,
-  CircularProgress,
-  Badge,
+  Skeleton,
+  Tooltip,
+  Stack,
+  useTheme,
 } from "@mui/material";
-import BookmarkAddOutlinedIcon from "@mui/icons-material/BookmarkAddOutlined";
-import BookmarkAddedIcon from "@mui/icons-material/BookmarkAdded";
-import InventoryIcon from "@mui/icons-material/Inventory";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
+import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
+import BookmarkIcon from "@mui/icons-material/Bookmark";
+import BookmarkBorderIcon from "@mui/icons-material/BookmarkBorder";
 import { Book } from "../../api/books";
 import { useCartStore } from "../../store/cartStore";
 import { useWishlistStore } from "../../store/wishlistStore";
 
 interface BookCardProps {
   book: Book;
-  variant?: "default" | "compact";
 }
 
-const BookCard: React.FC<BookCardProps> = ({ book, variant = "default" }) => {
-  const navigate = useNavigate();
+const BookCard: React.FC<BookCardProps> = memo(({ book }) => {
+  const theme = useTheme();
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageError, setImageError] = useState(false);
   const { addItem, isInCart } = useCartStore();
-  const {
-    addItemToWishlist,
-    removeItemFromWishlist,
-    isItemInWishlist,
-    isLoading: wishlistLoading,
-  } = useWishlistStore();
+  const { addItemToWishlist, removeItemFromWishlist, isItemInWishlist } =
+    useWishlistStore();
 
-  const alreadyInCart = isInCart(book.id);
-  const bookInWishlist = isItemInWishlist(book.id);
+  // Memoize computed values
+  const isDiscounted = book.discountRate > 0;
+  const inCart = isInCart(book.id);
+  const inWishlist = isItemInWishlist(book.id);
 
-  const handleViewDetails = () => {
-    navigate(`/books/${book.id}`);
+  // Handle image loading
+  const handleImageLoad = () => setImageLoaded(true);
+  const handleImageError = () => {
+    setImageError(true);
+    setImageLoaded(true);
   };
 
-  const handleAddToCart = () => {
+  // Handle cart and wishlist actions
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.preventDefault(); // Prevent navigation
     addItem(book);
   };
 
-  const handleToggleWishlist = async () => {
-    try {
-      if (bookInWishlist) {
-        await removeItemFromWishlist(book.id);
-      } else {
-        await addItemToWishlist(book);
-      }
-    } catch (error) {
-      console.error("Failed to toggle wishlist item on card:", error);
+  const handleToggleWishlist = (e: React.MouseEvent) => {
+    e.preventDefault(); // Prevent navigation
+    if (inWishlist) {
+      removeItemFromWishlist(book.id);
+    } else {
+      addItemToWishlist(book);
     }
   };
 
-  // Placeholder image if no cover is available
-  const coverImage =
-    book.coverImage || "https://via.placeholder.com/150x200?text=No+Image";
-
-  // Display first genre if available
-  const primaryGenre =
-    book.genres && book.genres.length > 0 ? book.genres[0] : null;
-
-  // Check if book is on sale
-  const isOnSale = book.discountRate > 0;
-
   return (
     <Card
+      component={Link}
+      to={`/books/${book.id}`}
       sx={{
-        width: "100%",
-        height: variant === "compact" ? 380 : 520,
+        height: "100%",
         display: "flex",
         flexDirection: "column",
-        transition: "transform 0.2s",
+        textDecoration: "none",
+        transition: "transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out",
         "&:hover": {
-          transform: "scale(1.02)",
+          transform: "translateY(-4px)",
+          boxShadow: theme.shadows[4],
         },
-        position: "relative",
       }}
-      elevation={2}
     >
-      <Box sx={{ position: "relative" }}>
-        {isOnSale && (
-          <Badge
+      <Box sx={{ position: "relative", paddingTop: "140%" }}>
+        {!imageLoaded && (
+          <Skeleton
+            variant="rectangular"
             sx={{
               position: "absolute",
-              top: 12,
-              right: 12,
-              zIndex: 1,
-              "& .MuiBadge-badge": {
-                fontSize: "0.8rem",
-                height: "24px",
-                minWidth: "24px",
-                padding: "0 8px",
-                borderRadius: "12px",
-                fontWeight: "bold",
-              },
+              top: 0,
+              left: 0,
+              width: "100%",
+              height: "100%",
             }}
-            badgeContent={`-${book.discountRate}%`}
-            color="error"
+            animation="wave"
           />
         )}
         <CardMedia
           component="img"
-          height={variant === "compact" ? 140 : 200}
-          image={coverImage}
+          image={imageError ? "/placeholder-book.jpg" : book.coverImage}
           alt={book.title}
-          sx={{ objectFit: "contain", pt: 2 }}
+          onLoad={handleImageLoad}
+          onError={handleImageError}
+          sx={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            opacity: imageLoaded ? 1 : 0,
+            transition: "opacity 0.3s ease-in-out",
+          }}
         />
-      </Box>
-      <CardContent sx={{ flexGrow: 1, pb: 0 }}>
-        {primaryGenre && (
+        {/* Action buttons */}
+        <Box
+          sx={{
+            position: "absolute",
+            top: 8,
+            right: 8,
+            display: "flex",
+            flexDirection: "column",
+            gap: 1,
+          }}
+        >
+          <Tooltip title={inCart ? "In Cart" : "Add to Cart"}>
+            <IconButton
+              onClick={handleAddToCart}
+              disabled={inCart}
+              sx={{
+                bgcolor: "background.paper",
+                "&:hover": { bgcolor: "action.hover" },
+              }}
+              size="small"
+            >
+              <ShoppingCartIcon
+                color={inCart ? "disabled" : "primary"}
+                fontSize="small"
+              />
+            </IconButton>
+          </Tooltip>
+          <Tooltip
+            title={inWishlist ? "Remove from Wishlist" : "Add to Wishlist"}
+          >
+            <IconButton
+              onClick={handleToggleWishlist}
+              sx={{
+                bgcolor: "background.paper",
+                "&:hover": { bgcolor: "action.hover" },
+              }}
+              size="small"
+            >
+              {inWishlist ? (
+                <BookmarkIcon color="primary" fontSize="small" />
+              ) : (
+                <BookmarkBorderIcon fontSize="small" />
+              )}
+            </IconButton>
+          </Tooltip>
+        </Box>
+        {/* Discount badge */}
+        {isDiscounted && (
           <Chip
-            label={primaryGenre}
+            label={`-${book.discountRate}%`}
+            color="error"
             size="small"
-            sx={{ mb: 1 }}
-            color="primary"
-            variant="outlined"
+            sx={{
+              position: "absolute",
+              top: 8,
+              left: 8,
+              fontWeight: "bold",
+            }}
           />
         )}
+      </Box>
 
+      <CardContent
+        sx={{ flexGrow: 1, display: "flex", flexDirection: "column" }}
+      >
         <Typography
+          variant="h6"
+          component="h2"
           gutterBottom
-          variant={variant === "compact" ? "subtitle1" : "h6"}
-          component="div"
-          noWrap
-          title={book.title}
+          sx={{
+            fontSize: "1rem",
+            fontWeight: "bold",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            display: "-webkit-box",
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: "vertical",
+            minHeight: "3rem",
+          }}
         >
           {book.title}
         </Typography>
 
-        <Typography variant="body2" color="text.secondary" gutterBottom>
-          by {book.author}
+        <Typography
+          variant="body2"
+          color="text.secondary"
+          gutterBottom
+          sx={{
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {book.author}
         </Typography>
 
         {book.rating !== undefined && (
-          <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
-            <Rating
-              name={`book-rating-${book.id}`}
-              value={book.rating}
-              precision={0.5}
-              size="small"
-              readOnly
-            />
-            <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
-              {book.rating}
+          <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+            <Rating value={book.rating} readOnly size="small" precision={0.5} />
+            <Typography variant="body2" color="text.secondary">
+              {book.rating.toFixed(1)}
             </Typography>
-          </Box>
+          </Stack>
         )}
 
-        {variant !== "compact" && (
-          <Typography
-            variant="body2"
-            color="text.secondary"
-            sx={{
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              display: "-webkit-box",
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: "vertical",
-              mb: 1,
-            }}
-          >
-            {book.description}
-          </Typography>
-        )}
-
-        <Box sx={{ display: "flex", alignItems: "center", mt: 1, mb: 1 }}>
-          <InventoryIcon fontSize="small" color="action" sx={{ mr: 0.5 }} />
-          <Typography
-            variant="body2"
-            color={book.stock > 0 ? "success.main" : "error.main"}
-          >
-            {book.stock > 0 ? `In stock: ${book.stock} items` : "Out of stock"}
-          </Typography>
-        </Box>
-
-        <Box sx={{ mt: 1 }}>
-          {isOnSale ? (
-            <Stack direction="column" spacing={0.5}>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                <Typography variant="h6" color="error.main">
-                  ${book.price.toFixed(2)}
-                </Typography>
-                <Typography
-                  variant="caption"
-                  sx={{
-                    bgcolor: "error.main",
-                    color: "white",
-                    px: 0.7,
-                    py: 0.3,
-                    borderRadius: 1,
-                    fontWeight: "bold",
-                  }}
-                >
-                  -{book.discountRate}%
-                </Typography>
-              </Box>
+        <Box sx={{ mt: "auto" }}>
+          <Stack direction="row" spacing={1} alignItems="baseline">
+            <Typography
+              variant="h6"
+              color={isDiscounted ? "error.main" : "primary.main"}
+              sx={{ fontWeight: "bold" }}
+            >
+              ${book.price.toFixed(2)}
+            </Typography>
+            {isDiscounted && (
               <Typography
                 variant="body2"
                 color="text.secondary"
@@ -210,58 +229,19 @@ const BookCard: React.FC<BookCardProps> = ({ book, variant = "default" }) => {
               >
                 ${book.originalPrice.toFixed(2)}
               </Typography>
-            </Stack>
-          ) : (
-            <Typography variant="h6" color="primary">
-              ${book.price.toFixed(2)}
+            )}
+          </Stack>
+          {book.stock === 0 && (
+            <Typography variant="body2" color="error" sx={{ mt: 1 }}>
+              Out of Stock
             </Typography>
           )}
         </Box>
       </CardContent>
-
-      <CardActions
-        sx={{ p: 2, pt: 1, display: "flex", justifyContent: "space-between" }}
-      >
-        <Button
-          size="small"
-          color="primary"
-          variant="outlined"
-          onClick={handleViewDetails}
-          sx={{ flexGrow: 0.5 }}
-        >
-          Details
-        </Button>
-        <Button
-          size="small"
-          color="primary"
-          variant="contained"
-          onClick={handleAddToCart}
-          disabled={alreadyInCart || book.stock <= 0}
-          sx={{ flexGrow: 0.5, mx: 1 }}
-        >
-          {alreadyInCart ? "In Cart" : "Add to Cart"}
-        </Button>
-        <IconButton
-          aria-label={
-            bookInWishlist ? "Remove from wishlist" : "Add to wishlist"
-          }
-          onClick={handleToggleWishlist}
-          disabled={wishlistLoading}
-          color="secondary"
-          sx={{ flexShrink: 0 }}
-          size="medium"
-        >
-          {wishlistLoading ? (
-            <CircularProgress size={24} color="inherit" />
-          ) : bookInWishlist ? (
-            <BookmarkAddedIcon />
-          ) : (
-            <BookmarkAddOutlinedIcon />
-          )}
-        </IconButton>
-      </CardActions>
     </Card>
   );
-};
+});
+
+BookCard.displayName = "BookCard";
 
 export default BookCard;

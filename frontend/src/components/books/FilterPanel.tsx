@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, memo } from "react";
 import {
   Box,
   Typography,
@@ -20,8 +20,8 @@ import {
   Tooltip,
   useTheme,
   Fade,
-  debounce,
-  SelectChangeEvent,
+  useMediaQuery,
+  Checkbox,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
@@ -32,6 +32,7 @@ import CategoryIcon from "@mui/icons-material/Category";
 import SearchIcon from "@mui/icons-material/Search";
 import { BookQuery } from "../../api/books";
 import { useBookStore } from "../../store/bookStore";
+import { debounce } from "lodash";
 
 // Sort options
 const sortOptions = [
@@ -76,376 +77,389 @@ interface FilterPanelProps {
   isMobile: boolean;
 }
 
-const FilterPanel: React.FC<FilterPanelProps> = ({
-  filters,
-  onFilterChange,
-  onApplyFilters,
-  onResetFilters,
-  isMobile,
-}) => {
-  const theme = useTheme();
-  // Lấy danh sách thể loại và loadGenres từ bookStore
-  const { genres, loadGenres } = useBookStore();
+const FilterPanel: React.FC<FilterPanelProps> = memo(
+  ({ filters, onFilterChange, onApplyFilters, onResetFilters, isMobile }) => {
+    const theme = useTheme();
+    const isSmallScreen = useMediaQuery(theme.breakpoints.down("sm"));
+    const { genres, loadGenres } = useBookStore();
 
-  // Load genres khi component được render
-  useEffect(() => {
-    loadGenres();
-  }, [loadGenres]);
+    // Load genres khi component được render
+    useEffect(() => {
+      loadGenres();
+    }, [loadGenres]);
 
-  // Local state for filters
-  const [priceRange, setPriceRange] = useState<[number, number]>([
-    filters.minPrice || 0,
-    filters.maxPrice || 200,
-  ]);
-  const [isDraggingPrice, setIsDraggingPrice] = useState<boolean>(false);
+    // Local state for filters
+    const [priceRange, setPriceRange] = useState<[number, number]>([
+      filters.minPrice || 0,
+      filters.maxPrice || 200,
+    ]);
+    const [isDraggingPrice, setIsDraggingPrice] = useState<boolean>(false);
 
-  const [selectedGenres, setSelectedGenres] = useState<string[]>(
-    filters.genres || []
-  );
+    const [selectedGenres, setSelectedGenres] = useState<string[]>(
+      filters.genres || []
+    );
 
-  const [authorFilter, setAuthorFilter] = useState<string>(
-    filters.author || ""
-  );
+    const [authorFilter, setAuthorFilter] = useState<string>(
+      filters.author || ""
+    );
 
-  const [sortOption, setSortOption] = useState<string>(
-    `${filters.sortBy || "createdAt"}:${filters.sortOrder || "desc"}`
-  );
-
-  const [inStockOnly, setInStockOnly] = useState<boolean>(
-    filters.inStock || false
-  );
-
-  const [onSaleOnly, setOnSaleOnly] = useState<boolean>(
-    filters.onSale || false
-  );
-
-  // Price slider marks
-  const priceMarks = getPriceMarks();
-
-  // Update local state when filters change externally
-  useEffect(() => {
-    setPriceRange([filters.minPrice || 0, filters.maxPrice || 200]);
-    setSelectedGenres(filters.genres || []);
-    setAuthorFilter(filters.author || "");
-    setSortOption(
+    const [sortOption, setSortOption] = useState<string>(
       `${filters.sortBy || "createdAt"}:${filters.sortOrder || "desc"}`
     );
-    setInStockOnly(filters.inStock || false);
-    setOnSaleOnly(filters.onSale || false);
-  }, [filters]);
 
-  // Debounced function for applying filters after slider changes
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const debouncedUpdatePrice = useCallback(
-    debounce((newPriceRange: [number, number]) => {
-      onFilterChange({
-        minPrice: newPriceRange[0],
-        maxPrice: newPriceRange[1],
-      });
-      setIsDraggingPrice(false);
-    }, 500),
-    [onFilterChange]
-  );
-
-  // Handle price range change
-  const handlePriceChange = (
-    _event: Event,
-    newValue: number | number[],
-    activeThumb: number
-  ) => {
-    if (!Array.isArray(newValue)) {
-      return;
-    }
-
-    setIsDraggingPrice(true);
-
-    // If the user is dragging both thumbs simultaneously, update both values
-    setPriceRange(newValue as [number, number]);
-    debouncedUpdatePrice(newValue as [number, number]);
-  };
-
-  // Handle price min input change
-  const handlePriceMinChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const value = parseFloat(event.target.value);
-    if (!isNaN(value) && value >= 0 && value <= priceRange[1]) {
-      const newRange: [number, number] = [value, priceRange[1]];
-      setPriceRange(newRange);
-      debouncedUpdatePrice(newRange);
-    }
-  };
-
-  // Handle price max input change
-  const handlePriceMaxChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const value = parseFloat(event.target.value);
-    if (!isNaN(value) && value >= priceRange[0]) {
-      const newRange: [number, number] = [priceRange[0], value];
-      setPriceRange(newRange);
-      debouncedUpdatePrice(newRange);
-    }
-  };
-
-  // Handle author change
-  const handleAuthorChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const value = event.target.value;
-    setAuthorFilter(value);
-    onFilterChange({ author: value || undefined });
-  };
-
-  // Handle genre selection
-  const handleGenreChange = (_event: React.SyntheticEvent, value: string[]) => {
-    console.log("FilterPanel: Selected genres:", value);
-    console.log(
-      "FilterPanel: Selected genres type:",
-      typeof value,
-      Array.isArray(value)
+    const [inStockOnly, setInStockOnly] = useState<boolean>(
+      filters.inStock || false
     );
 
-    // Output each selected genre's exact string value with quotes to see whitespace
-    if (Array.isArray(value)) {
-      value.forEach((genre, index) => {
-        console.log(`FilterPanel: Selected genre[${index}] = "${genre}"`);
+    const [onSaleOnly, setOnSaleOnly] = useState<boolean>(
+      filters.onSale || false
+    );
+
+    // Price slider marks
+    const priceMarks = getPriceMarks();
+
+    // Update local state when filters change externally
+    useEffect(() => {
+      setPriceRange([filters.minPrice || 0, filters.maxPrice || 200]);
+      setSelectedGenres(filters.genres || []);
+      setAuthorFilter(filters.author || "");
+      setSortOption(
+        `${filters.sortBy || "createdAt"}:${filters.sortOrder || "desc"}`
+      );
+      setInStockOnly(filters.inStock || false);
+      setOnSaleOnly(filters.onSale || false);
+    }, [filters]);
+
+    // Debounced filter handlers
+    const debouncedPriceChange = useCallback(
+      debounce((newRange: [number, number]) => {
+        onFilterChange({
+          minPrice: newRange[0],
+          maxPrice: newRange[1],
+        });
+      }, 500),
+      [onFilterChange]
+    );
+
+    const debouncedSearchChange = useCallback(
+      debounce((value: string) => {
+        onFilterChange({ search: value });
+      }, 300),
+      [onFilterChange]
+    );
+
+    // Handle price range change
+    const handlePriceChange = (
+      _event: Event,
+      newValue: number | number[],
+      activeThumb: number
+    ) => {
+      if (!Array.isArray(newValue)) {
+        return;
+      }
+
+      setIsDraggingPrice(true);
+
+      // If the user is dragging both thumbs simultaneously, update both values
+      const newRange = newValue as [number, number];
+      setPriceRange(newRange);
+      debouncedPriceChange(newRange);
+    };
+
+    // Handle price min input change
+    const handlePriceMinChange = (
+      event: React.ChangeEvent<HTMLInputElement>
+    ) => {
+      const value = parseFloat(event.target.value);
+      if (!isNaN(value) && value >= 0 && value <= priceRange[1]) {
+        const newRange: [number, number] = [value, priceRange[1]];
+        setPriceRange(newRange);
+        debouncedPriceChange(newRange);
+      }
+    };
+
+    // Handle price max input change
+    const handlePriceMaxChange = (
+      event: React.ChangeEvent<HTMLInputElement>
+    ) => {
+      const value = parseFloat(event.target.value);
+      if (!isNaN(value) && value >= priceRange[0]) {
+        const newRange: [number, number] = [priceRange[0], value];
+        setPriceRange(newRange);
+        debouncedPriceChange(newRange);
+      }
+    };
+
+    // Handle author change
+    const handleAuthorChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+      const value = event.target.value;
+      setAuthorFilter(value);
+      onFilterChange({ author: value || undefined });
+    };
+
+    // Handle genre selection
+    const handleGenreChange = (
+      _event: React.SyntheticEvent,
+      value: string[]
+    ) => {
+      console.log("FilterPanel: Selected genres:", value);
+      console.log(
+        "FilterPanel: Selected genres type:",
+        typeof value,
+        Array.isArray(value)
+      );
+
+      // Output each selected genre's exact string value with quotes to see whitespace
+      if (Array.isArray(value)) {
+        value.forEach((genre, index) => {
+          console.log(`FilterPanel: Selected genre[${index}] = "${genre}"`);
+        });
+      }
+
+      setSelectedGenres(value);
+      console.log("FilterPanel: Calling onFilterChange with:", {
+        genres: value.length > 0 ? value : undefined,
+        page: 1,
       });
-    }
+      onFilterChange({ genres: value.length > 0 ? value : undefined, page: 1 });
+    };
 
-    setSelectedGenres(value);
-    console.log("FilterPanel: Calling onFilterChange with:", {
-      genres: value.length > 0 ? value : undefined,
-      page: 1,
-    });
-    onFilterChange({ genres: value.length > 0 ? value : undefined, page: 1 });
-  };
+    // Thêm useEffect để theo dõi khi genres thay đổi
+    useEffect(() => {
+      console.log("FilterPanel: Genres updated:", genres);
+    }, [genres]);
 
-  // Thêm useEffect để theo dõi khi genres thay đổi
-  useEffect(() => {
-    console.log("FilterPanel: Genres updated:", genres);
-  }, [genres]);
+    // Handle sort option change
+    const handleSortChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+      const value = event.target.value;
+      setSortOption(value);
+      const [sortBy, sortOrder] = value.split(":");
+      onFilterChange({ sortBy, sortOrder: sortOrder as "asc" | "desc" });
+    };
 
-  // Handle sort option change
-  const handleSortChange = (event: SelectChangeEvent) => {
-    const value = event.target.value;
-    setSortOption(value);
-    const [sortBy, sortOrder] = value.split(":");
-    onFilterChange({ sortBy, sortOrder: sortOrder as "asc" | "desc" });
-  };
+    // Handle in stock toggle
+    const handleInStockChange = (
+      event: React.ChangeEvent<HTMLInputElement>
+    ) => {
+      const checked = event.target.checked;
+      setInStockOnly(checked);
+      onFilterChange({ inStock: checked || undefined });
+    };
 
-  // Handle in stock toggle
-  const handleInStockChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const checked = event.target.checked;
-    setInStockOnly(checked);
-    onFilterChange({ inStock: checked || undefined });
-  };
+    // Handle on sale toggle
+    const handleOnSaleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+      const checked = event.target.checked;
+      setOnSaleOnly(checked);
+      onFilterChange({ onSale: checked || undefined });
+    };
 
-  // Handle on sale toggle
-  const handleOnSaleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const checked = event.target.checked;
-    setOnSaleOnly(checked);
-    onFilterChange({ onSale: checked || undefined });
-  };
+    // Handle search button click
+    const handleSearchClick = () => {
+      onApplyFilters();
+    };
 
-  // Handle search button click
-  const handleSearchClick = () => {
-    onApplyFilters();
-  };
+    const containerStyles = {
+      width: "100%",
+      height: "calc(100vh - 200px)",
+      overflowY: "auto",
+      ...(isMobile
+        ? { padding: theme.spacing(2) }
+        : {
+            padding: theme.spacing(3),
+            maxHeight: "800px", // Fixed maximum height
+          }),
+    };
 
-  const containerStyles = {
-    width: "100%",
-    height: "calc(100vh - 200px)",
-    overflowY: "auto",
-    ...(isMobile
-      ? { padding: theme.spacing(2) }
-      : {
-          padding: theme.spacing(3),
-          maxHeight: "800px", // Fixed maximum height
-        }),
-  };
-
-  return (
-    <Box sx={containerStyles}>
-      <Typography variant="h6" gutterBottom fontWeight="bold">
-        Filter Books
-      </Typography>
-
-      {/* Author filter */}
-      <Box sx={{ mb: 3 }}>
-        <Typography
-          variant="subtitle2"
-          gutterBottom
-          sx={{ display: "flex", alignItems: "center" }}
-        >
-          <PersonIcon fontSize="small" sx={{ mr: 1 }} />
-          Author
-        </Typography>
-        <TextField
-          fullWidth
-          size="small"
-          variant="outlined"
-          placeholder="Search by author"
-          value={authorFilter}
-          onChange={handleAuthorChange}
-        />
-      </Box>
-
-      {/* Genre filter */}
-      <Box sx={{ mb: 3 }}>
-        <Typography
-          variant="subtitle2"
-          gutterBottom
-          sx={{ display: "flex", alignItems: "center" }}
-        >
-          <CategoryIcon fontSize="small" sx={{ mr: 1 }} />
-          Genres
-        </Typography>
-        <Autocomplete
-          multiple
-          options={genres.length > 0 ? genres : ["Loading genres..."]}
-          loading={genres.length === 0}
-          value={selectedGenres}
-          onChange={handleGenreChange}
-          renderInput={(params) => (
-            <TextField
-              {...params}
-              variant="outlined"
-              size="small"
-              placeholder={
-                genres.length > 0 ? "Select genres" : "Loading genres..."
-              }
-            />
-          )}
-          renderTags={(value, getTagProps) =>
-            value.map((option, index) => (
-              <Chip
-                {...getTagProps({ index })}
-                key={option}
-                label={option}
-                size="small"
-              />
-            ))
-          }
-        />
-      </Box>
-
-      {/* Price range filter */}
-      <Box sx={{ mb: 3 }}>
-        <Typography
-          variant="subtitle2"
-          gutterBottom
-          sx={{ display: "flex", alignItems: "center" }}
-        >
-          <AttachMoneyIcon fontSize="small" sx={{ mr: 1 }} />
-          Price Range
+    return (
+      <Box sx={containerStyles}>
+        <Typography variant="h6" gutterBottom fontWeight="bold">
+          Filter Books
         </Typography>
 
-        <Box sx={{ px: 1 }}>
-          <Slider
-            value={priceRange}
-            onChange={handlePriceChange}
-            valueLabelDisplay="auto"
-            valueLabelFormat={formatPrice}
-            min={0}
-            max={200}
-            step={1}
-            marks={priceMarks}
-            sx={{ mt: 3, mb: 1 }}
-          />
-
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "space-between",
-              mt: 2,
-              px: 1,
-            }}
+        {/* Author filter */}
+        <Box sx={{ mb: 3 }}>
+          <Typography
+            variant="subtitle2"
+            gutterBottom
+            sx={{ display: "flex", alignItems: "center" }}
           >
-            <TextField
-              label="Min"
-              value={priceRange[0]}
-              onChange={handlePriceMinChange}
-              type="number"
-              size="small"
-              InputProps={{
-                startAdornment: (
-                  <Typography variant="body2" sx={{ mr: 0.5 }}>
-                    $
-                  </Typography>
-                ),
-              }}
-              sx={{ width: "45%" }}
+            <PersonIcon fontSize="small" sx={{ mr: 1 }} />
+            Author
+          </Typography>
+          <TextField
+            fullWidth
+            size="small"
+            variant="outlined"
+            placeholder="Search by author"
+            value={authorFilter}
+            onChange={handleAuthorChange}
+          />
+        </Box>
+
+        {/* Genre filter */}
+        <Box sx={{ mb: 3 }}>
+          <Typography
+            variant="subtitle2"
+            gutterBottom
+            sx={{ display: "flex", alignItems: "center" }}
+          >
+            <CategoryIcon fontSize="small" sx={{ mr: 1 }} />
+            Genres
+          </Typography>
+          <Autocomplete
+            multiple
+            options={genres.length > 0 ? genres : ["Loading genres..."]}
+            loading={genres.length === 0}
+            value={selectedGenres}
+            onChange={handleGenreChange}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                variant="outlined"
+                size="small"
+                placeholder={
+                  genres.length > 0 ? "Select genres" : "Loading genres..."
+                }
+              />
+            )}
+            renderTags={(value, getTagProps) =>
+              value.map((option, index) => (
+                <Chip
+                  {...getTagProps({ index })}
+                  key={option}
+                  label={option}
+                  size="small"
+                />
+              ))
+            }
+          />
+        </Box>
+
+        {/* Price range filter */}
+        <Box sx={{ mb: 3 }}>
+          <Typography
+            variant="subtitle2"
+            gutterBottom
+            sx={{ display: "flex", alignItems: "center" }}
+          >
+            <AttachMoneyIcon fontSize="small" sx={{ mr: 1 }} />
+            Price Range
+          </Typography>
+
+          <Box sx={{ px: 1 }}>
+            <Slider
+              value={priceRange}
+              onChange={handlePriceChange}
+              valueLabelDisplay="auto"
+              valueLabelFormat={formatPrice}
+              min={0}
+              max={200}
+              step={1}
+              marks={priceMarks}
+              sx={{ mt: 3, mb: 1 }}
             />
-            <TextField
-              label="Max"
-              value={priceRange[1]}
-              onChange={handlePriceMaxChange}
-              type="number"
-              size="small"
-              InputProps={{
-                startAdornment: (
-                  <Typography variant="body2" sx={{ mr: 0.5 }}>
-                    $
-                  </Typography>
-                ),
+
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                mt: 2,
+                px: 1,
               }}
-              sx={{ width: "45%" }}
-            />
+            >
+              <TextField
+                label="Min"
+                value={priceRange[0]}
+                onChange={handlePriceMinChange}
+                type="number"
+                size="small"
+                InputProps={{
+                  startAdornment: (
+                    <Typography variant="body2" sx={{ mr: 0.5 }}>
+                      $
+                    </Typography>
+                  ),
+                }}
+                sx={{ width: "45%" }}
+              />
+              <TextField
+                label="Max"
+                value={priceRange[1]}
+                onChange={handlePriceMaxChange}
+                type="number"
+                size="small"
+                InputProps={{
+                  startAdornment: (
+                    <Typography variant="body2" sx={{ mr: 0.5 }}>
+                      $
+                    </Typography>
+                  ),
+                }}
+                sx={{ width: "45%" }}
+              />
+            </Box>
           </Box>
         </Box>
-      </Box>
 
-      {/* Stock and Sale filters */}
-      <Box sx={{ mb: 3 }}>
-        <Typography
-          variant="subtitle2"
-          gutterBottom
-          sx={{ display: "flex", alignItems: "center" }}
-        >
-          <LocalOfferIcon fontSize="small" sx={{ mr: 1 }} />
-          Availability & Offers
-        </Typography>
-        <FormControlLabel
-          control={
-            <Switch
-              checked={filters.inStock}
-              onChange={handleInStockChange}
-              name="inStock"
-            />
-          }
-          label="In Stock Only"
-          sx={{ width: "100%", mb: 1 }}
-        />
-        <FormControlLabel
-          control={
-            <Switch
-              checked={filters.onSale}
-              onChange={handleOnSaleChange}
-              name="onSale"
-            />
-          }
-          label="On Sale Only"
-          sx={{ width: "100%" }}
-        />
-      </Box>
+        {/* Stock and Sale filters */}
+        <Box sx={{ mb: 3 }}>
+          <Typography
+            variant="subtitle2"
+            gutterBottom
+            sx={{ display: "flex", alignItems: "center" }}
+          >
+            <LocalOfferIcon fontSize="small" sx={{ mr: 1 }} />
+            Availability & Offers
+          </Typography>
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={filters.inStock}
+                onChange={handleInStockChange}
+                size="small"
+              />
+            }
+            label="In Stock Only"
+            sx={{ width: "100%", mb: 1 }}
+          />
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={filters.onSale}
+                onChange={handleOnSaleChange}
+                size="small"
+              />
+            }
+            label="On Sale Only"
+            sx={{ width: "100%" }}
+          />
+        </Box>
 
-      {/* Action buttons */}
-      <Stack spacing={2} direction="row" sx={{ mt: 4 }}>
-        <Button
-          variant="outlined"
-          color="secondary"
-          onClick={onResetFilters}
-          fullWidth
-        >
-          Reset
-        </Button>
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={handleSearchClick}
-          fullWidth
-          startIcon={<SearchIcon />}
-        >
-          Search
-        </Button>
-      </Stack>
-    </Box>
-  );
-};
+        {/* Action buttons */}
+        <Stack spacing={2} direction="row" sx={{ mt: 4 }}>
+          <Button
+            variant="outlined"
+            color="secondary"
+            onClick={onResetFilters}
+            fullWidth
+          >
+            Reset
+          </Button>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={handleSearchClick}
+            fullWidth
+            startIcon={<SearchIcon />}
+          >
+            Search
+          </Button>
+        </Stack>
+      </Box>
+    );
+  }
+);
+
+FilterPanel.displayName = "FilterPanel";
 
 export default FilterPanel;

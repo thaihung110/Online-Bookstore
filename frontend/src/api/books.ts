@@ -1,4 +1,5 @@
 import api from "./axios";
+import { useMemo } from "react";
 
 export interface Book {
   id: string;
@@ -44,42 +45,90 @@ export interface BookResponse {
   limit: number;
 }
 
-// Hàm xử lý dữ liệu sách từ API để đảm bảo tính đúng đắn
-const transformBookData = (bookData: any): Book => {
-  // Đảm bảo ID được chuyển từ _id của MongoDB sang id cho frontend
-  const id = bookData._id || bookData.id;
+// Define raw book data type from API
+interface RawBookData {
+  _id?: string;
+  id?: string;
+  title: string;
+  author: string;
+  description: string;
+  originalPrice?: number;
+  discountRate?: number;
+  price: number;
+  coverImage?: string;
+  isbn: string;
+  genres: string[];
+  publisher: string;
+  publicationYear: number;
+  rating?: number;
+  averageRating?: number;
+  stock: number;
+  category?: string[];
+  publishedDate?: string;
+  pageCount?: number;
+}
 
-  // Đảm bảo có originalPrice, nếu không thì lấy giá price
-  const originalPrice =
-    bookData.originalPrice !== undefined
-      ? bookData.originalPrice
-      : bookData.price;
+// Validate book data
+const isValidBook = (book: any): book is RawBookData => {
+  return (
+    typeof book === "object" &&
+    book !== null &&
+    typeof book.title === "string" &&
+    typeof book.author === "string" &&
+    typeof book.description === "string" &&
+    typeof book.price === "number" &&
+    typeof book.isbn === "string" &&
+    Array.isArray(book.genres) &&
+    typeof book.publisher === "string" &&
+    typeof book.publicationYear === "number"
+  );
+};
 
-  // Đảm bảo có discountRate, mặc định là 0
-  const discountRate =
-    bookData.discountRate !== undefined ? bookData.discountRate : 0;
+// Cache for memoizing book data
+const bookCache = new Map<string, { data: Book | Book[]; timestamp: number }>();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
-  // Tính giá hiển thị (đã giảm), nếu không có thì lấy từ API
-  const price = bookData.price;
+// Transform book data from API to frontend format
+const transformBookData = (bookData: RawBookData): Book => {
+  // Convert _id to id if necessary
+  const id = bookData._id || bookData.id || "";
+
+  // Ensure numeric values
+  const originalPrice = Number(bookData.originalPrice) || bookData.price;
+  const discountRate = Number(bookData.discountRate) || 0;
+  const price = Number(bookData.price);
+  const rating = bookData.rating
+    ? Number(bookData.rating)
+    : bookData.averageRating
+    ? Number(bookData.averageRating)
+    : undefined;
+  const stock = Number(bookData.stock) || 0;
+  const pageCount = bookData.pageCount ? Number(bookData.pageCount) : undefined;
+
+  // Ensure arrays
+  const genres = Array.isArray(bookData.genres) ? bookData.genres : [];
+  const category = Array.isArray(bookData.category)
+    ? bookData.category
+    : undefined;
 
   return {
     id,
-    title: bookData.title,
-    author: bookData.author,
-    description: bookData.description,
+    title: bookData.title.trim(),
+    author: bookData.author.trim(),
+    description: bookData.description.trim(),
     originalPrice,
     discountRate,
     price,
     coverImage: bookData.coverImage,
     isbn: bookData.isbn,
-    genres: bookData.genres || [],
-    publisher: bookData.publisher,
+    genres,
+    publisher: bookData.publisher.trim(),
     publicationYear: bookData.publicationYear,
-    rating: bookData.rating || bookData.averageRating,
-    stock: bookData.stock,
-    category: bookData.category,
+    rating,
+    stock,
+    category,
     publishedDate: bookData.publishedDate,
-    pageCount: bookData.pageCount,
+    pageCount,
   };
 };
 
@@ -89,43 +138,44 @@ export const getBooks = async (
 ): Promise<BookResponse> => {
   console.log("API: Calling getBooks with query:", query);
 
-  // Log specifically for genres filter
-  if (query.genres) {
-    console.log(
-      "API: Genres filter:",
-      Array.isArray(query.genres) ? query.genres : [query.genres]
-    );
-  }
-
   try {
-    // Manually build params to ensure genres are sent correctly
-    const params: Record<string, any> = { ...query };
+    // Clean up query parameters
+    const cleanQuery: BookQuery = {};
+    if (query.page && query.page > 0) cleanQuery.page = query.page;
+    if (query.limit && query.limit > 0) cleanQuery.limit = query.limit;
+    if (query.search?.trim()) cleanQuery.search = query.search.trim();
+    if (query.author?.trim()) cleanQuery.author = query.author.trim();
+    if (Array.isArray(query.genres) && query.genres.length > 0) {
+      cleanQuery.genres = query.genres;
+    }
+    if (query.minPrice && query.minPrice >= 0)
+      cleanQuery.minPrice = query.minPrice;
+    if (query.maxPrice && query.maxPrice >= 0)
+      cleanQuery.maxPrice = query.maxPrice;
+    if (query.inStock !== undefined) cleanQuery.inStock = query.inStock;
+    if (query.onSale !== undefined) cleanQuery.onSale = query.onSale;
+    if (query.sortBy) cleanQuery.sortBy = query.sortBy;
+    if (query.sortOrder) cleanQuery.sortOrder = query.sortOrder;
 
-    // Check if genres need special handling
-    if (
-      params.genres &&
-      Array.isArray(params.genres) &&
-      params.genres.length === 0
-    ) {
-      delete params.genres; // Remove empty arrays
+    console.log("API: Clean query parameters:", cleanQuery);
+    const response = await api.get("/books", { params: cleanQuery });
+
+    // Validate and transform response data
+    if (!response.data || !Array.isArray(response.data.books)) {
+      throw new Error("Invalid response format from API");
     }
 
-    console.log("API: Final params for API call:", params);
-    const response = await api.get("/books", { params });
-    console.log("API: getBooks response data:", response.data);
-
-    // Xử lý dữ liệu để đảm bảo tính đúng đắn
     const transformedBooks = response.data.books.map(transformBookData);
 
     return {
       books: transformedBooks,
-      total: response.data.total,
-      page: response.data.page,
-      limit: response.data.limit,
+      total: response.data.total || transformedBooks.length,
+      page: response.data.page || 1,
+      limit: response.data.limit || 10,
     };
   } catch (error) {
     console.error("Error in getBooks API call:", error);
-    // Return a default empty response instead of throwing to prevent UI from breaking
+    // Return safe default response
     return {
       books: [],
       total: 0,
@@ -135,50 +185,63 @@ export const getBooks = async (
   }
 };
 
-// Get a single book by ID
+// Get a single book by ID with caching
 export const getBookById = async (id: string): Promise<Book> => {
   console.log(`Calling getBookById API for id: ${id}`);
+
+  // Check cache first
+  const cached = bookCache.get(id);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    console.log("Cache hit for book:", id);
+    return cached.data as Book;
+  }
+
   try {
     const response = await api.get(`/books/${id}`);
-    console.log("getBookById API response:", response.data);
+    const transformedBook = transformBookData(response.data as RawBookData);
 
-    // Xử lý dữ liệu để đảm bảo tính đúng đắn
-    return transformBookData(response.data);
+    // Update cache
+    bookCache.set(id, {
+      data: transformedBook,
+      timestamp: Date.now(),
+    });
+
+    return transformedBook;
   } catch (error) {
     console.error(`Error in getBookById API call for id ${id}:`, error);
     throw error;
   }
 };
 
-// Get books by category
+// Get books by category with validation
 export const getBooksByCategory = async (
   category: string,
   query: Omit<BookQuery, "genres"> = {}
 ): Promise<BookResponse> => {
-  console.log(
-    `Calling getBooksByCategory API for category: ${category} with query:`,
-    query
-  );
+  if (!category?.trim()) {
+    throw new Error("Category is required");
+  }
+
+  console.log(`Calling getBooksByCategory API for category: ${category}`);
   try {
     const response = await api.get("/books", {
-      params: { ...query, genres: [category] },
+      params: { ...query, genres: [category.trim()] },
     });
-    console.log("getBooksByCategory API response:", response.data);
 
-    // Xử lý dữ liệu để đảm bảo tính đúng đắn
+    if (!response.data || !Array.isArray(response.data.books)) {
+      throw new Error("Invalid response format from API");
+    }
+
     const transformedBooks = response.data.books.map(transformBookData);
 
     return {
       books: transformedBooks,
-      total: response.data.total,
-      page: response.data.page,
-      limit: response.data.limit,
+      total: response.data.total || transformedBooks.length,
+      page: response.data.page || 1,
+      limit: response.data.limit || 10,
     };
   } catch (error) {
-    console.error(
-      `Error in getBooksByCategory API call for category ${category}:`,
-      error
-    );
+    console.error(`Error in getBooksByCategory API call:`, error);
     return {
       books: [],
       total: 0,
@@ -188,92 +251,71 @@ export const getBooksByCategory = async (
   }
 };
 
-// Get featured books
+// Get featured books with memoization
 export const getFeaturedBooks = async (limit: number = 6): Promise<Book[]> => {
-  console.log(`Calling getFeaturedBooks API with limit: ${limit}`);
+  const cacheKey = `featured_${limit}`;
+  const cached = bookCache.get(cacheKey);
+
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    console.log("Cache hit for featured books");
+    return cached.data as Book[];
+  }
+
   try {
-    // Không xây dựng URL thủ công, để axios xử lý việc này
     const response = await api.get("/books/featured", {
-      params: { limit },
-      // Đảm bảo không xảy ra lỗi từ URL
-      paramsSerializer: (params) => {
-        const searchParams = new URLSearchParams();
-        for (const key in params) {
-          searchParams.append(key, params[key]);
-        }
-        return searchParams.toString();
-      },
+      params: { limit: Math.max(1, Math.min(limit, 20)) }, // Limit between 1 and 20
     });
 
-    console.log("getFeaturedBooks API response:", response.data);
-
     if (!Array.isArray(response.data)) {
-      console.warn("Expected array response, but got:", typeof response.data);
-      return [];
+      throw new Error("Invalid response format for featured books");
     }
 
-    // Xử lý dữ liệu để đảm bảo tính đúng đắn
-    return response.data.map(transformBookData);
-  } catch (error: any) {
+    const transformedBooks = response.data.map((book: RawBookData) =>
+      transformBookData(book)
+    );
+
+    // Update cache
+    bookCache.set(cacheKey, {
+      data: transformedBooks,
+      timestamp: Date.now(),
+    });
+
+    return transformedBooks;
+  } catch (error) {
     console.error("Error in getFeaturedBooks API call:", error);
-    if (error.response) {
-      // The request was made and the server responded with a status code
-      // that falls out of the range of 2xx
-      console.error("Response error data:", error.response.data);
-      console.error("Response error status:", error.response.status);
-      console.error("Response error headers:", error.response.headers);
-    } else if (error.request) {
-      // The request was made but no response was received
-      console.error("Request made but no response received:", error.request);
-    } else {
-      // Something happened in setting up the request that triggered an Error
-      console.error("Error message:", error.message);
-    }
-    // Return an empty array instead of throwing to prevent UI from breaking
     return [];
   }
 };
 
-// Get all unique genres
+// Get all unique genres with caching
+const genresCache = {
+  data: [] as string[],
+  timestamp: 0,
+};
+
 export const getAllGenres = async (): Promise<string[]> => {
-  console.log(
-    "Calling getAllGenres API with URL:",
-    `${api.defaults.baseURL}/books/genres`
-  );
+  // Check cache
+  if (Date.now() - genresCache.timestamp < CACHE_TTL) {
+    return genresCache.data;
+  }
+
   try {
     const response = await api.get("/books/genres");
-    console.log("getAllGenres API response:", response);
-    console.log(
-      "getAllGenres data type:",
-      typeof response.data,
-      Array.isArray(response.data)
-    );
 
-    if (!response.data || !Array.isArray(response.data)) {
-      console.warn(
-        "Expected array response for genres, but got:",
-        response.data
-      );
-      // Fallback list trong trường hợp API trả về không phải mảng
-      return [
-        "Fiction",
-        "Non-Fiction",
-        "Science Fiction",
-        "Fantasy",
-        "Mystery",
-      ];
+    if (!Array.isArray(response.data)) {
+      throw new Error("Invalid response format for genres");
     }
+
+    // Update cache
+    genresCache.data = response.data;
+    genresCache.timestamp = Date.now();
 
     return response.data;
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error in getAllGenres API call:", error);
-    if (error.response) {
-      console.error("Response error status:", error.response.status);
-      console.error("Response error data:", error.response.data);
-    } else if (error.request) {
-      console.error("Request made but no response received:", error.request);
-    }
-    // Fallback list khi có lỗi
-    return ["Fiction", "Non-Fiction", "Science Fiction", "Fantasy", "Mystery"];
+    // Return cached data if available, otherwise fallback list
+    return genresCache.data.length > 0
+      ? genresCache.data
+      : ["Fiction", "Non-Fiction", "Science Fiction", "Fantasy", "Mystery"];
   }
 };
