@@ -62,6 +62,9 @@ const HomePage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [genres, setGenres] = useState<string[]>([]);
   const [loadingGenres, setLoadingGenres] = useState(false);
+  const [recommendedBooks, setRecommendedBooks] = useState<Book[]>([]);
+  const [loadingRecommended, setLoadingRecommended] = useState(false);
+  const [errorRecommended, setErrorRecommended] = useState<string | null>(null);
 
   useEffect(() => {
     const loadFeaturedBooks = async () => {
@@ -89,6 +92,18 @@ const HomePage: React.FC = () => {
       })
       .finally(() => setLoadingGenres(false));
   }, []);
+
+  useEffect(() => {
+    // Giả lập: lấy ngẫu nhiên 6 sách từ featuredBooks nếu chưa có API riêng
+    if (featuredBooks.length > 0) {
+      setLoadingRecommended(true);
+      setTimeout(() => {
+        const shuffled = [...featuredBooks].sort(() => 0.5 - Math.random());
+        setRecommendedBooks(shuffled.slice(0, 6));
+        setLoadingRecommended(false);
+      }, 500);
+    }
+  }, [featuredBooks]);
 
   // Lấy 7 genres nổi bật đầu tiên có trong data
   const featuredGenres = FEATURED_GENRES.filter((g) =>
@@ -374,178 +389,55 @@ const HomePage: React.FC = () => {
         </Box>
       </Container>
 
-      {/* Categories Section */}
-      <Box sx={{ bgcolor: "background.paper", py: 8, mb: 4 }}>
-        <Container maxWidth="lg">
-          <Box sx={{ display: "flex", alignItems: "center", mb: 4 }}>
-            <BookIcon color="primary" sx={{ fontSize: 32, mr: 2 }} />
-            <Typography
-              component="h2"
-              variant="h4"
-              gutterBottom
-              sx={{
-                fontFamily: "'Playfair Display', serif",
-                fontWeight: 600,
-                position: "relative",
-                display: "inline-block",
-                mb: 0,
-              }}
-            >
-              Browse by Category
-              <Box
-                sx={{
-                  position: "absolute",
-                  width: "40%",
-                  height: "3px",
-                  bottom: "-8px",
-                  left: "0",
-                  backgroundColor: "secondary.main",
-                }}
-              />
-            </Typography>
-          </Box>
-          {loadingGenres ? (
-            <Box sx={{ display: "flex", justifyContent: "center", my: 4 }}>
-              <CircularProgress />
-            </Box>
-          ) : (
-            <Box sx={{ display: "flex", flexWrap: "wrap", mx: -1 }}>
-              {featuredGenres.map((genre) => {
-                // Lấy ảnh minh hoạ: ưu tiên mapping, nếu không có thì tạo link Unsplash theo tên genre
-                const img =
-                  FEATURED_GENRE_IMAGES[genre] ||
-                  `https://source.unsplash.com/random/400x300/?${encodeURIComponent(
-                    genre
-                  )},book`;
-                return (
-                  <Box
-                    key={genre}
-                    sx={{
-                      width: { xs: "50%", sm: "33.33%", md: "16.66%" },
-                      p: 1,
-                    }}
-                  >
-                    <Card
-                      component={RouterLink}
-                      to={`/books?genres=${encodeURIComponent(genre)}`}
-                      sx={{
-                        height: 150,
-                        display: "flex",
-                        flexDirection: "column",
-                        justifyContent: "flex-end",
-                        position: "relative",
-                        textDecoration: "none",
-                        borderRadius: 2,
-                        overflow: "hidden",
-                        transition: "transform 0.3s",
-                        "&:hover": {
-                          transform: "scale(1.03)",
-                        },
-                      }}
-                    >
-                      <CardMedia
-                        component="img"
-                        image={img}
-                        alt={genre}
-                        sx={{
-                          position: "absolute",
-                          top: 0,
-                          left: 0,
-                          width: "100%",
-                          height: "100%",
-                          objectFit: "cover",
-                        }}
-                      />
-                      <Box
-                        sx={{
-                          position: "absolute",
-                          top: 0,
-                          left: 0,
-                          width: "100%",
-                          height: "100%",
-                          background:
-                            "linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.3) 50%, rgba(0,0,0,0) 100%)",
-                        }}
-                      />
-                      <CardContent
-                        sx={{ position: "relative", color: "white", p: 2 }}
-                      >
-                        <Typography variant="h6" component="div">
-                          {genre}
-                        </Typography>
-                      </CardContent>
-                    </Card>
-                  </Box>
-                );
-              })}
-            </Box>
-          )}
-        </Container>
-      </Box>
-
-      {/* Newsletter Section */}
-      <Container maxWidth="md" sx={{ mb: 8, px: { xs: 2, md: 3 } }}>
-        <Paper
-          sx={{
-            p: { xs: 3, md: 6 },
-            backgroundColor: "primary.main",
-            color: "white",
-            borderRadius: 2,
-            position: "relative",
-            overflow: "hidden",
-          }}
-        >
-          <Box
+      {/* Recommended for you Section */}
+      <Container maxWidth="lg" sx={{ mb: 8, px: { xs: 2, md: 3 } }}>
+        <Box sx={{ display: "flex", alignItems: "center", mb: 4 }}>
+          <WhatshotIcon color="secondary" sx={{ fontSize: 32, mr: 2 }} />
+          <Typography
+            component="h2"
+            variant="h4"
+            gutterBottom
             sx={{
-              position: "absolute",
-              top: 0,
-              right: 0,
-              width: { xs: "100px", md: "200px" },
-              height: { xs: "100px", md: "200px" },
-              background: "rgba(255,255,255,0.1)",
-              borderRadius: "50%",
-              transform: "translate(30%, -30%)",
-            }}
-          />
-          <Box
-            sx={{
-              position: "absolute",
-              bottom: 0,
-              left: 0,
-              width: { xs: "80px", md: "150px" },
-              height: { xs: "80px", md: "150px" },
-              background: "rgba(255,255,255,0.1)",
-              borderRadius: "50%",
-              transform: "translate(-30%, 30%)",
-            }}
-          />
-          <Box
-            sx={{
+              fontFamily: "'Playfair Display', serif",
+              fontWeight: 600,
               position: "relative",
-              zIndex: 1,
-              textAlign: "center",
-              maxWidth: "600px",
-              mx: "auto",
+              display: "inline-block",
+              mb: 0,
             }}
           >
-            <Typography variant="h4" gutterBottom fontWeight={600}>
-              Stay Updated
-            </Typography>
-            <Typography variant="body1" paragraph sx={{ mb: 4, opacity: 0.9 }}>
-              Subscribe to our newsletter and be the first to know about new
-              releases, special promotions, and exclusive content.
-            </Typography>
-            <Button
-              variant="contained"
-              color="secondary"
-              size="large"
-              fullWidth
-              sx={{ py: 1.5 }}
-            >
-              Subscribe Now
-            </Button>
+            Recommended for you
+            <Box
+              sx={{
+                position: "absolute",
+                width: "40%",
+                height: "3px",
+                bottom: "-8px",
+                left: "0",
+                backgroundColor: "secondary.main",
+              }}
+            />
+          </Typography>
+        </Box>
+        {loadingRecommended ? (
+          <Box sx={{ display: "flex", justifyContent: "center", my: 4 }}>
+            <CircularProgress />
           </Box>
-        </Paper>
+        ) : errorRecommended ? (
+          <Box sx={{ textAlign: "center", my: 4 }}>
+            <Typography color="error">{errorRecommended}</Typography>
+          </Box>
+        ) : (
+          <Box sx={{ display: "flex", flexWrap: "wrap", mx: -1.5 }}>
+            {recommendedBooks.map((book) => (
+              <Box
+                key={book.id}
+                sx={{ width: { xs: "100%", sm: "50%", md: "33.33%" }, p: 1.5 }}
+              >
+                <BookCard book={book} />
+              </Box>
+            ))}
+          </Box>
+        )}
       </Container>
     </MainLayout>
   );

@@ -10,9 +10,22 @@ import {
 } from "@mui/material";
 import ChatIcon from "@mui/icons-material/Chat";
 import CloseIcon from "@mui/icons-material/Close";
+import api from "../api/axios";
+import DOMPurify from "dompurify";
+import { marked } from "marked";
 
-const OPENAI_DEMO_ENDPOINT = "https://api.openai.com/v1/chat/completions";
-const OPENAI_DEMO_KEY = "sk-demo"; // <-- Thay bằng key thật nếu cần, demo sẽ không gửi thật
+const CHATBOT_ENDPOINT = "http://127.0.0.1:8000/chat";
+
+function renderMarkdown(md: string): string {
+  // marked có thể trả về Promise nếu dùng async, nên ép về string
+  if (typeof marked === "function") {
+    const html = marked(md);
+    if (typeof html === "string") return html;
+    // Nếu là Promise (trường hợp hiếm), trả về chuỗi gốc
+    return md;
+  }
+  return md;
+}
 
 const ChatbotWidget: React.FC = () => {
   const [open, setOpen] = useState(false);
@@ -31,32 +44,46 @@ const ChatbotWidget: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      // Gửi request demo tới OpenAI (chỉ hoạt động với key thật)
-      const res = await fetch(OPENAI_DEMO_ENDPOINT, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${OPENAI_DEMO_KEY}`,
-        },
-        body: JSON.stringify({
-          model: "gpt-3.5-turbo",
-          messages: newMessages.map((m) => ({
-            role: m.role,
-            content: m.content,
-          })),
-          max_tokens: 100,
-        }),
-      });
-      if (!res.ok) throw new Error("Không thể kết nối OpenAI API");
-      const data = await res.json();
-      const aiMsg =
-        data.choices?.[0]?.message?.content || "(Không có phản hồi)";
+      const res = await api.post(
+        CHATBOT_ENDPOINT,
+        { message: input },
+        { timeout: 30000 }
+      );
+      const aiMsg = res.data?.response || "(Không có phản hồi)";
       setMessages([...newMessages, { role: "assistant", content: aiMsg }]);
     } catch (e: any) {
-      setError("Lỗi khi gửi tới AI. (Demo: cần API key thật)");
+      // Xử lý lỗi đặc biệt
+      let userMsg = "Lỗi không xác định khi kết nối chatbot.";
+      if (e.response) {
+        switch (e.response.status) {
+          case 401:
+            userMsg = "Bạn chưa đăng nhập hoặc phiên đăng nhập đã hết hạn.";
+            break;
+          case 403:
+            userMsg = "Bạn không có quyền truy cập chức năng này.";
+            break;
+          case 404:
+            userMsg = "Không tìm thấy endpoint chatbot.";
+            break;
+          case 422:
+            userMsg =
+              e.response.data?.message || "Dữ liệu gửi lên không hợp lệ.";
+            break;
+          case 500:
+            userMsg = "Lỗi server nội bộ. Vui lòng thử lại sau.";
+            break;
+          default:
+            userMsg = e.response.data?.message || `Lỗi: ${e.response.status}`;
+        }
+      } else if (e.code === "ECONNABORTED") {
+        userMsg = "Kết nối tới chatbot bị timeout.";
+      } else if (e.message?.includes("Network Error")) {
+        userMsg = "Không thể kết nối tới server chatbot.";
+      }
+      setError(userMsg);
       setMessages([
         ...newMessages,
-        { role: "assistant", content: "(Lỗi: không thể trả lời)" },
+        { role: "assistant", content: `(Lỗi: ${userMsg})` },
       ]);
     } finally {
       setLoading(false);
@@ -147,7 +174,17 @@ const ChatbotWidget: React.FC = () => {
                   boxShadow: 1,
                 }}
               >
-                {msg.content}
+                {msg.role === "assistant" ? (
+                  <span
+                    dangerouslySetInnerHTML={{
+                      __html: DOMPurify.sanitize(
+                        renderMarkdown(msg.content || "")
+                      ),
+                    }}
+                  />
+                ) : (
+                  msg.content
+                )}
               </Box>
             ))}
             {loading && (
