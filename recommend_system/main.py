@@ -5,6 +5,7 @@ from bson import ObjectId
 from typing import List
 import numpy as np
 # CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]
+# uvicorn main:app --port 8080
 app = FastAPI()
 
 # Kết nối MongoDB
@@ -23,11 +24,36 @@ async def add_rating(
     rating: float = Body(...),
     created_at: str = Body(..., description="Timestamp of the rating in ISO format")
 ):
-    return {
+    rating_col = db["user_rating"]
+
+    past_ratings = rating_col.find_one({
+        "user_id": user_id,
+        "book_id": book_id
+    })
+
+
+    if past_ratings:
+        # Nếu đã có rating, cập nhật rating mới
+        rating_col.update_one(
+            {"user_id": user_id, "book_id": book_id},
+            {"$set": {"rating": rating, "created_at": created_at}}
+        )
+        print(f"Updated rating for user {user_id} and book {book_id}.")
+
+        return {
+            "status": "updated",
+            "message": f"Rating updated for user {user_id} and book {book_id}."
+        }
+
+    rating_col.insert_one({
         "user_id": user_id,
         "book_id": book_id,
         "rating": rating,
         "created_at": created_at
+    })
+    return {
+        "status": "success",
+        "message": f"Rating added for user {user_id} and book {book_id}."
     }
 
 
