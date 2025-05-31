@@ -8,7 +8,6 @@ import {
   ValidateNested,
   IsOptional,
   ValidateIf,
-  IsArray,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
@@ -20,26 +19,6 @@ export class VNPayDetailsDto {
   @IsString()
   @IsOptional()
   returnUrl?: string;
-}
-
-export class PaymentCartItemDto {
-  @ApiProperty({
-    description: 'ID của sách',
-    example: '60d21b4667d0d8992e610c85',
-  })
-  @IsString()
-  @IsNotEmpty()
-  bookId: string;
-
-  @ApiProperty({ description: 'Số lượng', example: 2, minimum: 1 })
-  @IsNumber()
-  @Min(1)
-  quantity: number;
-
-  @ApiProperty({ description: 'Giá tại thời điểm thêm vào', example: 100000 })
-  @IsNumber()
-  @Min(0)
-  priceAtAdd: number;
 }
 
 // DTO chung cho việc tạo thanh toán
@@ -86,13 +65,4 @@ export class CreatePaymentDto {
   @Type(() => VNPayDetailsDto)
   @IsObject()
   vnpayDetails?: VNPayDetailsDto;
-
-  @ApiProperty({
-    type: [PaymentCartItemDto],
-    description: 'Danh sách item được tick để thanh toán',
-  })
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => PaymentCartItemDto)
-  items: PaymentCartItemDto[];
 }

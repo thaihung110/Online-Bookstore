@@ -17,11 +17,7 @@ export interface VNPayDetails {
 }
 
 // Interface cho thông tin item thanh toán
-export interface PaymentCartItem {
-  bookId: string;
-  quantity: number;
-  priceAtAdd: number;
-}
+// Xoá interface PaymentCartItem
 
 // Interface cho yêu cầu tạo thanh toán
 export interface CreatePaymentRequest {
@@ -33,7 +29,6 @@ export interface CreatePaymentRequest {
   address: string;
   phone: string;
   vnpayDetails?: VNPayDetails;
-  items: PaymentCartItem[];
 }
 
 // Interface cho thông tin thanh toán

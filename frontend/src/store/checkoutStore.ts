@@ -194,18 +194,6 @@ export const useCheckoutStore = create<CheckoutState>()(
             }
           }
 
-          // Lấy danh sách item được tick từ cart
-          const cartStore = useCartStore.getState();
-          const cartItems = cartStore.getCartItems();
-          const tickedItems = cartItems.filter(
-            (item) => (item as any).isTicked !== false
-          );
-          const paymentItems = tickedItems.map((item) => ({
-            bookId: item.book.id,
-            quantity: item.quantity,
-            priceAtAdd: item.priceAtAdd,
-          }));
-
           // Chuẩn bị dữ liệu gửi lên
           const paymentRequest: CreatePaymentRequest = {
             orderId: order.id,
@@ -216,10 +204,17 @@ export const useCheckoutStore = create<CheckoutState>()(
             address: shippingAddress.address,
             phone: shippingAddress.phoneNumber,
             ...(paymentMethod === "VNPAY" ? { vnpayDetails: {} } : {}),
-            items: paymentItems,
           };
 
-          console.log("[DEBUG] Sending paymentRequest:", paymentRequest);
+          // Log chi tiết để debug
+          console.log("[DEBUG] paymentRequest:", paymentRequest);
+          console.log("[DEBUG] orderId:", order.id);
+          console.log("[DEBUG] paymentMethod:", paymentMethod);
+          console.log("[DEBUG] amount:", amount);
+          console.log("[DEBUG] fullName:", shippingAddress.fullName);
+          console.log("[DEBUG] city:", shippingAddress.city);
+          console.log("[DEBUG] address:", shippingAddress.address);
+          console.log("[DEBUG] phone:", shippingAddress.phoneNumber);
 
           const payment = await createPayment(paymentRequest);
 
