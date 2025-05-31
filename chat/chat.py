@@ -106,18 +106,18 @@ def load_books():
     return book_embeddings, book_metadata
 
 
-if __name__ == "__main__":
-    history = []
-    book_embeddings, book_metadata = load_books()
-
-    while True:
-        user_query = input("you: ")
-
-        contents = get_contents(user_query, history, book_embeddings, book_metadata)
-        response_text = generate(genai_client, gemini_model, contents)
-
-        # Update history
-        history.append(to_content("user", user_query))
-        history.append(to_content("model", response_text))
-
-        print("model:", response_text)
+# if __name__ == "__main__":
+#     history = []
+#     book_embeddings, book_metadata = load_books()
+#
+#     while True:
+#         user_query = input("you: ")
+#
+#         contents = get_contents(user_query, history, book_embeddings, book_metadata)
+#         response_text = generate(genai_client, gemini_model, contents)
+#
+#         # Update history
+#         history.append(to_content("user", user_query))
+#         history.append(to_content("model", response_text))
+#
+#         print("model:", response_text)
