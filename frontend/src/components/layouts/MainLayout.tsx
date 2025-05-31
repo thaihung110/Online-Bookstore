@@ -49,7 +49,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const { isAuthenticated, logout, user } = useAuthStore();
   const cartStore = useCartStore();
-  const totalItems = cartStore.getTotalItems();
+  const totalItems = useCartStore((state) => state.getTotalItems());
 
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 

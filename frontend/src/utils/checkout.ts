@@ -51,7 +51,9 @@ export const canProceedToCheckout = (
 export const processCheckoutPayment = async (
   placeOrder: () => Promise<any>,
   createPayment: () => Promise<any>,
-  processPayment: () => Promise<{ redirectUrl?: string; success: boolean }>,
+  processPayment: (
+    id: string
+  ) => Promise<{ redirectUrl?: string; success: boolean }>,
   paymentMethod: string | null
 ): Promise<{ success: boolean; redirectUrl?: string; error?: string }> => {
   try {
@@ -64,11 +66,16 @@ export const processCheckoutPayment = async (
     console.log("Payment created:", payment);
 
     // Xử lý thanh toán
-    const result = await processPayment();
+    if (!payment || !payment.id) {
+      throw new Error("Không lấy được payment id để xử lý thanh toán");
+    }
+    console.log("[DEBUG] Call processPayment with id:", payment.id);
+    const result = await processPayment(payment.id);
     console.log("Payment processed:", result);
 
     // Nếu là VNPay, trả về URL để chuyển hướng
     if (paymentMethod === "VNPAY" && result.redirectUrl) {
+      window.open(result.redirectUrl, "_blank", "noopener");
       return {
         success: true,
         redirectUrl: result.redirectUrl,

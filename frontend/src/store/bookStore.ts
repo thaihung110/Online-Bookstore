@@ -12,7 +12,6 @@ interface BookState {
   featuredBooks: Book[];
   currentBook: Book | null;
   totalBooks: number;
-  currentPage: number;
   limit: number;
   isLoading: boolean;
   error: string | null;
@@ -24,8 +23,6 @@ interface BookState {
   fetchBookById: (id: string) => Promise<void>;
   setFilters: (filters: Partial<BookQuery>) => void;
   resetFilters: () => void;
-  nextPage: () => Promise<void>;
-  prevPage: () => Promise<void>;
   setPage: (page: number) => Promise<void>;
   clearError: () => void;
   loadGenres: () => Promise<void>;
@@ -43,7 +40,6 @@ export const useBookStore = create<BookState>((set, get) => ({
   featuredBooks: [],
   currentBook: null,
   totalBooks: 0,
-  currentPage: 1,
   limit: 10,
   isLoading: false,
   error: null,
@@ -80,9 +76,7 @@ export const useBookStore = create<BookState>((set, get) => ({
       set({
         books: response.books,
         totalBooks: response.total,
-        currentPage: response.page,
         limit: response.limit,
-        filters: mergedQuery,
         isLoading: false,
       });
     } catch (error) {
@@ -111,7 +105,14 @@ export const useBookStore = create<BookState>((set, get) => ({
   },
 
   setFilters: (filters) => {
-    const updatedFilters = { ...get().filters, ...filters, page: 1 }; // Reset to page 1 when filters change
+    // Nếu filters chỉ thay đổi page, giữ nguyên page truyền vào
+    let updatedFilters;
+    if (Object.keys(filters).length === 1 && filters.page !== undefined) {
+      updatedFilters = { ...get().filters, ...filters };
+    } else {
+      // Nếu thay đổi filter khác, reset page về 1
+      updatedFilters = { ...get().filters, ...filters, page: 1 };
+    }
     set({ filters: updatedFilters });
     get().fetchBooks(updatedFilters);
   },
@@ -119,25 +120,6 @@ export const useBookStore = create<BookState>((set, get) => ({
   resetFilters: () => {
     set({ filters: defaultFilters });
     get().fetchBooks(defaultFilters);
-  },
-
-  nextPage: async () => {
-    const { currentPage, totalBooks, limit, filters } = get();
-    const totalPages = Math.ceil(totalBooks / limit);
-
-    if (currentPage < totalPages) {
-      const newPage = currentPage + 1;
-      await get().setPage(newPage);
-    }
-  },
-
-  prevPage: async () => {
-    const { currentPage } = get();
-
-    if (currentPage > 1) {
-      const newPage = currentPage - 1;
-      await get().setPage(newPage);
-    }
   },
 
   setPage: async (page) => {

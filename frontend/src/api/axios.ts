@@ -37,6 +37,21 @@ const api = axios.create({
     : 10000,
   // Thêm withCredentials để gửi cookies
   withCredentials: true,
+  // Thêm cấu hình paramsSerializer mặc định
+  paramsSerializer: {
+    serialize: (params) => {
+      return Object.entries(params)
+        .map(([key, value]) => {
+          if (Array.isArray(value)) {
+            return value
+              .map((v) => `${encodeURIComponent(key)}=${encodeURIComponent(v)}`)
+              .join("&");
+          }
+          return `${encodeURIComponent(key)}=${encodeURIComponent(value)}`;
+        })
+        .join("&");
+    },
+  },
 });
 
 // Simple retry mechanism

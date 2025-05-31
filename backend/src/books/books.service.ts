@@ -17,12 +17,32 @@ export class BooksService {
   private convertPricesToUSD(book: any): any {
     if (!book) return null;
     const bookObj = book.toObject ? book.toObject() : { ...book };
+
+    // Chuẩn hóa coverImage
+    let coverImage = bookObj.coverImage;
+    if (
+      !coverImage ||
+      typeof coverImage !== 'string' ||
+      coverImage.trim() === ''
+    ) {
+      this.logger.warn(
+        `Book (id=${bookObj._id || bookObj.id || 'unknown'}) missing coverImage, fallback to /placeholder-book.jpg`,
+      );
+      coverImage = '/placeholder-book.jpg';
+    } else if (!coverImage.startsWith('http')) {
+      this.logger.warn(
+        `Book (id=${bookObj._id || bookObj.id || 'unknown'}) has invalid coverImage: ${coverImage}, fallback to /placeholder-book.jpg`,
+      );
+      coverImage = '/placeholder-book.jpg';
+    }
+
     return {
       ...bookObj,
       price: Number((bookObj.price / this.VND_TO_USD_RATE).toFixed(2)),
       originalPrice: Number(
         (bookObj.originalPrice / this.VND_TO_USD_RATE).toFixed(2),
       ),
+      coverImage,
     };
   }
 

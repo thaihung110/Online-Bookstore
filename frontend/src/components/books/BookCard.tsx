@@ -29,13 +29,13 @@ const BookCard: React.FC<BookCardProps> = memo(({ book }) => {
   const theme = useTheme();
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
-  const { addItem, isInCart } = useCartStore();
+  const { addItem } = useCartStore();
+  const isInCart = useCartStore((state) => state.isInCart(book.id));
   const { addItemToWishlist, removeItemFromWishlist, isItemInWishlist } =
     useWishlistStore();
 
   // Memoize computed values
   const isDiscounted = book.discountRate > 0;
-  const inCart = isInCart(book.id);
   const inWishlist = isItemInWishlist(book.id);
 
   // Handle image loading
@@ -47,8 +47,8 @@ const BookCard: React.FC<BookCardProps> = memo(({ book }) => {
 
   // Handle cart and wishlist actions
   const handleAddToCart = (e: React.MouseEvent) => {
-    e.preventDefault(); // Prevent navigation
-    addItem(book);
+    e.preventDefault();
+    addItem(book.id, 1);
   };
 
   const handleToggleWishlist = (e: React.MouseEvent) => {
@@ -59,6 +59,19 @@ const BookCard: React.FC<BookCardProps> = memo(({ book }) => {
       addItemToWishlist(book);
     }
   };
+
+  // Debug: Log giá trị đầu vào
+  console.log(
+    "BookCard:",
+    book.title,
+    "price:",
+    book.price,
+    "originalPrice:",
+    book.originalPrice
+  );
+  // Không chuyển đổi giá nữa, chỉ hiển thị trực tiếp
+  const priceUsd = book.price;
+  const originalPriceUsd = book.originalPrice;
 
   return (
     <Card
@@ -118,10 +131,10 @@ const BookCard: React.FC<BookCardProps> = memo(({ book }) => {
             gap: 1,
           }}
         >
-          <Tooltip title={inCart ? "In Cart" : "Add to Cart"}>
+          <Tooltip title={isInCart ? "In Cart" : "Add to Cart"}>
             <IconButton
               onClick={handleAddToCart}
-              disabled={inCart}
+              disabled={isInCart}
               sx={{
                 bgcolor: "background.paper",
                 "&:hover": { bgcolor: "action.hover" },
@@ -129,7 +142,7 @@ const BookCard: React.FC<BookCardProps> = memo(({ book }) => {
               size="small"
             >
               <ShoppingCartIcon
-                color={inCart ? "disabled" : "primary"}
+                color={isInCart ? "disabled" : "primary"}
                 fontSize="small"
               />
             </IconButton>
@@ -219,7 +232,7 @@ const BookCard: React.FC<BookCardProps> = memo(({ book }) => {
               color={isDiscounted ? "error.main" : "primary.main"}
               sx={{ fontWeight: "bold" }}
             >
-              ${book.price.toFixed(2)}
+              ${priceUsd.toFixed(2)}
             </Typography>
             {isDiscounted && (
               <Typography
@@ -227,7 +240,7 @@ const BookCard: React.FC<BookCardProps> = memo(({ book }) => {
                 color="text.secondary"
                 sx={{ textDecoration: "line-through" }}
               >
-                ${book.originalPrice.toFixed(2)}
+                ${originalPriceUsd.toFixed(2)}
               </Typography>
             )}
           </Stack>

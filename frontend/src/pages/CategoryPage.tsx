@@ -37,7 +37,6 @@ const CategoryPage: React.FC = () => {
   const {
     books,
     totalBooks,
-    currentPage,
     limit,
     isLoading,
     error,
@@ -409,7 +408,7 @@ const CategoryPage: React.FC = () => {
                     >
                       <Pagination
                         count={totalPages}
-                        page={currentPage}
+                        page={filters.page || 1}
                         color="primary"
                         onChange={handlePageChange}
                         size={isMobile ? "small" : "medium"}

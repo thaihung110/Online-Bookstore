@@ -13,6 +13,7 @@ import {
 } from "../api/payments";
 import { useCartStore } from "./cartStore";
 import { Address } from "../utils/checkout";
+import { vndToUsd } from "../utils/currency";
 
 // Interface cho đơn hàng
 export interface Order {
@@ -42,22 +43,27 @@ interface CheckoutState {
   activeStep: number;
 
   // Actions
-  setShippingAddress: (address: Address) => void;
-  setBillingAddress: (address: Address) => void;
+  setShippingAddress: (address: any) => void;
+  setBillingAddress: (address: any) => void;
   setUseShippingAsBilling: (value: boolean) => void;
-  setPaymentMethod: (method: PaymentMethod) => void;
-  setPaymentDetails: (details: BankCardDetails | VNPayDetails) => void;
+  setPaymentMethod: (method: any) => void;
+  setPaymentDetails: (details: any) => void;
   setActiveStep: (step: number) => void;
 
   // Thao tác với API
   placeOrder: () => Promise<Order>;
   createPayment: () => Promise<Payment>;
-  processPayment: () => Promise<{ redirectUrl?: string; success: boolean }>;
+  processPayment: (
+    id: string
+  ) => Promise<{ redirectUrl?: string; success: boolean }>;
   getPayment: (id: string) => Promise<Payment>;
 
   // Utilities
   reset: () => void;
   clearError: () => void;
+
+  // New actions
+  removeCartItem: (id: string) => void;
 }
 
 // Mock API tạo đơn hàng (sẽ được thay thế bằng API thực)
@@ -78,7 +84,7 @@ const createOrder = async (data: any): Promise<Order> => {
 
 export const useCheckoutStore = create<CheckoutState>()(
   devtools(
-    (set, get) => ({
+    (set: any, get: any) => ({
       // Dữ liệu
       shippingAddress: null,
       billingAddress: null,
@@ -94,17 +100,24 @@ export const useCheckoutStore = create<CheckoutState>()(
       activeStep: 0,
 
       // Actions
-      setShippingAddress: (address) => set({ shippingAddress: address }),
+      setShippingAddress: (address: any) => set({ shippingAddress: address }),
 
-      setBillingAddress: (address) => set({ billingAddress: address }),
+      setBillingAddress: (address: any) => set({ billingAddress: address }),
 
-      setUseShippingAsBilling: (value) => set({ useShippingAsBilling: value }),
+      setUseShippingAsBilling: (value: boolean) =>
+        set({ useShippingAsBilling: value }),
 
-      setPaymentMethod: (method) => set({ paymentMethod: method }),
+      setPaymentMethod: (method: any) => {
+        set({ paymentMethod: method });
+        // Nếu chọn VNPAY, paymentDetails là object rỗng
+        if (method === "VNPAY") {
+          set({ paymentDetails: {} });
+        }
+      },
 
-      setPaymentDetails: (details) => set({ paymentDetails: details }),
+      setPaymentDetails: (details: any) => set({ paymentDetails: details }),
 
-      setActiveStep: (step) => set({ activeStep: step }),
+      setActiveStep: (step: number) => set({ activeStep: step }),
 
       // Thao tác với API
       placeOrder: async () => {
@@ -150,7 +163,7 @@ export const useCheckoutStore = create<CheckoutState>()(
         try {
           set({ isLoading: true, error: null });
 
-          const { order, paymentMethod, paymentDetails } = get();
+          let { order, paymentMethod, shippingAddress } = get();
 
           if (!order) {
             throw new Error("Order not found");
@@ -160,17 +173,31 @@ export const useCheckoutStore = create<CheckoutState>()(
             throw new Error("Payment method is required");
           }
 
-          if (!paymentDetails) {
-            throw new Error("Payment details are required");
+          if (!shippingAddress) {
+            throw new Error("Shipping address is required");
           }
 
-          // Gọi API tạo thanh toán
+          // Nếu là VNPAY, amount phải là VND
+          let amount = order.totalAmount;
+          if (paymentMethod === "VNPAY") {
+            if (amount < 1000) {
+              amount = Math.round(amount * 25000);
+            }
+          }
+
+          // Chuẩn bị dữ liệu gửi lên
           const paymentRequest: CreatePaymentRequest = {
             orderId: order.id,
             paymentMethod,
-            amount: order.totalAmount,
-            paymentDetails,
+            amount,
+            fullName: shippingAddress.fullName,
+            city: shippingAddress.city,
+            address: shippingAddress.address,
+            phone: shippingAddress.phoneNumber,
+            ...(paymentMethod === "VNPAY" ? { vnpayDetails: {} } : {}),
           };
+
+          console.log("[DEBUG] Sending paymentRequest:", paymentRequest);
 
           const payment = await createPayment(paymentRequest);
 
@@ -188,19 +215,14 @@ export const useCheckoutStore = create<CheckoutState>()(
         }
       },
 
-      processPayment: async () => {
+      processPayment: async (id: string) => {
         try {
           set({ isLoading: true, error: null });
-
-          const { payment } = get();
-
-          if (!payment) {
-            throw new Error("Payment not found");
+          if (!id) {
+            throw new Error("Payment id is required");
           }
-
           // Gọi API xử lý thanh toán
-          const result = await processPayment(payment.id);
-
+          const result = await processPayment(id);
           set({ isLoading: false });
           return result;
         } catch (error) {
@@ -215,7 +237,7 @@ export const useCheckoutStore = create<CheckoutState>()(
         }
       },
 
-      getPayment: async (id) => {
+      getPayment: async (id: string) => {
         try {
           set({ isLoading: true, error: null });
 
@@ -249,6 +271,12 @@ export const useCheckoutStore = create<CheckoutState>()(
         }),
 
       clearError: () => set({ error: null }),
+
+      // New actions
+      removeCartItem: (id: string) =>
+        set((state: any) => ({
+          cartItems: state.cartItems.filter((item: any) => item.book.id !== id),
+        })),
     }),
     { name: "checkout-store" }
   )

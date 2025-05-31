@@ -17,6 +17,7 @@ import EditProfilePage from "./pages/EditProfilePage";
 import TestApiComponent from "./components/TestApiComponent";
 import CheckoutPage from "./pages/CheckoutPage";
 import OrderConfirmationPage from "./pages/OrderConfirmationPage";
+import ChatbotWidget from "./components/ChatbotWidget";
 
 // Admin imports
 import {
@@ -214,6 +215,7 @@ const App: React.FC = () => {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
+      <ChatbotWidget />
     </ThemeProvider>
   );
 };

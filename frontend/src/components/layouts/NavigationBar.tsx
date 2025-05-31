@@ -42,8 +42,7 @@ const NavigationBar: React.FC = () => {
   const navigate = useNavigate();
 
   const { isAuthenticated, user, logout } = useAuthStore();
-  const cartStore = useCartStore();
-  const totalItems = cartStore.getTotalItems();
+  const totalItems = useCartStore((state) => state.getTotalItems());
 
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);

@@ -27,6 +27,7 @@ import { useBookStore } from "../store/bookStore";
 import { useCartStore } from "../store/cartStore";
 import { useWishlistStore } from "../store/wishlistStore";
 import { buyNow } from "../utils/checkout";
+import { Book } from "../api/books";
 
 const BookDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -57,19 +58,26 @@ const BookDetailPage: React.FC = () => {
 
   const handleAddToCart = () => {
     if (currentBook) {
-      addItem(currentBook);
+      addItem(currentBook.id, 1);
     }
   };
+
+  // Adapter cho buyNow
+  const addItemAdapter = (book: Book, quantity: number = 1) =>
+    addItem(book.id, quantity);
 
   const handleBuyNow = async () => {
     if (currentBook) {
       try {
-        // Sử dụng hàm utility buyNow để xử lý
-        const success = await buyNow(currentBook, addItem, isInCart);
-        if (success) {
-          // Nếu thành công, chuyển đến trang checkout
-          navigate("/checkout");
+        // Nếu chưa có trong cart thì thêm vào
+        if (!isInCart(currentBook.id)) {
+          await addItemAdapter(currentBook, 1);
         }
+        // Luôn set localStorage trước khi chuyển trang
+        const selected = { [currentBook.id]: true };
+        localStorage.setItem("cart-selected-items", JSON.stringify(selected));
+        localStorage.setItem("cart-buynow-id", currentBook.id);
+        navigate("/cart");
       } catch (error) {
         console.error("Error during buy now process:", error);
       }
@@ -153,6 +161,19 @@ const BookDetailPage: React.FC = () => {
     currentBook.originalPrice !== undefined
       ? currentBook.originalPrice
       : currentBook.price;
+
+  // Debug: Log giá trị đầu vào
+  console.log(
+    "BookDetailPage:",
+    currentBook.title,
+    "price:",
+    currentBook.price,
+    "originalPrice:",
+    originalPrice
+  );
+  // Không chuyển đổi giá nữa, chỉ hiển thị trực tiếp
+  const priceUsd = currentBook.price;
+  const originalPriceUsd = originalPrice;
 
   return (
     <MainLayout>
@@ -332,7 +353,7 @@ const BookDetailPage: React.FC = () => {
                         color="error.main"
                         sx={{ fontWeight: "bold" }}
                       >
-                        ${currentBook.price.toFixed(2)}
+                        ${priceUsd.toFixed(2)}
                       </Typography>
 
                       <Chip
@@ -350,7 +371,7 @@ const BookDetailPage: React.FC = () => {
                           fontWeight: "medium",
                         }}
                       >
-                        ${originalPrice.toFixed(2)}
+                        ${originalPriceUsd.toFixed(2)}
                       </Typography>
                     </Stack>
                   ) : (
@@ -359,7 +380,7 @@ const BookDetailPage: React.FC = () => {
                       color="primary.main"
                       sx={{ fontWeight: "bold" }}
                     >
-                      ${currentBook.price.toFixed(2)}
+                      ${priceUsd.toFixed(2)}
                     </Typography>
                   )}
                 </Box>

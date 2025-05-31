@@ -92,7 +92,7 @@ const CheckoutPage: React.FC = () => {
       const result = await processCheckoutPayment(
         placeOrder,
         createPayment,
-        processPayment,
+        (id) => processPayment(id),
         paymentMethod
       );
 
@@ -107,7 +107,7 @@ const CheckoutPage: React.FC = () => {
 
       // Nếu cần chuyển hướng đến cổng thanh toán (VNPAY)
       if (result.redirectUrl) {
-        window.location.href = result.redirectUrl;
+        window.open(result.redirectUrl, "_blank", "noopener");
         return;
       }
 

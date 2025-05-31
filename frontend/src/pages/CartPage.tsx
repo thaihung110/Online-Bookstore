@@ -1,8 +1,7 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Container,
   Typography,
-  Grid,
   Box,
   Paper,
   Button,
@@ -13,6 +12,7 @@ import {
   Card,
   Alert,
   CircularProgress,
+  Checkbox,
 } from "@mui/material";
 import { Link as RouterLink } from "react-router-dom";
 import AddIcon from "@mui/icons-material/Add";
@@ -24,40 +24,110 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import MainLayout from "../components/layouts/MainLayout";
 import { useCartStore } from "../store/cartStore";
 import { CartItem } from "../api/cart";
+import { vndToUsd } from "../utils/currency";
 
-const CartItemRow: React.FC<{ item: CartItem }> = ({ item }) => {
+const SELECTED_ITEMS_KEY = "cart-selected-items";
+
+const CartItemRow: React.FC<{
+  item: CartItem;
+  checked: boolean;
+  onCheckedChange: (checked: boolean) => void;
+}> = ({ item, checked, onCheckedChange }) => {
   const { updateItemQuantity, removeItem, isLoading } = useCartStore();
 
+  // Lấy id đúng cho book (ưu tiên _id, fallback sang id)
+  const bookId = (item.book as any)._id || item.book.id;
+
+  // State tạm cho số lượng nhập vào (kiểu string để cho phép rỗng)
+  const [inputQty, setInputQty] = useState<string>(item.quantity.toString());
+
+  // Khi số lượng trong store thay đổi (do update từ backend), đồng bộ lại input
+  React.useEffect(() => {
+    setInputQty(item.quantity.toString());
+  }, [item.quantity]);
+
   const handleUpdateQuantity = (qty: number) => {
-    updateItemQuantity(item.book.id, qty);
+    if (qty > 0 && qty <= (item.book.stock || 0)) {
+      updateItemQuantity(bookId, qty);
+    }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    // Cho phép rỗng để user dùng backspace
+    if (/^\d*$/.test(val)) {
+      setInputQty(val);
+    }
+  };
+
+  const handleInputBlur = () => {
+    const qty = parseInt(inputQty, 10);
+    // Nếu input rỗng hoặc không hợp lệ, reset về số lượng cũ
+    if (!inputQty || isNaN(qty) || qty < 1 || qty > (item.book.stock || 0)) {
+      setInputQty(item.quantity.toString());
+      return;
+    }
+    if (qty !== item.quantity) {
+      handleUpdateQuantity(qty);
+    }
+  };
+
+  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      const val = (e.target as HTMLInputElement).value;
+      const qty = parseInt(val, 10);
+      if (!val || isNaN(qty) || qty < 1 || qty > (item.book.stock || 0)) {
+        setInputQty(item.quantity.toString());
+        return;
+      }
+      if (qty !== item.quantity) {
+        handleUpdateQuantity(qty);
+      }
+    }
   };
 
   const handleIncrement = () => {
-    updateItemQuantity(item.book.id, item.quantity + 1);
+    console.log("CartItemRow increment bookId:", bookId);
+    if (item.quantity < (item.book.stock || 0)) {
+      updateItemQuantity(bookId, item.quantity + 1);
+    }
   };
 
   const handleDecrement = () => {
+    console.log("CartItemRow decrement bookId:", bookId);
     if (item.quantity > 1) {
-      updateItemQuantity(item.book.id, item.quantity - 1);
+      updateItemQuantity(bookId, item.quantity - 1);
     }
   };
 
   const handleRemove = () => {
-    removeItem(item.book.id);
+    console.log("CartItemRow remove bookId:", bookId);
+    removeItem(bookId);
   };
 
   // Placeholder image if no cover is available
-  const coverImage =
-    item.book.coverImage || "https://via.placeholder.com/100x150?text=No+Image";
+  const coverImage = item.book.coverImage || "/placeholder-book.jpg";
+
+  // Chuyển đổi giá sang USD
+  const priceUsd = vndToUsd(item.priceAtAdd);
+  const itemTotal = vndToUsd(item.priceAtAdd * item.quantity);
 
   return (
     <Paper sx={{ p: 2, mb: 2, display: "flex", width: "100%" }}>
+      <Checkbox
+        checked={checked}
+        onChange={(e) => onCheckedChange(e.target.checked)}
+        sx={{ mr: 1, alignSelf: "flex-start" }}
+      />
       <Box sx={{ width: 80, height: 120, mr: 2, flexShrink: 0 }}>
         <CardMedia
           component="img"
           image={coverImage}
           alt={item.book.title}
           sx={{ width: "100%", height: "100%", objectFit: "contain" }}
+          onError={(e) => {
+            e.currentTarget.src = "/placeholder-book.jpg";
+          }}
         />
       </Box>
 
@@ -87,21 +157,19 @@ const CartItemRow: React.FC<{ item: CartItem }> = ({ item }) => {
           </Typography>
         </Box>
 
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            mt: 1,
-          }}
-        >
-          <Typography
-            variant="subtitle1"
-            color="primary.main"
-            fontWeight="bold"
-          >
-            ${(item.book.price * item.quantity).toFixed(2)}
-          </Typography>
+        <Box sx={{ display: "flex", justifyContent: "space-between", mt: 1 }}>
+          <Box>
+            <Typography variant="body2" color="text.secondary">
+              Price: ${priceUsd.toFixed(2)}
+            </Typography>
+            <Typography
+              variant="subtitle1"
+              color="primary.main"
+              fontWeight="bold"
+            >
+              Total: ${itemTotal.toFixed(2)}
+            </Typography>
+          </Box>
 
           <Box sx={{ display: "flex", alignItems: "center" }}>
             <IconButton
@@ -124,16 +192,15 @@ const CartItemRow: React.FC<{ item: CartItem }> = ({ item }) => {
 
             <TextField
               size="small"
-              value={item.quantity}
-              onChange={(e) => {
-                const qty = parseInt(e.target.value, 10);
-                if (!isNaN(qty) && qty > 0) {
-                  handleUpdateQuantity(qty);
-                }
-              }}
+              value={inputQty}
+              onChange={handleInputChange}
+              onBlur={handleInputBlur}
+              onKeyDown={handleInputKeyDown}
+              type="text"
               InputProps={{
                 inputProps: {
                   min: 1,
+                  max: item.book.stock || 1,
                   style: { textAlign: "center", width: "30px" },
                 },
               }}
@@ -157,29 +224,81 @@ const CartItemRow: React.FC<{ item: CartItem }> = ({ item }) => {
 };
 
 const CartPage: React.FC = () => {
-  const {
-    getCartItems,
-    getTotalItems,
-    getTotalPrice,
-    clearCart,
-    isLoading,
-    error,
-    loadCart,
-  } = useCartStore();
+  const { cart, isLoading, error, loadCart, clearCart } = useCartStore();
 
-  const items = getCartItems();
-  const totalItems = getTotalItems();
-  const totalPrice = getTotalPrice();
+  // State lưu trạng thái chọn từng sản phẩm (bookId: boolean)
+  const [selectedItems, setSelectedItems] = React.useState<{
+    [id: string]: boolean;
+  }>({});
 
-  // Fixed shipping cost
-  const shippingCost = totalPrice > 0 && totalPrice <= 50 ? 5.99 : 0;
-  // Tax calculation (e.g., 8%)
+  // Khi cart thay đổi, đồng bộ selectedItems (mặc định tick hết)
+  React.useEffect(() => {
+    if (cart?.items) {
+      // Ưu tiên xử lý Buy Now flag
+      const buyNowId = localStorage.getItem("cart-buynow-id");
+      if (buyNowId) {
+        const newSelected: { [id: string]: boolean } = {};
+        cart.items.forEach((item) => {
+          const id = (item.book as any)._id || item.book.id;
+          newSelected[id] = id === buyNowId;
+        });
+        setSelectedItems(newSelected);
+        localStorage.removeItem("cart-buynow-id");
+        localStorage.setItem(SELECTED_ITEMS_KEY, JSON.stringify(newSelected));
+        return;
+      }
+      // Nếu không phải buy now, lấy trạng thái cũ từ localStorage như bình thường
+      const saved = localStorage.getItem(SELECTED_ITEMS_KEY);
+      let initial: { [id: string]: boolean } = {};
+      if (saved) {
+        try {
+          initial = JSON.parse(saved);
+        } catch {}
+      }
+      const newSelected: { [id: string]: boolean } = {};
+      const initialKeys = Object.keys(initial);
+      cart.items.forEach((item) => {
+        const id = (item.book as any)._id || item.book.id;
+        newSelected[id] = initial[id] !== undefined ? initial[id] : true;
+      });
+      setSelectedItems(newSelected);
+    }
+  }, [cart]);
+
+  // Luôn lưu selectedItems vào localStorage khi thay đổi
+  React.useEffect(() => {
+    localStorage.setItem(SELECTED_ITEMS_KEY, JSON.stringify(selectedItems));
+  }, [selectedItems]);
+
+  // Hàm xử lý chọn/bỏ chọn từng sản phẩm
+  const handleCheckedChange = (id: string, checked: boolean) => {
+    setSelectedItems((prev) => ({ ...prev, [id]: checked }));
+  };
+
+  // Lọc các item được chọn
+  const selectedCartItems =
+    cart?.items.filter(
+      (item) => selectedItems[(item.book as any)._id || item.book.id]
+    ) || [];
+
+  // Tính toán lại các giá trị dựa trên selectedCartItems
+  const subtotal = vndToUsd(
+    selectedCartItems.reduce(
+      (sum, item) => sum + item.priceAtAdd * item.quantity,
+      0
+    )
+  );
+  const discount = 0;
+  const totalItems = selectedCartItems.reduce(
+    (sum, item) => sum + item.quantity,
+    0
+  );
+  const shippingCost = subtotal > 50 ? 0 : totalItems > 0 ? 5.99 : 0;
   const taxRate = 0.08;
-  const taxAmount = totalPrice * taxRate;
-  // Total with shipping and tax
-  const orderTotal = totalPrice + shippingCost + taxAmount;
+  const taxAmount = subtotal * taxRate;
+  const orderTotal = subtotal + shippingCost + taxAmount - discount;
 
-  if (isLoading && items.length === 0) {
+  if (isLoading && !cart?.items.length) {
     return (
       <MainLayout>
         <Container
@@ -215,7 +334,7 @@ const CartPage: React.FC = () => {
     );
   }
 
-  if (items.length === 0) {
+  if (!cart?.items.length) {
     return (
       <MainLayout>
         <Container maxWidth="lg" sx={{ my: 4 }}>
@@ -254,9 +373,14 @@ const CartPage: React.FC = () => {
           Shopping Cart ({totalItems} {totalItems === 1 ? "item" : "items"})
         </Typography>
 
-        <Grid container spacing={3}>
+        <Box display="flex" flexDirection={{ xs: "column", md: "row" }}>
           {/* Cart Items */}
-          <Grid size={{ xs: 12, md: 8 }}>
+          <Box
+            flex={2}
+            minWidth={0}
+            mr={{ md: 3, xs: 0 }}
+            mb={{ xs: 3, md: 0 }}
+          >
             <Button
               component={RouterLink}
               to="/books"
@@ -285,9 +409,19 @@ const CartPage: React.FC = () => {
                   <CircularProgress />
                 </Box>
               )}
-              {items.map((item) => (
-                <CartItemRow key={item._id || item.book.id} item={item} />
-              ))}
+              {cart?.items.map((item) => {
+                const id = (item.book as any)._id || item.book.id;
+                return (
+                  <CartItemRow
+                    key={id}
+                    item={item}
+                    checked={!!selectedItems[id]}
+                    onCheckedChange={(checked) =>
+                      handleCheckedChange(id, checked)
+                    }
+                  />
+                );
+              })}
             </Box>
 
             <Box
@@ -298,15 +432,15 @@ const CartPage: React.FC = () => {
                 color="error"
                 startIcon={<DeleteIcon />}
                 onClick={clearCart}
-                disabled={isLoading || items.length === 0}
+                disabled={isLoading || !cart?.items.length}
               >
                 Clear Cart
               </Button>
             </Box>
-          </Grid>
+          </Box>
 
           {/* Order Summary */}
-          <Grid size={{ xs: 12, md: 4 }}>
+          <Box flex={1} minWidth={0}>
             <Card sx={{ p: 3, position: "sticky", top: 80 }}>
               <Typography variant="h6" gutterBottom>
                 Order Summary
@@ -318,10 +452,25 @@ const CartPage: React.FC = () => {
                 sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}
               >
                 <Typography variant="body1">Subtotal</Typography>
-                <Typography variant="body1">
-                  ${totalPrice.toFixed(2)}
-                </Typography>
+                <Typography variant="body1">${subtotal.toFixed(2)}</Typography>
               </Box>
+
+              {discount > 0 && (
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    mb: 1,
+                  }}
+                >
+                  <Typography variant="body1" color="success.main">
+                    Discount
+                  </Typography>
+                  <Typography variant="body1" color="success.main">
+                    -${discount.toFixed(2)}
+                  </Typography>
+                </Box>
+              )}
 
               <Box
                 sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}
@@ -354,13 +503,17 @@ const CartPage: React.FC = () => {
                 fullWidth
                 component={RouterLink}
                 to="/checkout"
-                disabled={isLoading || items.length === 0}
+                disabled={
+                  isLoading ||
+                  !cart?.items.length ||
+                  selectedCartItems.length === 0
+                }
               >
                 Proceed to Checkout
               </Button>
             </Card>
-          </Grid>
-        </Grid>
+          </Box>
+        </Box>
       </Container>
     </MainLayout>
   );

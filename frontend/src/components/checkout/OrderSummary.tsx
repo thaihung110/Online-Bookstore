@@ -17,6 +17,7 @@ import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
 import { useCheckoutStore } from "../../store/checkoutStore";
 import { useCartStore } from "../../store/cartStore";
 import { formatCurrency } from "../../utils/format";
+import { CartItem } from "../../api/cart";
 
 const OrderSummary: React.FC = () => {
   const {
@@ -27,11 +28,21 @@ const OrderSummary: React.FC = () => {
     paymentDetails,
   } = useCheckoutStore();
 
-  const { getCartItems, getTotalPrice, getTotalQuantity } = useCartStore();
+  const getCartItems = useCartStore((state) => state.getCartItems);
+  const getTotalPrice = useCartStore((state) => state.getTotalPrice);
+  const getTotalQuantity = useCartStore((state) => state.getTotalQuantity);
 
   const cartItems = getCartItems();
   const totalPrice = getTotalPrice();
-  const totalItems = getTotalQuantity();
+  const totalQuantity = getTotalQuantity();
+
+  // Chuyển đổi giá từ VND sang USD
+  const VND_TO_USD = 25000;
+  const cartItemsUsd = cartItems.map((item) => ({
+    ...item,
+    priceAtAdd: item.priceAtAdd / VND_TO_USD,
+  }));
+  const totalPriceUsd = totalPrice / VND_TO_USD;
 
   // Hiển thị địa chỉ định dạng đầy đủ
   const formatAddress = (address: any) => {
@@ -129,12 +140,12 @@ const OrderSummary: React.FC = () => {
         <Box sx={{ flex: { xs: "1 1 100%", md: "1 1 35%" } }}>
           <Paper variant="outlined" sx={{ p: 2 }}>
             <Typography variant="subtitle1" gutterBottom>
-              Đơn hàng của bạn ({totalItems} sản phẩm)
+              Đơn hàng của bạn ({totalQuantity} sản phẩm)
             </Typography>
 
             <List disablePadding>
-              {cartItems.map((item) => (
-                <ListItem key={item.book.id} sx={{ py: 1, px: 0 }}>
+              {cartItemsUsd.map((item: CartItem, idx: number) => (
+                <ListItem key={item.book.id + "-" + idx} sx={{ py: 1, px: 0 }}>
                   <Avatar
                     src={item.book.coverImage}
                     alt={item.book.title}
@@ -146,7 +157,7 @@ const OrderSummary: React.FC = () => {
                     secondary={`Số lượng: ${item.quantity}`}
                   />
                   <Typography variant="body2">
-                    {formatCurrency(item.book.price * item.quantity)}
+                    ${(item.priceAtAdd * item.quantity).toFixed(2)}
                   </Typography>
                 </ListItem>
               ))}
@@ -156,7 +167,7 @@ const OrderSummary: React.FC = () => {
               <ListItem sx={{ py: 1, px: 0 }}>
                 <ListItemText primary="Tạm tính" />
                 <Typography variant="body1">
-                  {formatCurrency(totalPrice)}
+                  ${totalPriceUsd.toFixed(2)}
                 </Typography>
               </ListItem>
 
@@ -168,7 +179,7 @@ const OrderSummary: React.FC = () => {
               <ListItem sx={{ py: 1, px: 0 }}>
                 <ListItemText primary="Tổng cộng" />
                 <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-                  {formatCurrency(totalPrice)}
+                  ${totalPriceUsd.toFixed(2)}
                 </Typography>
               </ListItem>
             </List>

@@ -145,9 +145,16 @@ export const getBooks = async (
     if (query.limit && query.limit > 0) cleanQuery.limit = query.limit;
     if (query.search?.trim()) cleanQuery.search = query.search.trim();
     if (query.author?.trim()) cleanQuery.author = query.author.trim();
+
+    // Xử lý đặc biệt cho genres để phù hợp với backend
     if (Array.isArray(query.genres) && query.genres.length > 0) {
-      cleanQuery.genres = query.genres;
+      // Đảm bảo mỗi genre được trim và không empty
+      cleanQuery.genres = query.genres
+        .map((genre) => genre.trim())
+        .filter((genre) => genre.length > 0);
+      console.log("API: Clean genres:", cleanQuery.genres);
     }
+
     if (query.minPrice && query.minPrice >= 0)
       cleanQuery.minPrice = query.minPrice;
     if (query.maxPrice && query.maxPrice >= 0)
@@ -158,7 +165,36 @@ export const getBooks = async (
     if (query.sortOrder) cleanQuery.sortOrder = query.sortOrder;
 
     console.log("API: Clean query parameters:", cleanQuery);
-    const response = await api.get("/books", { params: cleanQuery });
+
+    // Sử dụng URLSearchParams để đảm bảo format đúng cho array parameters
+    const params = new URLSearchParams();
+    Object.entries(cleanQuery).forEach(([key, value]) => {
+      if (Array.isArray(value)) {
+        value.forEach((v) => params.append(key, v));
+      } else if (value !== undefined) {
+        params.append(key, value.toString());
+      }
+    });
+
+    const response = await api.get("/books", {
+      params: cleanQuery,
+      paramsSerializer: {
+        serialize: (params) => {
+          return Object.entries(params)
+            .map(([key, value]) => {
+              if (Array.isArray(value)) {
+                return value
+                  .map(
+                    (v) => `${encodeURIComponent(key)}=${encodeURIComponent(v)}`
+                  )
+                  .join("&");
+              }
+              return `${encodeURIComponent(key)}=${encodeURIComponent(value)}`;
+            })
+            .join("&");
+        },
+      },
+    });
 
     // Validate and transform response data
     if (!response.data || !Array.isArray(response.data.books)) {

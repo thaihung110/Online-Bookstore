@@ -21,7 +21,11 @@ export interface CreatePaymentRequest {
   orderId: string;
   paymentMethod: PaymentMethod;
   amount: number;
-  paymentDetails: BankCardDetails | VNPayDetails;
+  fullName: string;
+  city: string;
+  address: string;
+  phone: string;
+  vnpayDetails?: VNPayDetails;
 }
 
 // Interface cho thông tin thanh toán
@@ -60,6 +64,11 @@ export const createPayment = async (
 ): Promise<Payment> => {
   try {
     const response = await api.post("/payments", data);
+    // Nếu response.data có trường payment, trả về payment
+    if (response.data && response.data.payment) {
+      return response.data.payment;
+    }
+    // Nếu không, trả về response.data (giữ tương thích)
     return response.data;
   } catch (error) {
     console.error("Error creating payment:", error);

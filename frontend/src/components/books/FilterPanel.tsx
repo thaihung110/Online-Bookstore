@@ -203,25 +203,24 @@ const FilterPanel: React.FC<FilterPanelProps> = memo(
       value: string[]
     ) => {
       console.log("FilterPanel: Selected genres:", value);
-      console.log(
-        "FilterPanel: Selected genres type:",
-        typeof value,
-        Array.isArray(value)
-      );
 
-      // Output each selected genre's exact string value with quotes to see whitespace
-      if (Array.isArray(value)) {
-        value.forEach((genre, index) => {
-          console.log(`FilterPanel: Selected genre[${index}] = "${genre}"`);
-        });
-      }
+      // Validate và clean up genres trước khi update
+      const cleanedGenres = value
+        .map((genre) => genre.trim())
+        .filter((genre) => genre.length > 0);
 
-      setSelectedGenres(value);
-      console.log("FilterPanel: Calling onFilterChange with:", {
-        genres: value.length > 0 ? value : undefined,
+      console.log("FilterPanel: Cleaned genres:", cleanedGenres);
+
+      setSelectedGenres(cleanedGenres);
+
+      // Log the exact query being sent
+      const filterUpdate = {
+        genres: cleanedGenres.length > 0 ? cleanedGenres : undefined,
         page: 1,
-      });
-      onFilterChange({ genres: value.length > 0 ? value : undefined, page: 1 });
+      };
+      console.log("FilterPanel: Updating filters with:", filterUpdate);
+
+      onFilterChange(filterUpdate);
     };
 
     // Thêm useEffect để theo dõi khi genres thay đổi

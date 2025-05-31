@@ -54,7 +54,6 @@ const BooksPage: React.FC = () => {
   const {
     books,
     totalBooks,
-    currentPage,
     limit,
     isLoading,
     error,
@@ -80,21 +79,14 @@ const BooksPage: React.FC = () => {
   // Calculate total pages
   const totalPages = Math.ceil(totalBooks / limit);
 
-  // Effect to fetch books on component mount and sync with URL params
-  useEffect(() => {
-    // Parse URL search params
+  // Parse filters from URL
+  const parseFiltersFromUrl = () => {
     const params: Record<string, string> = {};
     searchParams.forEach((value, key) => {
       params[key] = value;
     });
-
     const urlFilters: Partial<BookQuery> = {};
-
-    // Map URL params to filters
-    if (params.search) {
-      urlFilters.search = params.search;
-      setSearchTerm(params.search);
-    }
+    if (params.search) urlFilters.search = params.search;
     if (params.author) urlFilters.author = params.author;
     if (params.page) urlFilters.page = Number(params.page);
     if (params.genres) urlFilters.genres = params.genres.split(",");
@@ -105,16 +97,32 @@ const BooksPage: React.FC = () => {
     if (params.sortBy) urlFilters.sortBy = params.sortBy;
     if (params.sortOrder)
       urlFilters.sortOrder = params.sortOrder as "asc" | "desc";
+    return urlFilters;
+  };
 
-    // If we have URL filters, apply them
-    if (Object.keys(urlFilters).length > 0) {
-      console.log("Applying URL filters:", urlFilters);
+  // Khi URL thay đổi, parse lại filters và setFilters (chỉ khi filters thực sự khác)
+  useEffect(() => {
+    const urlFilters = parseFiltersFromUrl();
+    // Chỉ setFilters nếu filters khác urlFilters
+    const filtersString = JSON.stringify(filters);
+    const urlFiltersString = JSON.stringify(urlFilters);
+    if (filtersString !== urlFiltersString) {
       setFilters(urlFilters);
-    } else {
-      // Otherwise fetch with default filters
-      fetchBooks();
     }
-  }, [fetchBooks, searchParams, setFilters]);
+    // eslint-disable-next-line
+  }, [searchParams]);
+
+  // Khi filters thay đổi, update URL nếu khác với searchParams
+  useEffect(() => {
+    const urlFilters = parseFiltersFromUrl();
+    const filtersString = JSON.stringify(filters);
+    const urlFiltersString = JSON.stringify(urlFilters);
+    if (filtersString !== urlFiltersString) {
+      updateUrlParams(filters);
+    }
+    // Không gọi fetchBooks ở đây nữa, fetchBooks chỉ nên gọi trong store khi setFilters/setPage
+    // eslint-disable-next-line
+  }, [filters]);
 
   // Update URL when filters change
   const updateUrlParams = (newFilters: Partial<BookQuery>) => {
@@ -234,10 +242,8 @@ const BooksPage: React.FC = () => {
     _event: React.ChangeEvent<unknown>,
     page: number
   ) => {
-    // First update store
-    setPage(page);
-    // Then update URL
-    updateUrlParams({ page });
+    // Chỉ gọi setFilters, useEffect sẽ tự update URL
+    setFilters({ ...filters, page });
   };
 
   // Reset all filters
@@ -578,8 +584,11 @@ const BooksPage: React.FC = () => {
               >
                 <Pagination
                   count={totalPages}
-                  page={currentPage}
-                  onChange={handlePageChange}
+                  page={filters.page || 1}
+                  onChange={(_event, page) => {
+                    setPage(page);
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                  }}
                   color="primary"
                   showFirstButton
                   showLastButton

@@ -31,14 +31,14 @@ type AuthState = {
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set, get) => ({
+    (set: any, get: any) => ({
       token: null,
       user: null,
       isAuthenticated: false,
       isLoading: false,
       error: null,
 
-      login: async (email, password) => {
+      login: async (email: string, password: string) => {
         set({ isLoading: true, error: null });
         try {
           const credentials: LoginRequest = { email, password };
@@ -78,7 +78,7 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      register: async (username, email, password) => {
+      register: async (username: string, email: string, password: string) => {
         set({ isLoading: true, error: null });
         try {
           const userData: RegisterRequest = { username, email, password };
@@ -172,8 +172,8 @@ export const useAuthStore = create<AuthState>()(
       clearError: () => set({ error: null }),
     }),
     {
-      name: "auth-storage", // name of the item in localStorage
-      partialize: (state) => ({
+      name: "auth-storage",
+      partialize: (state: AuthState) => ({
         token: state.token,
         user: state.user,
         isAuthenticated: state.isAuthenticated,

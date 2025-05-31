@@ -3,18 +3,22 @@ import { Book } from "./books"; // Assuming Book type is needed for cart items
 
 // Interface for a cart item
 export interface CartItem {
+  _id?: string;
   book: Book;
   quantity: number;
-  _id?: string;
+  priceAtAdd: number;
 }
 
 // Interface for the cart structure
 export interface Cart {
   _id: string; // Cart ID
-  userId: string; // User ID associated with the cart
+  user: string; // User ID associated with the cart
   items: CartItem[];
-  totalPrice: number;
-  totalItems: number;
+  subtotal: number;
+  discount: number;
+  appliedCouponCode?: string;
+  appliedGiftCardCode?: string;
+  loyaltyPointsToUse?: number;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -45,10 +49,10 @@ export const getCart = async (): Promise<Cart> => {
     // Return empty cart on error
     return {
       _id: "",
-      userId: "",
+      user: "",
       items: [],
-      totalPrice: 0,
-      totalItems: 0,
+      subtotal: 0,
+      discount: 0,
     };
   }
 };
@@ -87,7 +91,7 @@ export const updateCartItemQuantity = async (
   itemData: UpdateCartItemRequest
 ): Promise<Cart> => {
   try {
-    const response = await api.put<Cart>(`/carts/items/${itemData.bookId}`, {
+    const response = await api.patch<Cart>(`/carts/items/${itemData.bookId}`, {
       quantity: itemData.quantity,
     });
     return response.data;

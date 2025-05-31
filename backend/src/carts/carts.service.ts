@@ -24,7 +24,6 @@ export class CartsService {
     let cart = await this.cartModel.findOne({ user: userId }).populate({
       path: 'items.book',
       model: 'Book',
-      select: '_id title author price stock',
     });
 
     if (!cart) {
@@ -79,7 +78,6 @@ export class CartsService {
       return this.cartModel.findById(newCart._id).populate({
         path: 'items.book',
         model: 'Book',
-        select: '_id title author price stock',
       });
     }
 
@@ -172,7 +170,6 @@ export class CartsService {
     return this.cartModel.findOne({ user: userId }).populate({
       path: 'items.book',
       model: 'Book',
-      select: '_id title author price stock',
     });
   }
 
@@ -240,7 +237,6 @@ export class CartsService {
     return this.cartModel.findById(result._id).populate({
       path: 'items.book',
       model: 'Book',
-      select: '_id title author price stock',
     });
   }
 
@@ -322,7 +318,6 @@ export class CartsService {
     return this.cartModel.findById(result._id).populate({
       path: 'items.book',
       model: 'Book',
-      select: '_id title author price stock',
     });
   }
 
