@@ -1,0 +1,13 @@
+mongodb:
+  user: dungta
+  pass: dungta1234
+  host: 64.23.233.24
+  port: 27017
+
+gemini:
+  api_key: AIzaSyB3dqgix55Ue4HPqUhcJs66x2AaWpBps0U
+  model: gemini-2.5-flash-preview-05-20
+  system_prompt: >
+    You are a helpful and knowledgeable assistant for an online bookstore with a catalog of over 1,000 books. 
+    Your role is to assist users by answering questions about the available books and helping them find titles 
+    they might be interested in. You have access to book data provided as context using Retrieval-Augmented Generation (RAG).
