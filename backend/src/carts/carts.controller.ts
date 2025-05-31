@@ -14,7 +14,10 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { CartsService } from './carts.service';
-import { AddItemToCartDto } from './dto/add-item-to-cart.dto';
+import {
+  AddItemToCartDto,
+  UpdateItemInCartDto,
+} from './dto/add-item-to-cart.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import {
   ApiTags,
@@ -60,21 +63,16 @@ export class CartsController {
   }
 
   @Patch('items/:bookId')
-  @ApiOperation({ summary: 'Update item quantity in the cart' })
+  @ApiOperation({ summary: 'Update item in the cart (quantity, isTicked)' })
   @ApiParam({
     name: 'bookId',
     description: 'ID of the book in the cart',
     type: String,
   })
-  @ApiBody({
-    schema: {
-      properties: { quantity: { type: 'number', example: 2, minimum: 1 } },
-      required: ['quantity'],
-    },
-  })
+  @ApiBody({ type: UpdateItemInCartDto })
   @ApiResponse({
     status: 200,
-    description: 'Item quantity updated successfully.',
+    description: 'Item updated successfully.',
     type: Cart,
   })
   @ApiResponse({
@@ -86,39 +84,12 @@ export class CartsController {
     status: 404,
     description: 'Book not found in cart or user/book not found.',
   })
-  async updateItemQuantity(
+  async updateItemInCart(
     @Request() req,
     @Param('bookId') bookId: string,
-    @Body('quantity', ParseIntPipe) quantity: number,
+    @Body() updateDto: UpdateItemInCartDto,
   ) {
-    return this.cartsService.updateItemQuantity(req.user.id, bookId, quantity);
-  }
-
-  // Support both PUT and PATCH for backward compatibility
-  @Put('items/:bookId')
-  @ApiOperation({ summary: 'Update item quantity in the cart (PUT method)' })
-  @ApiParam({
-    name: 'bookId',
-    description: 'ID of the book in the cart',
-    type: String,
-  })
-  @ApiBody({
-    schema: {
-      properties: { quantity: { type: 'number', example: 2, minimum: 1 } },
-      required: ['quantity'],
-    },
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Item quantity updated successfully.',
-    type: Cart,
-  })
-  async updateItemQuantityPut(
-    @Request() req,
-    @Param('bookId') bookId: string,
-    @Body('quantity', ParseIntPipe) quantity: number,
-  ) {
-    return this.cartsService.updateItemQuantity(req.user.id, bookId, quantity);
+    return this.cartsService.updateItemInCart(req.user.id, bookId, updateDto);
   }
 
   @Delete('items/:bookId')

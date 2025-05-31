@@ -13,6 +13,9 @@ export class CartItem {
 
   @Prop({ required: true, min: 0 })
   priceAtAdd: number; // Giá tại thời điểm thêm vào giỏ
+
+  @Prop({ type: Boolean, default: true })
+  isTicked: boolean;
 }
 
 @Schema({ timestamps: true })

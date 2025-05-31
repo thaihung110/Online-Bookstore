@@ -120,6 +120,26 @@ export class PaymentsService {
   // Tạo thanh toán mới
   async createPayment(createPaymentDto: CreatePaymentDto, ipAddr: string) {
     try {
+      // Validate: chỉ nhận các item được tick (frontend chỉ gửi item được tick)
+      if (
+        !createPaymentDto.items ||
+        !Array.isArray(createPaymentDto.items) ||
+        createPaymentDto.items.length === 0
+      ) {
+        throw new BadRequestException(
+          'Không có sản phẩm nào được tick để thanh toán',
+        );
+      }
+      // Tính lại tổng tiền từ các item được tick
+      const calculatedAmount = createPaymentDto.items.reduce(
+        (sum, item) => sum + item.priceAtAdd * item.quantity,
+        0,
+      );
+      if (calculatedAmount !== createPaymentDto.amount) {
+        throw new BadRequestException(
+          'Số tiền thanh toán không khớp với các sản phẩm được tick',
+        );
+      }
       this.paymentLoggingService.logPaymentFlow(
         PaymentLogType.PAYMENT_CREATED,
         {
@@ -128,14 +148,11 @@ export class PaymentsService {
           requestData: createPaymentDto,
         },
       );
-
       const payment = new this.paymentModel({
         ...createPaymentDto,
         status: PaymentStatus.PENDING,
       });
-
       const savedPayment = await payment.save();
-
       if (savedPayment.paymentMethod === PaymentMethod.VNPAY) {
         const paymentUrl = await this.vnpayService.createPaymentUrl(
           savedPayment,
@@ -146,7 +163,6 @@ export class PaymentsService {
           redirectUrl: paymentUrl,
         };
       }
-
       return {
         payment: savedPayment,
       };

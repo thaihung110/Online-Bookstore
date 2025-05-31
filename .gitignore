@@ -44,4 +44,6 @@ Thumbs.db
 *.tgz
 
 # Yarn Integrity file
-.yarn-integrity
+.yarn-
+
+postman/

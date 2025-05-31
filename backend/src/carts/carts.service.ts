@@ -336,7 +336,10 @@ export class CartsService {
   // Helper method to recalculate subtotal
   private async recalculateSubtotal(cart: CartDocument): Promise<void> {
     cart.subtotal = cart.items.reduce((total, item) => {
-      return total + item.priceAtAdd * item.quantity;
+      if (item.isTicked) {
+        return total + item.priceAtAdd * item.quantity;
+      }
+      return total;
     }, 0);
   }
 
@@ -443,5 +446,33 @@ export class CartsService {
 
     await cart.save();
     return this.cartModel.findById(cart._id).populate('items.book');
+  }
+
+  async updateItemInCart(
+    userId: string,
+    bookId: string,
+    updateDto: { quantity?: number; isTicked?: boolean },
+  ): Promise<CartDocument> {
+    const bookObjectId = new Types.ObjectId(bookId);
+    const cart = await this.cartModel.findOne({ user: userId });
+    if (!cart) throw new NotFoundException('Cart not found');
+    const itemIndex = cart.items.findIndex(
+      (item) => item.book.toString() === bookObjectId.toString(),
+    );
+    if (itemIndex === -1) throw new NotFoundException('Item not found in cart');
+    // Cập nhật quantity nếu có
+    if (updateDto.quantity !== undefined) {
+      if (updateDto.quantity < 1)
+        throw new BadRequestException('Quantity must be >= 1');
+      cart.items[itemIndex].quantity = updateDto.quantity;
+    }
+    // Cập nhật isTicked nếu có
+    if (updateDto.isTicked !== undefined) {
+      cart.items[itemIndex].isTicked = updateDto.isTicked;
+    }
+    await cart.save();
+    return this.cartModel
+      .findOne({ user: userId })
+      .populate({ path: 'items.book', model: 'Book' });
   }
 }

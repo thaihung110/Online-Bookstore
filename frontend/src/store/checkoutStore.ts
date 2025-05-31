@@ -128,6 +128,15 @@ export const useCheckoutStore = create<CheckoutState>()(
             get();
           const cartStore = useCartStore.getState();
           const cartItems = cartStore.getCartItems();
+          const tickedItems = cartItems.filter(
+            (item) => (item as any).isTicked !== false
+          );
+          const paymentItems = tickedItems.map((item) => ({
+            bookId: item.book.id,
+            quantity: item.quantity,
+            priceAtAdd: item.priceAtAdd,
+          }));
+
           const totalAmount = cartStore.getTotalPrice();
 
           if (!shippingAddress) {
@@ -141,7 +150,7 @@ export const useCheckoutStore = create<CheckoutState>()(
 
           // Gọi API tạo đơn hàng
           const order = await createOrder({
-            items: cartItems,
+            items: paymentItems,
             totalAmount,
             shippingAddress,
             billingAddress: finalBillingAddress,
@@ -185,6 +194,18 @@ export const useCheckoutStore = create<CheckoutState>()(
             }
           }
 
+          // Lấy danh sách item được tick từ cart
+          const cartStore = useCartStore.getState();
+          const cartItems = cartStore.getCartItems();
+          const tickedItems = cartItems.filter(
+            (item) => (item as any).isTicked !== false
+          );
+          const paymentItems = tickedItems.map((item) => ({
+            bookId: item.book.id,
+            quantity: item.quantity,
+            priceAtAdd: item.priceAtAdd,
+          }));
+
           // Chuẩn bị dữ liệu gửi lên
           const paymentRequest: CreatePaymentRequest = {
             orderId: order.id,
@@ -195,6 +216,7 @@ export const useCheckoutStore = create<CheckoutState>()(
             address: shippingAddress.address,
             phone: shippingAddress.phoneNumber,
             ...(paymentMethod === "VNPAY" ? { vnpayDetails: {} } : {}),
+            items: paymentItems,
           };
 
           console.log("[DEBUG] Sending paymentRequest:", paymentRequest);

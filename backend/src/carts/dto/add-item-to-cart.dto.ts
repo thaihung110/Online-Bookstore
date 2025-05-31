@@ -25,4 +25,32 @@ export class AddItemToCartDto {
   @IsNumber()
   @Min(1)
   quantity: number;
+
+  @ApiProperty({
+    description: 'Whether the item is ticked/selected in the cart',
+    example: true,
+    required: false,
+    default: true,
+  })
+  isTicked?: boolean;
+}
+
+export class UpdateItemInCartDto {
+  @ApiProperty({
+    description: 'The quantity of the book to update',
+    example: 2,
+    minimum: 1,
+    required: false,
+  })
+  @IsNumber()
+  @Min(1)
+  quantity?: number;
+
+  @ApiProperty({
+    description: 'Whether the item is ticked/selected in the cart',
+    example: true,
+    required: false,
+    default: true,
+  })
+  isTicked?: boolean;
 }
