@@ -14,7 +14,7 @@ print("Connected to MongoDB")
 db = client["bookstore"]
 books_collection = db["books"]
 recommend_system = RecommendSystem(db_uri="mongodb://dungta:dungta1234@64.23.233.24:27017/bookstore?authSource=admin", db_name="bookstore")
-recommend_system.fit(n_factors=20, lr=0.01, reg=0.01, n_epochs=100)
+# recommend_system.fit(n_factors=20, lr=0.01, reg=0.01, n_epochs=100)
 
 
 @app.post("/rating")
@@ -58,7 +58,7 @@ async def add_rating(
 
 
 @app.get("/recommend/books/{user_id}")
-async def recommend_books(user_id: str, top_k: int = 5):
+async def recommend_books(user_id: str, top_k: int = Query(5, description="Number of recommendations to return")):
     recommendations = []
     try:
         print(f"Recommending books for user {user_id} with top_k={top_k}")
@@ -76,7 +76,22 @@ async def recommend_books_batch():
         return {"status": "success", "message": "Batch update completed."}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/recommend/books/username/{username}")
+async def recommend_books_by_username(username: str, top_k: int = Query(5, description="Number of recommendations to return")): 
+    try:
+        user = db["test_insert_user"].find_one({"username": username})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found.")
+        user_id = str(user["_id"])
+        print(f"Recommending books for user {username} with user_id={user_id} and top_k={top_k}")
+        recommendations = recommend_system.recommend(user_id, top_k=top_k)
+        return recommendations
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
     
+
 
 
 @app.get("/health")

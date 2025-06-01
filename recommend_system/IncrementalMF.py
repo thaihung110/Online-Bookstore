@@ -63,7 +63,7 @@ class IncrementalMF:
         # Lấy danh sách các item chưa rate
         candidates = [i for i in range(self.n_items) if i not in rated_set]
         print(f"n_users: {self.n_users}, n_items: {self.n_items}")
-        print(f"Candidates for user {u}: {candidates}")
+        # print(f"Candidates for user {u}: {candidates}")
         candidate_scores = [scores[i] for i in candidates]
         # Lấy top_k item có điểm cao nhất
         if len(candidate_scores) == 0:
