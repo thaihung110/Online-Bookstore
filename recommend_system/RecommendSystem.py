@@ -203,10 +203,10 @@ class RecommendSystem:
             recommendations = self.model.recommend(
                 user_index, top_k=top_k, rated_items=rated_items
             )
-
+            print(f"Recommendations for user {user_id}: {recommendations}")
             # Chuyển đổi chỉ số item sang book_id
             item_index_map = {
-                item["item_index"]: item["book_id"]
+                item["item_index"]: str(item["book_id"])
                 for item in self.db["item_index"].find()
             }
             recommendations = [

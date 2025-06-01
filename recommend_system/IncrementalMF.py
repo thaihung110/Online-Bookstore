@@ -1,9 +1,13 @@
-import numpy as np
 import pickle
+
+import numpy as np
 from pymongo import MongoClient
 
+
 class IncrementalMF:
-    def __init__(self, n_users=None, n_items=None, n_factors=20, lr=0.01, reg=0.01):
+    def __init__(
+        self, n_users=None, n_items=None, n_factors=20, lr=0.01, reg=0.01
+    ):
         if n_users is not None or n_items is not None:
             self.n_users = n_users
             self.n_items = n_items
@@ -11,17 +15,23 @@ class IncrementalMF:
             self.lr = lr
             self.reg = reg
             # Khởi tạo latent factors ngẫu nhiên
-            self.P = np.random.normal(0, 0.1, (n_users, n_factors))  # user latent
-            self.Q = np.random.normal(0, 0.1, (n_items, n_factors))  # item latent
+            self.P = np.random.normal(
+                0, 0.1, (n_users, n_factors)
+            )  # user latent
+            self.Q = np.random.normal(
+                0, 0.1, (n_items, n_factors)
+            )  # item latent
             self.bu = np.zeros(n_users)  # user bias
             self.bi = np.zeros(n_items)  # item bias
             self.mu = 0  # global mean
             self.last_update_time = None  # Thời gian cập nhật cuối cùng
+
     # def __init__(self,path=None):
     #     self.load_model(path)  # Tải mô hình đã lưu nếu có
 
     def add_user(self):
         self.n_users += 1
+
     def add_item(self):
         self.n_items += 1
 
@@ -63,7 +73,7 @@ class IncrementalMF:
         # Lấy danh sách các item chưa rate
         candidates = [i for i in range(self.n_items) if i not in rated_set]
         print(f"n_users: {self.n_users}, n_items: {self.n_items}")
-        print(f"Candidates for user {u}: {candidates}")
+        # print(f"Candidates for user {u}: {candidates}")
         candidate_scores = [scores[i] for i in candidates]
         # Lấy top_k item có điểm cao nhất
         if len(candidate_scores) == 0:
@@ -71,40 +81,40 @@ class IncrementalMF:
         top_indices = np.argsort(candidate_scores)[-top_k:][::-1]
         top_items = [candidates[i] for i in top_indices]
         return top_items
-    
-    def save_model(self, path='mf_model.pkl'):
-        with open(path, 'wb') as f:
-            pickle.dump({
-                'P': self.P,
-                'Q': self.Q,
-                'bu': self.bu,
-                'bi': self.bi,
-                'mu': self.mu,
-                'n_users': self.n_users,
-                'n_items': self.n_items,
-                'n_factors': self.n_factors,
-                'lr': self.lr,
-                'reg': self.reg,
-                'last_update_time': self.last_update_time
-            }, f)
 
-    def load_model(self, path='mf_model.pkl'):
-        with open(path, 'rb') as f:
+    def save_model(self, path="mf_model.pkl"):
+        with open(path, "wb") as f:
+            pickle.dump(
+                {
+                    "P": self.P,
+                    "Q": self.Q,
+                    "bu": self.bu,
+                    "bi": self.bi,
+                    "mu": self.mu,
+                    "n_users": self.n_users,
+                    "n_items": self.n_items,
+                    "n_factors": self.n_factors,
+                    "lr": self.lr,
+                    "reg": self.reg,
+                    "last_update_time": self.last_update_time,
+                },
+                f,
+            )
+
+    def load_model(self, path="mf_model.pkl"):
+        with open(path, "rb") as f:
             params = pickle.load(f)
-            self.P = params['P']
-            self.Q = params['Q']
-            self.bu = params['bu']
-            self.bi = params['bi']
-            self.mu = params['mu']
-            self.n_users = params['n_users']
-            self.n_items = params['n_items']
-            self.n_factors = params['n_factors']
-            self.lr = params['lr']
-            self.reg = params['reg']
-            self.last_update_time = params['last_update_time']
-
-
-
+            self.P = params["P"]
+            self.Q = params["Q"]
+            self.bu = params["bu"]
+            self.bi = params["bi"]
+            self.mu = params["mu"]
+            self.n_users = params["n_users"]
+            self.n_items = params["n_items"]
+            self.n_factors = params["n_factors"]
+            self.lr = params["lr"]
+            self.reg = params["reg"]
+            self.last_update_time = params["last_update_time"]
 
 
 if __name__ == "__main__":
@@ -205,4 +215,3 @@ if __name__ == "__main__":
     # print(rated_item)
     print(f"Dự đoán cho user {user} và item {item}:", model.predict(user, item))
     # print(f"Gợi ý cho user {user}:", model.recommend(user, rated_items=rated_item))
-

@@ -1,4 +1,5 @@
 import api from "./axios";
+import recommendApi from "./axiosRecommend";
 import { useMemo } from "react";
 
 export interface Book {
@@ -400,5 +401,29 @@ export const getBooksByIds = async (ids: string[]): Promise<Book[]> => {
       }
     }
     return results;
+  }
+};
+
+// Lấy danh sách sách recommend theo username
+export const getRecommendedBooksByUsername = async (
+  username: string,
+  topK: number = 6
+): Promise<Book[]> => {
+  try {
+    const response = await recommendApi.get(
+      `/recommend/books/username/${encodeURIComponent(username)}`,
+      {
+        params: { top_k: topK },
+      }
+    );
+    if (!Array.isArray(response.data)) {
+      throw new Error(
+        "Invalid response format for recommended books by username"
+      );
+    }
+    return response.data.map(transformBookData);
+  } catch (error) {
+    console.error("Error in getRecommendedBooksByUsername API call:", error);
+    return [];
   }
 };

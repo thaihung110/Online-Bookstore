@@ -175,6 +175,10 @@ const BookDetailPage: React.FC = () => {
   const priceUsd = currentBook.price;
   const originalPriceUsd = originalPrice;
 
+  // Helper safe format
+  const safeToFixed = (val: any, digits = 2) =>
+    typeof val === "number" && !isNaN(val) ? val.toFixed(digits) : "N/A";
+
   return (
     <MainLayout>
       <Container maxWidth="lg" sx={{ py: 4 }}>
@@ -323,23 +327,27 @@ const BookDetailPage: React.FC = () => {
                 alignItems="center"
                 sx={{ my: 2 }}
               >
-                {currentBook.rating !== undefined && currentBook.rating > 0 && (
-                  <Box sx={{ display: "flex", alignItems: "center" }}>
-                    <Rating
-                      value={currentBook.rating}
-                      precision={0.5}
-                      readOnly
-                    />
-                    <Typography
-                      variant="body1"
-                      sx={{ ml: 1, color: "text.secondary" }}
-                    >
-                      {currentBook.rating.toFixed(1)}/5
-                    </Typography>
-                  </Box>
-                )}
                 {currentBook.rating !== undefined &&
-                currentBook.rating > 0 &&
+                  currentBook.rating !== null &&
+                  !isNaN(currentBook.rating) &&
+                  currentBook.rating > 0 && (
+                    <Box sx={{ display: "flex", alignItems: "center" }}>
+                      <Rating
+                        value={currentBook.rating}
+                        precision={0.5}
+                        readOnly
+                      />
+                      <Typography
+                        variant="body1"
+                        sx={{ ml: 1, color: "text.secondary" }}
+                      >
+                        {safeToFixed(currentBook.rating, 1)}/5
+                      </Typography>
+                    </Box>
+                  )}
+                {currentBook.rating !== undefined &&
+                currentBook.rating !== null &&
+                !isNaN(currentBook.rating) &&
                 currentBook.price ? (
                   <Divider orientation="vertical" flexItem />
                 ) : null}
@@ -353,7 +361,7 @@ const BookDetailPage: React.FC = () => {
                         color="error.main"
                         sx={{ fontWeight: "bold" }}
                       >
-                        ${priceUsd.toFixed(2)}
+                        ${safeToFixed(priceUsd, 2)}
                       </Typography>
 
                       <Chip
@@ -371,7 +379,7 @@ const BookDetailPage: React.FC = () => {
                           fontWeight: "medium",
                         }}
                       >
-                        ${originalPriceUsd.toFixed(2)}
+                        ${safeToFixed(originalPriceUsd, 2)}
                       </Typography>
                     </Stack>
                   ) : (
@@ -380,7 +388,7 @@ const BookDetailPage: React.FC = () => {
                       color="primary.main"
                       sx={{ fontWeight: "bold" }}
                     >
-                      ${priceUsd.toFixed(2)}
+                      ${safeToFixed(priceUsd, 2)}
                     </Typography>
                   )}
                 </Box>

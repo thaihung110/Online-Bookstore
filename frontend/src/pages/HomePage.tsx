@@ -28,23 +28,8 @@ import {
   getRecommendedBookIds,
   getBooksByIds,
 } from "../api/books";
-
-const FEATURED_GENRE_IMAGES: Record<string, string> = {
-  Fiction:
-    "https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=400&q=80", // Old books on a wooden shelf
-  "Non-Fiction":
-    "https://images.unsplash.com/photo-1464983953574-0892a716854b?auto=format&fit=crop&w=400&q=80", // Stack of books on white table
-  "Science Fiction":
-    "https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=crop&w=400&q=80", // Futuristic city/space
-  Mystery:
-    "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80", // Foggy forest, mystery
-  Romance:
-    "https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=400&q=80", // Book with heart-shaped pages
-  Biography:
-    "https://images.unsplash.com/photo-1515378791036-0648a3ef77b2?auto=format&fit=crop&w=400&q=80", // Person reading book
-  Fantasy:
-    "https://images.unsplash.com/photo-1503676382389-4809596d5290?auto=format&fit=crop&w=400&q=80", // Book with magical lights
-};
+import { getCurrentUser } from "../api/auth";
+import { getRecommendedBooksByUsername } from "../api/books";
 
 const FEATURED_GENRES = [
   "Fiction",
@@ -104,15 +89,14 @@ const HomePage: React.FC = () => {
       setLoadingRecommended(true);
       setErrorRecommended(null);
       try {
-        // Lấy userId từ localStorage (giả sử lưu ở auth-storage)
-        const authStorage = localStorage.getItem("auth-storage");
-        const userId = authStorage
-          ? JSON.parse(authStorage)?.state?.user?.id
-          : null;
-        if (userId) {
-          const bookIds = await getRecommendedBookIds(userId, 6);
-          if (bookIds && bookIds.length > 0) {
-            const books = await getBooksByIds(bookIds);
+        // Lấy username từ API profile
+        const user = await getCurrentUser();
+        console.log("[DEBUG] Current user from /auth/profile:", user);
+        const username = user?.username; // Dùng username thay vì email
+        console.log("[DEBUG] Username used for recommend API:", username);
+        if (username) {
+          const books = await getRecommendedBooksByUsername(username, 6);
+          if (books && books.length > 0) {
             setRecommendedBooks(books);
             setLoadingRecommended(false);
             return;
@@ -123,7 +107,7 @@ const HomePage: React.FC = () => {
           setErrorRecommended("You need to login to get recommendations");
         }
       } catch (err) {
-        setErrorRecommended("Failed to load recommended books");
+        setErrorRecommended("You need to login to get recommendations");
         console.error(err);
       } finally {
         setLoadingRecommended(false);

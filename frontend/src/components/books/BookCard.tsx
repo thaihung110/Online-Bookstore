@@ -38,6 +38,21 @@ const BookCard: React.FC<BookCardProps> = memo(({ book }) => {
   const isDiscounted = book.discountRate > 0;
   const inWishlist = isItemInWishlist(book.id);
 
+  // Guard: Không hiển thị sách nếu dữ liệu không hợp lệ
+  if (
+    book.price === 0 ||
+    (isDiscounted &&
+      (book.originalPrice === null || book.originalPrice === undefined))
+  ) {
+    if (process.env.NODE_ENV !== "production") {
+      console.warn(
+        `BookCard: Không hiển thị sách do dữ liệu không hợp lệ:`,
+        book
+      );
+    }
+    return null;
+  }
+
   // Handle image loading
   const handleImageLoad = () => setImageLoaded(true);
   const handleImageError = () => {
@@ -61,14 +76,17 @@ const BookCard: React.FC<BookCardProps> = memo(({ book }) => {
   };
 
   // Debug: Log giá trị đầu vào
-  console.log(
-    "BookCard:",
-    book.title,
-    "price:",
-    book.price,
-    "originalPrice:",
-    book.originalPrice
-  );
+  if (process.env.NODE_ENV !== "production") {
+    console.log(
+      "BookCard:",
+      book.title,
+      "price:",
+      book.price,
+      "originalPrice:",
+      book.originalPrice
+    );
+  }
+
   // Không chuyển đổi giá nữa, chỉ hiển thị trực tiếp
   const priceUsd = book.price;
   const originalPriceUsd = book.originalPrice;
@@ -227,22 +245,34 @@ const BookCard: React.FC<BookCardProps> = memo(({ book }) => {
 
         <Box sx={{ mt: "auto" }}>
           <Stack direction="row" spacing={1} alignItems="baseline">
-            <Typography
-              variant="h6"
-              color={isDiscounted ? "error.main" : "primary.main"}
-              sx={{ fontWeight: "bold" }}
-            >
-              ${priceUsd.toFixed(2)}
-            </Typography>
-            {isDiscounted && (
+            {priceUsd === null || priceUsd === undefined ? (
               <Typography
-                variant="body2"
-                color="text.secondary"
-                sx={{ textDecoration: "line-through" }}
+                variant="h6"
+                color="warning.main"
+                sx={{ fontWeight: "bold" }}
               >
-                ${originalPriceUsd.toFixed(2)}
+                Contact
+              </Typography>
+            ) : (
+              <Typography
+                variant="h6"
+                color={isDiscounted ? "error.main" : "primary.main"}
+                sx={{ fontWeight: "bold" }}
+              >
+                ${priceUsd.toFixed(2)}
               </Typography>
             )}
+            {isDiscounted &&
+              originalPriceUsd !== null &&
+              originalPriceUsd !== undefined && (
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ textDecoration: "line-through" }}
+                >
+                  ${originalPriceUsd.toFixed(2)}
+                </Typography>
+              )}
           </Stack>
           {book.stock === 0 && (
             <Typography variant="body2" color="error" sx={{ mt: 1 }}>
