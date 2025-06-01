@@ -21,7 +21,13 @@ import WhatshotIcon from "@mui/icons-material/Whatshot";
 import EmojiObjectsIcon from "@mui/icons-material/EmojiObjects";
 import MainLayout from "../components/layouts/MainLayout";
 import BookCard from "../components/books/BookCard";
-import { Book, getFeaturedBooks, getAllGenres } from "../api/books";
+import {
+  Book,
+  getFeaturedBooks,
+  getAllGenres,
+  getRecommendedBookIds,
+  getBooksByIds,
+} from "../api/books";
 
 const FEATURED_GENRE_IMAGES: Record<string, string> = {
   Fiction:
@@ -94,16 +100,37 @@ const HomePage: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    // Giả lập: lấy ngẫu nhiên 6 sách từ featuredBooks nếu chưa có API riêng
-    if (featuredBooks.length > 0) {
+    const fetchRecommendedBooks = async () => {
       setLoadingRecommended(true);
-      setTimeout(() => {
-        const shuffled = [...featuredBooks].sort(() => 0.5 - Math.random());
-        setRecommendedBooks(shuffled.slice(0, 6));
+      setErrorRecommended(null);
+      try {
+        // Lấy userId từ localStorage (giả sử lưu ở auth-storage)
+        const authStorage = localStorage.getItem("auth-storage");
+        const userId = authStorage
+          ? JSON.parse(authStorage)?.state?.user?.id
+          : null;
+        if (userId) {
+          const bookIds = await getRecommendedBookIds(userId, 6);
+          if (bookIds && bookIds.length > 0) {
+            const books = await getBooksByIds(bookIds);
+            setRecommendedBooks(books);
+            setLoadingRecommended(false);
+            return;
+          } else {
+            setErrorRecommended("No recommendations found");
+          }
+        } else {
+          setErrorRecommended("You need to login to get recommendations");
+        }
+      } catch (err) {
+        setErrorRecommended("Failed to load recommended books");
+        console.error(err);
+      } finally {
         setLoadingRecommended(false);
-      }, 500);
-    }
-  }, [featuredBooks]);
+      }
+    };
+    fetchRecommendedBooks();
+  }, []);
 
   // Lấy 7 genres nổi bật đầu tiên có trong data
   const featuredGenres = FEATURED_GENRES.filter((g) =>
