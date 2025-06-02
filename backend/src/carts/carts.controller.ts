@@ -125,4 +125,36 @@ export class CartsController {
   async clearCart(@Request() req) {
     return this.cartsService.clearCart(req.user.id);
   }
+
+  @Get('validate')
+  @ApiOperation({ summary: 'Validate cart items for stock and price changes' })
+  @ApiResponse({
+    status: 200,
+    description: 'Cart validation results.',
+    schema: {
+      type: 'object',
+      properties: {
+        isValid: { type: 'boolean' },
+        issues: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              bookId: { type: 'string' },
+              type: { type: 'string', enum: ['stock', 'price', 'unavailable'] },
+              message: { type: 'string' },
+              currentStock: { type: 'number' },
+              requestedQuantity: { type: 'number' },
+              currentPrice: { type: 'number' },
+              cartPrice: { type: 'number' },
+            },
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  async validateCart(@Request() req) {
+    return this.cartsService.validateCart(req.user.id);
+  }
 }

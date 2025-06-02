@@ -55,9 +55,17 @@ export class AdminBooksService {
     // Process image URL using UploadService
     const coverImage = await this.uploadService.processImageUrl(bookObj.coverImage);
 
+    // Ensure price values are valid numbers
+    const originalPrice = bookObj.originalPrice || 0;
+    const discountRate = bookObj.discountRate || 0;
+    const price = bookObj.price || (originalPrice * (1 - discountRate / 100));
+
     return {
       ...bookObj,
       coverImage,
+      originalPrice,
+      discountRate,
+      price,
     };
   }
 

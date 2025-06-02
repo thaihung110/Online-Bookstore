@@ -4,6 +4,8 @@ import {
   IsNumber,
   Min,
   IsMongoId,
+  IsBoolean,
+  IsOptional,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -32,6 +34,8 @@ export class AddItemToCartDto {
     required: false,
     default: true,
   })
+  @IsOptional()
+  @IsBoolean()
   isTicked?: boolean;
 }
 
@@ -42,6 +46,7 @@ export class UpdateItemInCartDto {
     minimum: 1,
     required: false,
   })
+  @IsOptional()
   @IsNumber()
   @Min(1)
   quantity?: number;
@@ -52,5 +57,7 @@ export class UpdateItemInCartDto {
     required: false,
     default: true,
   })
+  @IsOptional()
+  @IsBoolean()
   isTicked?: boolean;
 }

@@ -42,7 +42,7 @@ export class CartsService {
     userId: string,
     addItemDto: AddItemToCartDto,
   ): Promise<CartDocument> {
-    const { bookId, quantity } = addItemDto;
+    const { bookId, quantity, isTicked = true } = addItemDto;
 
     if (quantity <= 0) {
       throw new BadRequestException('Quantity must be greater than 0');
@@ -69,6 +69,7 @@ export class CartsService {
             book: bookObjectId,
             quantity: quantity,
             priceAtAdd: book.price,
+            isTicked: isTicked,
           },
         ],
         subtotal: book.price * quantity,
@@ -150,6 +151,7 @@ export class CartsService {
               book: bookObjectId,
               quantity: quantity,
               priceAtAdd: book.price,
+              isTicked: isTicked,
             },
           },
           $inc: { subtotal: book.price * quantity },
@@ -348,7 +350,7 @@ export class CartsService {
     userId: string,
     addItemDto: AddItemToCartDto,
   ): Promise<CartDocument> {
-    const { bookId, quantity } = addItemDto;
+    const { bookId, quantity, isTicked = true } = addItemDto;
 
     // Validate user and book
     await this.usersService.findById(userId);
@@ -393,6 +395,7 @@ export class CartsService {
             book: new MongooseSchema.Types.ObjectId(bookId),
             quantity: quantity,
             priceAtAdd: book.price,
+            isTicked: isTicked,
           },
         },
       },
@@ -407,6 +410,73 @@ export class CartsService {
   // Simplified addToCart method - delegates to addItem
   async addToCart(userId: string, addItemDto: AddItemToCartDto): Promise<Cart> {
     return this.addItem(userId, addItemDto);
+  }
+
+  // Validate cart items for stock and price changes
+  async validateCart(userId: string): Promise<{
+    isValid: boolean;
+    issues: Array<{
+      bookId: string;
+      type: 'stock' | 'price' | 'unavailable';
+      message: string;
+      currentStock?: number;
+      requestedQuantity?: number;
+      currentPrice?: number;
+      cartPrice?: number;
+    }>;
+  }> {
+    const cart = await this.cartModel.findOne({ user: userId }).populate({
+      path: 'items.book',
+      model: 'Book',
+    });
+
+    if (!cart) {
+      return { isValid: true, issues: [] };
+    }
+
+    const issues = [];
+
+    for (const item of cart.items) {
+      const book = item.book as any; // Populated book object
+
+      if (!book) {
+        issues.push({
+          bookId: item.book.toString(),
+          type: 'unavailable' as const,
+          message: 'This book is no longer available',
+        });
+        continue;
+      }
+
+      // Check stock availability
+      if (book.stock < item.quantity) {
+        issues.push({
+          bookId: book._id.toString(),
+          type: 'stock' as const,
+          message: `Only ${book.stock} items available, but ${item.quantity} requested`,
+          currentStock: book.stock,
+          requestedQuantity: item.quantity,
+        });
+      }
+
+      // Check price changes (allow small floating point differences)
+      const priceDifference = Math.abs(book.price - item.priceAtAdd);
+      if (priceDifference > 0.01) {
+        const priceChange = book.price > item.priceAtAdd ? 'increased' : 'decreased';
+        issues.push({
+          bookId: book._id.toString(),
+          type: 'price' as const,
+          message: `Price has ${priceChange} from $${(item.priceAtAdd / 23000).toFixed(2)} to $${(book.price / 23000).toFixed(2)}`,
+          currentPrice: book.price,
+          cartPrice: item.priceAtAdd,
+        });
+      }
+    }
+
+    return {
+      isValid: issues.length === 0,
+      issues,
+    };
   }
 
   // Method to cleanup duplicate items (call this once to fix existing data)
