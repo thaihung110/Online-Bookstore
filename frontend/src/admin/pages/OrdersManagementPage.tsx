@@ -169,7 +169,7 @@ const OrdersManagementPage: React.FC = () => {
                     <TableCell>{formatDate(order.createdAt)}</TableCell>
                     <TableCell>{order.user.name}</TableCell>
                     <TableCell>{order.items.length} items</TableCell>
-                    <TableCell>${order.totalAmount.toFixed(2)}</TableCell>
+                    <TableCell>${(order.totalAmount || 0).toFixed(2)}</TableCell>
                     <TableCell>
                       <Chip
                         label={

@@ -44,6 +44,9 @@ const BookList: React.FC<BookListProps> = ({
 }) => {
   const navigate = useNavigate();
 
+  // Placeholder image as data URL to avoid network requests
+  const placeholderImage = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA0MCA2MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjRjVGNUY1Ii8+CjxwYXRoIGQ9Ik0xNiAxOEgyNFYyMkgxNlYxOFoiIGZpbGw9IiNDQ0NDQ0MiLz4KPHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA0MCA2MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjRjVGNUY1Ii8+CjxwYXRoIGQ9Ik0xNiAxOEgyNFYyMkgxNlYxOFoiIGZpbGw9IiNDQ0NDQ0MiLz4KPHBhdGggZD0iTTEyIDI2SDI4VjI4SDEyVjI2WiIgZmlsbD0iI0NDQ0NDQyIvPgo8cGF0aCBkPSJNMTIgMzBIMjhWMzJIMTJWMzBaIiBmaWxsPSIjQ0NDQ0NDIi8+Cjx0ZXh0IHg9IjIwIiB5PSI0NCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzk5OTk5OSIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjgiPk5vIEltYWdlPC90ZXh0Pgo8L3N2Zz4K";
+
   // Handle pagination
   const handleChangePage = (_event: unknown, newPage: number) => {
     onFilterChange({ page: newPage + 1 });
@@ -182,25 +185,26 @@ const BookList: React.FC<BookListProps> = ({
                 >
                   <TableCell>
                     <Box sx={{ display: "flex", alignItems: "center" }}>
-                      {book.coverImage && (
-                        <Box
-                          component="img"
-                          src={book.coverImage}
-                          alt={book.title}
-                          sx={{
-                            width: 40,
-                            height: 60,
-                            objectFit: "cover",
-                            mr: 2,
-                            borderRadius: 1,
-                          }}
-                          onError={(
-                            e: React.SyntheticEvent<HTMLImageElement>
-                          ) => {
-                            e.currentTarget.src = "/placeholder-book.png";
-                          }}
-                        />
-                      )}
+                      <Box
+                        component="img"
+                        src={book.coverImage || placeholderImage}
+                        alt={book.title}
+                        sx={{
+                          width: 40,
+                          height: 60,
+                          objectFit: "cover",
+                          mr: 2,
+                          borderRadius: 1,
+                        }}
+                        onError={(
+                          e: React.SyntheticEvent<HTMLImageElement>
+                        ) => {
+                          // Only set placeholder once to prevent infinite loops
+                          if (e.currentTarget.src !== placeholderImage) {
+                            e.currentTarget.src = placeholderImage;
+                          }
+                        }}
+                      />
                       <Typography variant="body1">{book.title}</Typography>
                     </Box>
                   </TableCell>
@@ -217,14 +221,14 @@ const BookList: React.FC<BookListProps> = ({
                             mr: 1,
                           }}
                         >
-                          ${book.originalPrice.toFixed(2)}
+                          ${(book.originalPrice || 0).toFixed(2)}
                         </Typography>
                         <Typography
                           variant="body1"
                           component="span"
                           sx={{ color: "error.main", fontWeight: "bold" }}
                         >
-                          ${book.price.toFixed(2)}
+                          ${(book.price || 0).toFixed(2)}
                         </Typography>
                         <Typography
                           variant="caption"
@@ -236,7 +240,7 @@ const BookList: React.FC<BookListProps> = ({
                       </>
                     ) : (
                       <Typography variant="body1">
-                        ${book.price.toFixed(2)}
+                        ${(book.price || 0).toFixed(2)}
                       </Typography>
                     )}
                   </TableCell>

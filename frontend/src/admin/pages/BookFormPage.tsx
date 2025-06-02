@@ -695,7 +695,7 @@ const BookFormPage: React.FC = () => {
                   <TextField
                     fullWidth
                     label="Current Price (Calculated)"
-                    value={`$${calculateCurrentPrice(formData.originalPrice, formData.discountRate).toFixed(2)}`}
+                    value={`$${(calculateCurrentPrice(formData.originalPrice, formData.discountRate) || 0).toFixed(2)}`}
                     InputProps={{
                       readOnly: true,
                     }}

@@ -38,11 +38,16 @@ const BookCard: React.FC<BookCardProps> = memo(({ book }) => {
   const isDiscounted = book.discountRate > 0;
   const inWishlist = isItemInWishlist(book.id);
 
+  // Placeholder image as data URL to avoid network requests
+  const placeholderImage = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjMwMCIgdmlld0JveD0iMCAwIDIwMCAzMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMzAwIiBmaWxsPSIjRjVGNUY1Ii8+CjxwYXRoIGQ9Ik04MCA5MEgxMjBWMTEwSDgwVjkwWiIgZmlsbD0iI0NDQ0NDQyIvPgo8cGF0aCBkPSJNNjAgMTMwSDE0MFYxNDBINjBWMTMwWiIgZmlsbD0iI0NDQ0NDQyIvPgo8cGF0aCBkPSJNNjAgMTUwSDE0MFYxNjBINjBWMTUwWiIgZmlsbD0iI0NDQ0NDQyIvPgo8cGF0aCBkPSJNNjAgMTcwSDE0MFYxODBINjBWMTcwWiIgZmlsbD0iI0NDQ0NDQyIvPgo8dGV4dCB4PSIxMDAiIHk9IjIyMCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzk5OTk5OSIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0Ij5ObyBJbWFnZTwvdGV4dD4KPC9zdmc+";
+
   // Handle image loading
   const handleImageLoad = () => setImageLoaded(true);
   const handleImageError = () => {
-    setImageError(true);
-    setImageLoaded(true);
+    if (!imageError) { // Only set error once to prevent loops
+      setImageError(true);
+      setImageLoaded(true);
+    }
   };
 
   // Handle cart and wishlist actions
@@ -105,7 +110,7 @@ const BookCard: React.FC<BookCardProps> = memo(({ book }) => {
         )}
         <CardMedia
           component="img"
-          image={imageError ? "/placeholder-book.jpg" : book.coverImage}
+          image={imageError ? placeholderImage : (book.coverImage || placeholderImage)}
           alt={book.title}
           onLoad={handleImageLoad}
           onError={handleImageError}
@@ -232,7 +237,7 @@ const BookCard: React.FC<BookCardProps> = memo(({ book }) => {
               color={isDiscounted ? "error.main" : "primary.main"}
               sx={{ fontWeight: "bold" }}
             >
-              ${priceUsd.toFixed(2)}
+              ${(priceUsd || 0).toFixed(2)}
             </Typography>
             {isDiscounted && (
               <Typography
@@ -240,7 +245,7 @@ const BookCard: React.FC<BookCardProps> = memo(({ book }) => {
                 color="text.secondary"
                 sx={{ textDecoration: "line-through" }}
               >
-                ${originalPriceUsd.toFixed(2)}
+                ${(originalPriceUsd || 0).toFixed(2)}
               </Typography>
             )}
           </Stack>

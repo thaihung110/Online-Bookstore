@@ -25,15 +25,12 @@ import MainLayout from "../components/layouts/MainLayout";
 import { useCartStore } from "../store/cartStore";
 import { CartItem } from "../api/cart";
 import { vndToUsd } from "../utils/currency";
-
-const SELECTED_ITEMS_KEY = "cart-selected-items";
+import CartValidationAlert from "../components/cart/CartValidationAlert";
 
 const CartItemRow: React.FC<{
   item: CartItem;
-  checked: boolean;
-  onCheckedChange: (checked: boolean) => void;
-}> = ({ item, checked, onCheckedChange }) => {
-  const { updateItemQuantity, removeItem, isLoading } = useCartStore();
+}> = ({ item }) => {
+  const { updateItemQuantity, updateItemSelection, removeItem, isLoading } = useCartStore();
 
   // Lấy id đúng cho book (ưu tiên _id, fallback sang id)
   const bookId = (item.book as any)._id || item.book.id;
@@ -105,6 +102,11 @@ const CartItemRow: React.FC<{
     removeItem(bookId);
   };
 
+  const handleSelectionChange = (checked: boolean) => {
+    console.log("CartItemRow selection change bookId:", bookId, "checked:", checked);
+    updateItemSelection(bookId, checked);
+  };
+
   // Placeholder image if no cover is available
   const coverImage = item.book.coverImage || "/placeholder-book.jpg";
 
@@ -115,9 +117,10 @@ const CartItemRow: React.FC<{
   return (
     <Paper sx={{ p: 2, mb: 2, display: "flex", width: "100%" }}>
       <Checkbox
-        checked={checked}
-        onChange={(e) => onCheckedChange(e.target.checked)}
+        checked={item.isTicked}
+        onChange={(e) => handleSelectionChange(e.target.checked)}
         sx={{ mr: 1, alignSelf: "flex-start" }}
+        disabled={isLoading}
       />
       <Box sx={{ width: 80, height: 120, mr: 2, flexShrink: 0 }}>
         <CardMedia
@@ -224,70 +227,60 @@ const CartItemRow: React.FC<{
 };
 
 const CartPage: React.FC = () => {
-  const { cart, isLoading, error, loadCart, clearCart } = useCartStore();
+  const {
+    cart,
+    isLoading,
+    error,
+    loadCart,
+    clearCart,
+    updateItemSelection,
+    getSelectedItems,
+    getSelectedTotalPrice,
+    validateCart,
+    getValidationIssues,
+    hasValidationIssues,
+    isValidating
+  } = useCartStore();
 
-  // State lưu trạng thái chọn từng sản phẩm (bookId: boolean)
-  const [selectedItems, setSelectedItems] = React.useState<{
-    [id: string]: boolean;
-  }>({});
-
-  // Khi cart thay đổi, đồng bộ selectedItems (mặc định tick hết)
+  // Handle Buy Now functionality by updating backend state
   React.useEffect(() => {
-    if (cart?.items) {
-      // Ưu tiên xử lý Buy Now flag
+    const handleBuyNow = async () => {
       const buyNowId = localStorage.getItem("cart-buynow-id");
-      if (buyNowId) {
-        const newSelected: { [id: string]: boolean } = {};
-        cart.items.forEach((item) => {
-          const id = (item.book as any)._id || item.book.id;
-          newSelected[id] = id === buyNowId;
-        });
-        setSelectedItems(newSelected);
-        localStorage.removeItem("cart-buynow-id");
-        localStorage.setItem(SELECTED_ITEMS_KEY, JSON.stringify(newSelected));
-        return;
-      }
-      // Nếu không phải buy now, lấy trạng thái cũ từ localStorage như bình thường
-      const saved = localStorage.getItem(SELECTED_ITEMS_KEY);
-      let initial: { [id: string]: boolean } = {};
-      if (saved) {
+      if (buyNowId && cart?.items) {
         try {
-          initial = JSON.parse(saved);
-        } catch {}
+          // Update all items to be unselected first, then select only the buy now item
+          for (const item of cart.items) {
+            const id = (item.book as any)._id || item.book.id;
+            const shouldBeSelected = id === buyNowId;
+            if (item.isTicked !== shouldBeSelected) {
+              await updateItemSelection(id, shouldBeSelected);
+            }
+          }
+          localStorage.removeItem("cart-buynow-id");
+        } catch (error) {
+          console.error("Error handling buy now selection:", error);
+        }
       }
-      const newSelected: { [id: string]: boolean } = {};
-      const initialKeys = Object.keys(initial);
-      cart.items.forEach((item) => {
-        const id = (item.book as any)._id || item.book.id;
-        newSelected[id] = initial[id] !== undefined ? initial[id] : true;
-      });
-      setSelectedItems(newSelected);
+    };
+
+    if (cart?.items && !isLoading) {
+      handleBuyNow();
     }
-  }, [cart]);
+  }, [cart?.items, isLoading, updateItemSelection]);
 
-  // Luôn lưu selectedItems vào localStorage khi thay đổi
+  // Validate cart when it loads or changes
   React.useEffect(() => {
-    localStorage.setItem(SELECTED_ITEMS_KEY, JSON.stringify(selectedItems));
-  }, [selectedItems]);
+    if (cart?.items && cart.items.length > 0 && !isLoading) {
+      validateCart();
+    }
+  }, [cart?.items, validateCart, isLoading]);
 
-  // Hàm xử lý chọn/bỏ chọn từng sản phẩm
-  const handleCheckedChange = (id: string, checked: boolean) => {
-    setSelectedItems((prev) => ({ ...prev, [id]: checked }));
-  };
+  // Get selected items from backend state
+  const selectedCartItems = getSelectedItems();
+  const validationIssues = getValidationIssues();
 
-  // Lọc các item được chọn
-  const selectedCartItems =
-    cart?.items.filter(
-      (item) => selectedItems[(item.book as any)._id || item.book.id]
-    ) || [];
-
-  // Tính toán lại các giá trị dựa trên selectedCartItems
-  const subtotal = vndToUsd(
-    selectedCartItems.reduce(
-      (sum, item) => sum + item.priceAtAdd * item.quantity,
-      0
-    )
-  );
+  // Calculate totals using backend selected items
+  const subtotal = vndToUsd(getSelectedTotalPrice());
   const discount = 0;
   const totalItems = selectedCartItems.reduce(
     (sum, item) => sum + item.quantity,
@@ -390,6 +383,21 @@ const CartPage: React.FC = () => {
               Continue Shopping
             </Button>
 
+            {/* Cart Validation Alert */}
+            <CartValidationAlert
+              issues={validationIssues}
+              onRefresh={() => validateCart()}
+              onFixIssues={() => {
+                // Auto-fix issues by updating quantities to available stock
+                validationIssues.forEach((issue) => {
+                  if (issue.type === "stock" && issue.currentStock !== undefined) {
+                    // This would need to be implemented to auto-fix quantities
+                    console.log("Auto-fixing stock issue for book:", issue.bookId);
+                  }
+                });
+              }}
+            />
+
             <Box sx={{ position: "relative" }}>
               {isLoading && (
                 <Box
@@ -415,10 +423,6 @@ const CartPage: React.FC = () => {
                   <CartItemRow
                     key={id}
                     item={item}
-                    checked={!!selectedItems[id]}
-                    onCheckedChange={(checked) =>
-                      handleCheckedChange(id, checked)
-                    }
                   />
                 );
               })}
@@ -505,8 +509,12 @@ const CartPage: React.FC = () => {
                 to="/checkout"
                 disabled={
                   isLoading ||
+                  isValidating ||
                   !cart?.items.length ||
-                  selectedCartItems.length === 0
+                  selectedCartItems.length === 0 ||
+                  (hasValidationIssues() && validationIssues.some(issue =>
+                    issue.type === 'stock' || issue.type === 'unavailable'
+                  ))
                 }
               >
                 Proceed to Checkout

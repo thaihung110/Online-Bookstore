@@ -334,7 +334,7 @@ const BookDetailPage: React.FC = () => {
                       variant="body1"
                       sx={{ ml: 1, color: "text.secondary" }}
                     >
-                      {currentBook.rating.toFixed(1)}/5
+                      {(currentBook.rating || 0).toFixed(1)}/5
                     </Typography>
                   </Box>
                 )}
@@ -353,7 +353,7 @@ const BookDetailPage: React.FC = () => {
                         color="error.main"
                         sx={{ fontWeight: "bold" }}
                       >
-                        ${priceUsd.toFixed(2)}
+                        ${(priceUsd || 0).toFixed(2)}
                       </Typography>
 
                       <Chip
@@ -371,7 +371,7 @@ const BookDetailPage: React.FC = () => {
                           fontWeight: "medium",
                         }}
                       >
-                        ${originalPriceUsd.toFixed(2)}
+                        ${(originalPriceUsd || 0).toFixed(2)}
                       </Typography>
                     </Stack>
                   ) : (
@@ -380,7 +380,7 @@ const BookDetailPage: React.FC = () => {
                       color="primary.main"
                       sx={{ fontWeight: "bold" }}
                     >
-                      ${priceUsd.toFixed(2)}
+                      ${(priceUsd || 0).toFixed(2)}
                     </Typography>
                   )}
                 </Box>

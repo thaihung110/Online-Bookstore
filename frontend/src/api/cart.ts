@@ -7,6 +7,7 @@ export interface CartItem {
   book: Book;
   quantity: number;
   priceAtAdd: number;
+  isTicked: boolean;
 }
 
 // Interface for the cart structure
@@ -27,12 +28,14 @@ export interface Cart {
 export interface AddToCartRequest {
   bookId: string;
   quantity: number;
+  isTicked?: boolean;
 }
 
-// Request to update item quantity in cart
+// Request to update item in cart (quantity and/or selection)
 export interface UpdateCartItemRequest {
   bookId: string;
-  quantity: number;
+  quantity?: number;
+  isTicked?: boolean;
 }
 
 // --- API Functions ---
@@ -85,20 +88,42 @@ export const removeFromCart = async (bookId: string): Promise<Cart> => {
 };
 
 /**
- * Updates the quantity of an item in the cart.
+ * Updates an item in the cart (quantity and/or selection status).
  */
-export const updateCartItemQuantity = async (
+export const updateCartItem = async (
   itemData: UpdateCartItemRequest
 ): Promise<Cart> => {
   try {
-    const response = await api.patch<Cart>(`/carts/items/${itemData.bookId}`, {
-      quantity: itemData.quantity,
-    });
+    const updatePayload: { quantity?: number; isTicked?: boolean } = {};
+    if (itemData.quantity !== undefined) updatePayload.quantity = itemData.quantity;
+    if (itemData.isTicked !== undefined) updatePayload.isTicked = itemData.isTicked;
+
+    const response = await api.patch<Cart>(`/carts/items/${itemData.bookId}`, updatePayload);
     return response.data;
   } catch (error) {
-    console.error("Error updating cart item quantity:", error);
+    console.error("Error updating cart item:", error);
     throw error;
   }
+};
+
+/**
+ * Updates the quantity of an item in the cart.
+ * @deprecated Use updateCartItem instead for better flexibility
+ */
+export const updateCartItemQuantity = async (
+  itemData: { bookId: string; quantity: number }
+): Promise<Cart> => {
+  return updateCartItem(itemData);
+};
+
+/**
+ * Updates the selection status of an item in the cart.
+ */
+export const updateCartItemSelection = async (
+  bookId: string,
+  isTicked: boolean
+): Promise<Cart> => {
+  return updateCartItem({ bookId, isTicked });
 };
 
 /**
@@ -110,6 +135,35 @@ export const clearCart = async (): Promise<Cart> => {
     return response.data;
   } catch (error) {
     console.error("Error clearing cart:", error);
+    throw error;
+  }
+};
+
+// Interface for cart validation results
+export interface CartValidationIssue {
+  bookId: string;
+  type: 'stock' | 'price' | 'unavailable';
+  message: string;
+  currentStock?: number;
+  requestedQuantity?: number;
+  currentPrice?: number;
+  cartPrice?: number;
+}
+
+export interface CartValidationResult {
+  isValid: boolean;
+  issues: CartValidationIssue[];
+}
+
+/**
+ * Validates cart items for stock and price changes.
+ */
+export const validateCart = async (): Promise<CartValidationResult> => {
+  try {
+    const response = await api.get<CartValidationResult>("/carts/validate");
+    return response.data;
+  } catch (error) {
+    console.error("Error validating cart:", error);
     throw error;
   }
 };
