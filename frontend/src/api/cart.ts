@@ -1,6 +1,56 @@
 import api from "./axios";
 import { Book } from "./books"; // Assuming Book type is needed for cart items
 
+// Transform raw book data from backend to frontend format
+const transformBookData = (bookData: any): Book => {
+  // Convert _id to id if necessary
+  const id = bookData._id || bookData.id || "";
+
+  // Ensure numeric values
+  const originalPrice = Number(bookData.originalPrice) || bookData.price;
+  const discountRate = Number(bookData.discountRate) || 0;
+  const price = Number(bookData.price);
+  const rating = bookData.rating
+    ? Number(bookData.rating)
+    : bookData.averageRating
+    ? Number(bookData.averageRating)
+    : undefined;
+  const stock = Number(bookData.stock) || 0;
+  const pageCount = bookData.pageCount ? Number(bookData.pageCount) : undefined;
+
+  // Ensure arrays
+  const genres = Array.isArray(bookData.genres) ? bookData.genres : [];
+
+  return {
+    id,
+    title: bookData.title?.trim() || "",
+    author: bookData.author?.trim() || "",
+    description: bookData.description?.trim() || "",
+    originalPrice,
+    discountRate,
+    price,
+    coverImage: bookData.coverImage,
+    isbn: bookData.isbn || "",
+    genres,
+    publisher: bookData.publisher?.trim() || "",
+    publicationYear: bookData.publicationYear || 0,
+    rating,
+    stock,
+    pageCount,
+  };
+};
+
+// Transform cart data from backend to frontend format
+const transformCartData = (cartData: any): Cart => {
+  return {
+    ...cartData,
+    items: cartData.items?.map((item: any) => ({
+      ...item,
+      book: transformBookData(item.book),
+    })) || [],
+  };
+};
+
 // Interface for a cart item
 export interface CartItem {
   _id?: string;
@@ -45,8 +95,8 @@ export interface UpdateCartItemRequest {
  */
 export const getCart = async (): Promise<Cart> => {
   try {
-    const response = await api.get<Cart>("/carts");
-    return response.data;
+    const response = await api.get("/carts");
+    return transformCartData(response.data);
   } catch (error) {
     console.error("Error fetching cart:", error);
     // Return empty cart on error
@@ -65,8 +115,8 @@ export const getCart = async (): Promise<Cart> => {
  */
 export const addToCart = async (itemData: AddToCartRequest): Promise<Cart> => {
   try {
-    const response = await api.post<Cart>("/carts/items", itemData);
-    return response.data;
+    const response = await api.post("/carts/items", itemData);
+    return transformCartData(response.data);
   } catch (error) {
     console.error("Error adding item to cart:", error);
     throw error;
@@ -79,8 +129,8 @@ export const addToCart = async (itemData: AddToCartRequest): Promise<Cart> => {
  */
 export const removeFromCart = async (bookId: string): Promise<Cart> => {
   try {
-    const response = await api.delete<Cart>(`/carts/items/${bookId}`);
-    return response.data;
+    const response = await api.delete(`/carts/items/${bookId}`);
+    return transformCartData(response.data);
   } catch (error) {
     console.error("Error removing item from cart:", error);
     throw error;
@@ -98,8 +148,8 @@ export const updateCartItem = async (
     if (itemData.quantity !== undefined) updatePayload.quantity = itemData.quantity;
     if (itemData.isTicked !== undefined) updatePayload.isTicked = itemData.isTicked;
 
-    const response = await api.patch<Cart>(`/carts/items/${itemData.bookId}`, updatePayload);
-    return response.data;
+    const response = await api.patch(`/carts/items/${itemData.bookId}`, updatePayload);
+    return transformCartData(response.data);
   } catch (error) {
     console.error("Error updating cart item:", error);
     throw error;
@@ -131,8 +181,8 @@ export const updateCartItemSelection = async (
  */
 export const clearCart = async (): Promise<Cart> => {
   try {
-    const response = await api.delete<Cart>("/carts");
-    return response.data;
+    const response = await api.delete("/carts");
+    return transformCartData(response.data);
   } catch (error) {
     console.error("Error clearing cart:", error);
     throw error;

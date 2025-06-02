@@ -94,37 +94,7 @@ export class UsersService {
     }
   }
 
-  async addToWishlist(userId: string, bookId: string): Promise<User> {
-    const user = await this.userModel.findById(userId);
-    if (!user) {
-      throw new NotFoundException(`User with ID ${userId} not found`);
-    }
 
-    const bookObjectId = new Types.ObjectId(bookId);
-    if (
-      !user.wishlist.some((id) => id.toString() === bookObjectId.toString())
-    ) {
-      user.wishlist.push(bookObjectId as any);
-      await user.save();
-    }
-
-    return this.findById(userId);
-  }
-
-  async removeFromWishlist(userId: string, bookId: string): Promise<User> {
-    const user = await this.userModel.findById(userId);
-    if (!user) {
-      throw new NotFoundException(`User with ID ${userId} not found`);
-    }
-
-    const bookObjectId = new Types.ObjectId(bookId);
-    user.wishlist = user.wishlist.filter(
-      (id) => id.toString() !== bookObjectId.toString(),
-    );
-    await user.save();
-
-    return this.findById(userId);
-  }
 
   async addLoyaltyPoints(userId: string, points: number): Promise<User> {
     const user = await this.userModel.findById(userId);

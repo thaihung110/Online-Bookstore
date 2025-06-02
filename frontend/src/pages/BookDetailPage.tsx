@@ -18,14 +18,13 @@ import { useParams, useNavigate, Link as RouterLink } from "react-router-dom";
 import { useTheme } from "@mui/material/styles";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
-import BookmarkIcon from "@mui/icons-material/Bookmark";
-import BookmarkBorderIcon from "@mui/icons-material/BookmarkBorder";
+
 import PaymentIcon from "@mui/icons-material/Payment";
 
 import MainLayout from "../components/layouts/MainLayout";
 import { useBookStore } from "../store/bookStore";
 import { useCartStore } from "../store/cartStore";
-import { useWishlistStore } from "../store/wishlistStore";
+
 import { buyNow } from "../utils/checkout";
 import { Book } from "../api/books";
 
@@ -41,12 +40,7 @@ const BookDetailPage: React.FC = () => {
     error: bookError,
   } = useBookStore();
   const { addItem, isInCart } = useCartStore();
-  const {
-    addItemToWishlist,
-    removeItemFromWishlist,
-    isItemInWishlist,
-    isLoading: wishlistLoading,
-  } = useWishlistStore();
+
 
   useEffect(() => {
     if (id) {
@@ -84,19 +78,7 @@ const BookDetailPage: React.FC = () => {
     }
   };
 
-  const handleToggleWishlist = async () => {
-    if (currentBook) {
-      try {
-        if (isItemInWishlist(currentBook.id)) {
-          await removeItemFromWishlist(currentBook.id);
-        } else {
-          await addItemToWishlist(currentBook);
-        }
-      } catch (err) {
-        console.error("Failed to toggle wishlist item:", err);
-      }
-    }
-  };
+
 
   const handleGoBack = () => {
     navigate(-1);
@@ -243,27 +225,7 @@ const BookDetailPage: React.FC = () => {
                   >
                     Buy Now
                   </Button>
-                  <Button
-                    variant="outlined"
-                    color="secondary"
-                    fullWidth
-                    size="large"
-                    startIcon={
-                      isItemInWishlist(currentBook.id) ? (
-                        <BookmarkIcon />
-                      ) : (
-                        <BookmarkBorderIcon />
-                      )
-                    }
-                    onClick={handleToggleWishlist}
-                    disabled={wishlistLoading || !currentBook}
-                  >
-                    {wishlistLoading
-                      ? "Updating..."
-                      : isItemInWishlist(currentBook.id)
-                      ? "Remove from Wishlist"
-                      : "Add to Wishlist"}
-                  </Button>
+
                 </Stack>
               </Box>
             </Box>

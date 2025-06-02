@@ -47,7 +47,7 @@ const DashboardPage: React.FC = () => {
             Welcome, {user?.username || "User"}!
           </Typography>
           <Typography variant="body1" color="text.secondary">
-            Manage your account, view orders, and update your wishlist.
+            Manage your account and view your orders.
           </Typography>
         </Box>
       </Box>
@@ -121,28 +121,7 @@ const DashboardPage: React.FC = () => {
           </Paper>
         </Grid>
 
-        {/* Wishlist Section */}
-        <Grid size={{ xs: 12 }}>
-          <Paper sx={{ p: 3 }}>
-            <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
-              <Favorite color="secondary" sx={{ mr: 1 }} />
-              <Typography variant="h6">Your Wishlist</Typography>
-            </Box>
-            <Divider sx={{ mb: 2 }} />
-            <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
-              View and manage books you've saved for later.
-            </Typography>
-            <Button
-              variant="contained"
-              startIcon={<Favorite />}
-              onClick={() => navigate("/wishlist")}
-              color="secondary"
-            >
-              View My Wishlist
-            </Button>
-            {/* Placeholder for future wishlist items */}
-          </Paper>
-        </Grid>
+
       </Grid>
     </MainLayout>
   );

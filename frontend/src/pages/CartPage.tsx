@@ -32,16 +32,21 @@ const CartItemRow: React.FC<{
 }> = ({ item }) => {
   const { updateItemQuantity, updateItemSelection, removeItem, isLoading } = useCartStore();
 
-  // Lấy id đúng cho book (ưu tiên _id, fallback sang id)
-  const bookId = (item.book as any)._id || item.book.id;
+  // Lấy id đúng cho book (sau khi transform, chỉ có id)
+  const bookId = item.book.id;
 
   // State tạm cho số lượng nhập vào (kiểu string để cho phép rỗng)
   const [inputQty, setInputQty] = useState<string>(item.quantity.toString());
 
   // Khi số lượng trong store thay đổi (do update từ backend), đồng bộ lại input
   React.useEffect(() => {
+    console.log("CartItemRow: item.quantity changed to:", item.quantity, "for book:", bookId);
+    console.log("CartItemRow: updating inputQty to:", item.quantity.toString());
     setInputQty(item.quantity.toString());
-  }, [item.quantity]);
+  }, [item.quantity, bookId]);
+
+  // Debug: Log when component re-renders
+  console.log("CartItemRow render - bookId:", bookId, "quantity:", item.quantity, "inputQty:", inputQty);
 
   const handleUpdateQuantity = (qty: number) => {
     if (qty > 0 && qty <= (item.book.stock || 0)) {
@@ -84,14 +89,21 @@ const CartItemRow: React.FC<{
   };
 
   const handleIncrement = () => {
-    console.log("CartItemRow increment bookId:", bookId);
+    console.log("CartItemRow: handleIncrement clicked");
+    console.log("CartItemRow: bookId:", bookId);
+    console.log("CartItemRow: current quantity:", item.quantity);
+    console.log("CartItemRow: stock:", item.book.stock);
+    console.log("CartItemRow: can increment?", item.quantity < (item.book.stock || 0));
+
     if (item.quantity < (item.book.stock || 0)) {
+      console.log("CartItemRow: calling updateItemQuantity with:", bookId, item.quantity + 1);
       updateItemQuantity(bookId, item.quantity + 1);
+    } else {
+      console.log("CartItemRow: cannot increment - at max stock");
     }
   };
 
   const handleDecrement = () => {
-    console.log("CartItemRow decrement bookId:", bookId);
     if (item.quantity > 1) {
       updateItemQuantity(bookId, item.quantity - 1);
     }
@@ -215,7 +227,7 @@ const CartItemRow: React.FC<{
             <IconButton
               size="small"
               onClick={handleIncrement}
-              disabled={isLoading}
+              disabled={item.quantity >= (item.book.stock || 0) || isLoading}
             >
               <AddIcon />
             </IconButton>
@@ -250,7 +262,7 @@ const CartPage: React.FC = () => {
         try {
           // Update all items to be unselected first, then select only the buy now item
           for (const item of cart.items) {
-            const id = (item.book as any)._id || item.book.id;
+            const id = item.book.id;
             const shouldBeSelected = id === buyNowId;
             if (item.isTicked !== shouldBeSelected) {
               await updateItemSelection(id, shouldBeSelected);
@@ -417,11 +429,14 @@ const CartPage: React.FC = () => {
                   <CircularProgress />
                 </Box>
               )}
-              {cart?.items.map((item) => {
-                const id = (item.book as any)._id || item.book.id;
+              {cart?.items.map((item, index) => {
+                const id = item.book.id;
+                // Use a more unique key that includes the item's position and book ID
+                const uniqueKey = `${id}-${index}-${item.quantity}-${item.isTicked}`;
+                console.log("CartPage: Rendering item with key:", uniqueKey, "bookId:", id, "isTicked:", item.isTicked);
                 return (
                   <CartItemRow
-                    key={id}
+                    key={uniqueKey}
                     item={item}
                   />
                 );

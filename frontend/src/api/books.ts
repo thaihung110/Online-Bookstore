@@ -20,6 +20,7 @@ export interface Book {
   category?: string[];
   publishedDate?: string;
   pageCount?: number;
+  converImage?: string;
 }
 
 export interface BookQuery {

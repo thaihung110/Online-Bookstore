@@ -8,7 +8,7 @@ import { AuthModule } from './auth';
 import { BooksModule } from './books';
 import { CartsModule } from './carts';
 import { OrdersModule } from './orders';
-import { WishlistsModule } from './wishlists/wishlists.module';
+
 import { PaymentsModule } from './payments/payments.module';
 import { AdminModule } from './admin/admin.module';
 import { UploadModule } from './upload/upload.module';
@@ -26,7 +26,7 @@ import { RecommendProxyMiddleware } from './proxy/recommend-proxy.middleware';
         () => ({
           currency: {
             base: process.env.CURRENCY_BASE || 'USD',
-            vndToUsdRate: parseInt(process.env.VND_TO_USD_RATE, 10) || 25000,
+            vndToUsdRate: 1,
           },
           database: {
             uri: process.env.MONGO_URI,
@@ -69,7 +69,6 @@ import { RecommendProxyMiddleware } from './proxy/recommend-proxy.middleware';
     BooksModule,
     CartsModule,
     OrdersModule,
-    WishlistsModule,
     PaymentsModule,
     AdminModule,
     UploadModule,

@@ -100,29 +100,14 @@ const BooksPage: React.FC = () => {
     return urlFilters;
   };
 
-  // Khi URL thay đổi, parse lại filters và setFilters (chỉ khi filters thực sự khác)
+  // Initialize filters from URL on component mount
   useEffect(() => {
     const urlFilters = parseFiltersFromUrl();
-    // Chỉ setFilters nếu filters khác urlFilters
-    const filtersString = JSON.stringify(filters);
-    const urlFiltersString = JSON.stringify(urlFilters);
-    if (filtersString !== urlFiltersString) {
+    if (Object.keys(urlFilters).length > 0) {
       setFilters(urlFilters);
     }
-    // eslint-disable-next-line
-  }, [searchParams]);
-
-  // Khi filters thay đổi, update URL nếu khác với searchParams
-  useEffect(() => {
-    const urlFilters = parseFiltersFromUrl();
-    const filtersString = JSON.stringify(filters);
-    const urlFiltersString = JSON.stringify(urlFilters);
-    if (filtersString !== urlFiltersString) {
-      updateUrlParams(filters);
-    }
-    // Không gọi fetchBooks ở đây nữa, fetchBooks chỉ nên gọi trong store khi setFilters/setPage
-    // eslint-disable-next-line
-  }, [filters]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run on mount
 
   // Update URL when filters change
   const updateUrlParams = (newFilters: Partial<BookQuery>) => {
@@ -242,8 +227,10 @@ const BooksPage: React.FC = () => {
     _event: React.ChangeEvent<unknown>,
     page: number
   ) => {
-    // Chỉ gọi setFilters, useEffect sẽ tự update URL
-    setFilters({ ...filters, page });
+    const newFilters = { ...filters, page };
+    setFilters({ page }); // Only update page in store
+    updateUrlParams(newFilters); // Update URL with all filters including new page
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   // Reset all filters
@@ -564,7 +551,7 @@ const BooksPage: React.FC = () => {
               {books.map((book) => (
                 <Grid
                   key={book.id}
-                  size={{ xs: 12, sm: 6, md: isTablet ? 6 : 4, lg: 4 }}
+                  size={{ xs: 12, sm: 6, md: 4, lg: 3, xl: 2.4 }}
                   sx={{ display: "flex" }}
                 >
                   <BookCard book={book} />
@@ -585,10 +572,7 @@ const BooksPage: React.FC = () => {
                 <Pagination
                   count={totalPages}
                   page={filters.page || 1}
-                  onChange={(_event, page) => {
-                    setPage(page);
-                    window.scrollTo({ top: 0, behavior: "smooth" });
-                  }}
+                  onChange={handlePageChange}
                   color="primary"
                   showFirstButton
                   showLastButton

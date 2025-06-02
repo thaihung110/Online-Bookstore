@@ -37,7 +37,7 @@ const OrderSummary: React.FC = () => {
   const totalQuantity = getTotalQuantity();
 
   // Chuyển đổi giá từ VND sang USD
-  const VND_TO_USD = 25000;
+  const VND_TO_USD = 1;
   const cartItemsUsd = cartItems.map((item) => ({
     ...item,
     priceAtAdd: item.priceAtAdd / VND_TO_USD,

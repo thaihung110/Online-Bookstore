@@ -30,11 +30,7 @@ export class User {
   @Prop({ type: Date, default: null })
   resetPasswordExpires: Date;
 
-  @Prop({
-    type: [{ type: MongooseSchema.Types.ObjectId, ref: 'Book' }],
-    default: [],
-  })
-  wishlist: MongooseSchema.Types.ObjectId[];
+
 
   @Prop({ type: Number, default: 0 })
   loyaltyPoints: number;

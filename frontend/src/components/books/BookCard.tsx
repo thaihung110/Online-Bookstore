@@ -15,11 +15,10 @@ import {
 } from "@mui/material";
 import { Link } from "react-router-dom";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
-import BookmarkIcon from "@mui/icons-material/Bookmark";
-import BookmarkBorderIcon from "@mui/icons-material/BookmarkBorder";
+
 import { Book } from "../../api/books";
 import { useCartStore } from "../../store/cartStore";
-import { useWishlistStore } from "../../store/wishlistStore";
+
 
 interface BookCardProps {
   book: Book;
@@ -31,12 +30,8 @@ const BookCard: React.FC<BookCardProps> = memo(({ book }) => {
   const [imageError, setImageError] = useState(false);
   const { addItem } = useCartStore();
   const isInCart = useCartStore((state) => state.isInCart(book.id));
-  const { addItemToWishlist, removeItemFromWishlist, isItemInWishlist } =
-    useWishlistStore();
-
   // Memoize computed values
   const isDiscounted = book.discountRate > 0;
-  const inWishlist = isItemInWishlist(book.id);
 
   // Placeholder image as data URL to avoid network requests
   const placeholderImage = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjMwMCIgdmlld0JveD0iMCAwIDIwMCAzMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMzAwIiBmaWxsPSIjRjVGNUY1Ii8+CjxwYXRoIGQ9Ik04MCA5MEgxMjBWMTEwSDgwVjkwWiIgZmlsbD0iI0NDQ0NDQyIvPgo8cGF0aCBkPSJNNjAgMTMwSDE0MFYxNDBINjBWMTMwWiIgZmlsbD0iI0NDQ0NDQyIvPgo8cGF0aCBkPSJNNjAgMTUwSDE0MFYxNjBINjBWMTUwWiIgZmlsbD0iI0NDQ0NDQyIvPgo8cGF0aCBkPSJNNjAgMTcwSDE0MFYxODBINjBWMTcwWiIgZmlsbD0iI0NDQ0NDQyIvPgo8dGV4dCB4PSIxMDAiIHk9IjIyMCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzk5OTk5OSIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0Ij5ObyBJbWFnZTwvdGV4dD4KPC9zdmc+";
@@ -65,20 +60,13 @@ const BookCard: React.FC<BookCardProps> = memo(({ book }) => {
     }
   };
 
-  // Handle cart and wishlist actions
+  // Handle cart actions
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     addItem(book.id, 1);
   };
 
-  const handleToggleWishlist = (e: React.MouseEvent) => {
-    e.preventDefault(); // Prevent navigation
-    if (inWishlist) {
-      removeItemFromWishlist(book.id);
-    } else {
-      addItemToWishlist(book);
-    }
-  };
+
 
   // Debug: Log giá trị đầu vào
   if (process.env.NODE_ENV !== "production") {
@@ -93,15 +81,15 @@ const BookCard: React.FC<BookCardProps> = memo(({ book }) => {
   }
 
   // Không chuyển đổi giá nữa, chỉ hiển thị trực tiếp
-  const priceUsd = book.price;
+  
   const originalPriceUsd = book.originalPrice;
-
+const priceUsd = book.discountRate > 0 ? originalPriceUsd * (1 - book.discountRate / 100) : originalPriceUsd ; // calculate using discountRate
   return (
     <Card
       component={Link}
       to={`/books/${book.id}`}
       sx={{
-        height: "100%",
+        height: 380, // Slightly reduced height for better proportions
         display: "flex",
         flexDirection: "column",
         textDecoration: "none",
@@ -112,7 +100,7 @@ const BookCard: React.FC<BookCardProps> = memo(({ book }) => {
         },
       }}
     >
-      <Box sx={{ position: "relative", paddingTop: "140%" }}>
+      <Box sx={{ position: "relative", height: 220, flexShrink: 0 }}>
         {!imageLoaded && (
           <Skeleton
             variant="rectangular"
@@ -128,7 +116,7 @@ const BookCard: React.FC<BookCardProps> = memo(({ book }) => {
         )}
         <CardMedia
           component="img"
-          image={imageError ? placeholderImage : (book.coverImage || placeholderImage)}
+          image={imageError ? placeholderImage : (book.coverImage || placeholderImage )}
           alt={book.title}
           onLoad={handleImageLoad}
           onError={handleImageError}
@@ -170,24 +158,7 @@ const BookCard: React.FC<BookCardProps> = memo(({ book }) => {
               />
             </IconButton>
           </Tooltip>
-          <Tooltip
-            title={inWishlist ? "Remove from Wishlist" : "Add to Wishlist"}
-          >
-            <IconButton
-              onClick={handleToggleWishlist}
-              sx={{
-                bgcolor: "background.paper",
-                "&:hover": { bgcolor: "action.hover" },
-              }}
-              size="small"
-            >
-              {inWishlist ? (
-                <BookmarkIcon color="primary" fontSize="small" />
-              ) : (
-                <BookmarkBorderIcon fontSize="small" />
-              )}
-            </IconButton>
-          </Tooltip>
+
         </Box>
         {/* Discount badge */}
         {isDiscounted && (
@@ -206,7 +177,13 @@ const BookCard: React.FC<BookCardProps> = memo(({ book }) => {
       </Box>
 
       <CardContent
-        sx={{ flexGrow: 1, display: "flex", flexDirection: "column" }}
+        sx={{
+          flexGrow: 1,
+          display: "flex",
+          flexDirection: "column",
+          height: 180, // Fixed height for content area
+          p: 2,
+        }}
       >
         <Typography
           variant="h6"
@@ -220,7 +197,8 @@ const BookCard: React.FC<BookCardProps> = memo(({ book }) => {
             display: "-webkit-box",
             WebkitLineClamp: 2,
             WebkitBoxOrient: "vertical",
-            minHeight: "3rem",
+            height: "3rem", // Fixed height instead of minHeight
+            lineHeight: 1.5,
           }}
         >
           {book.title}
@@ -234,6 +212,7 @@ const BookCard: React.FC<BookCardProps> = memo(({ book }) => {
             overflow: "hidden",
             textOverflow: "ellipsis",
             whiteSpace: "nowrap",
+            height: "1.5rem", // Fixed height for author
           }}
         >
           {book.author}
@@ -248,7 +227,7 @@ const BookCard: React.FC<BookCardProps> = memo(({ book }) => {
           </Stack>
         )}
 
-        <Box sx={{ mt: "auto" }}>
+        <Box sx={{ mt: "auto", minHeight: "3rem", display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
           <Stack direction="row" spacing={1} alignItems="baseline">
             <Typography
               variant="h6"
@@ -257,32 +236,6 @@ const BookCard: React.FC<BookCardProps> = memo(({ book }) => {
             >
               ${(priceUsd || 0).toFixed(2)}
             </Typography>
-            {isDiscounted && (
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                sx={{ textDecoration: "line-through" }}
-              >
-                ${(originalPriceUsd || 0).toFixed(2)}
-              </Typography>
-            )}
-            {priceUsd === null || priceUsd === undefined ? (
-              <Typography
-                variant="h6"
-                color="warning.main"
-                sx={{ fontWeight: "bold" }}
-              >
-                Contact
-              </Typography>
-            ) : (
-              <Typography
-                variant="h6"
-                color={isDiscounted ? "error.main" : "primary.main"}
-                sx={{ fontWeight: "bold" }}
-              >
-                ${priceUsd.toFixed(2)}
-              </Typography>
-            )}
             {isDiscounted &&
               originalPriceUsd !== null &&
               originalPriceUsd !== undefined && (
@@ -296,7 +249,7 @@ const BookCard: React.FC<BookCardProps> = memo(({ book }) => {
               )}
           </Stack>
           {book.stock === 0 && (
-            <Typography variant="body2" color="error" sx={{ mt: 1 }}>
+            <Typography variant="body2" color="error" sx={{ mt: 0.5 }}>
               Out of Stock
             </Typography>
           )}

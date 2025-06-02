@@ -32,7 +32,7 @@ import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import PersonIcon from "@mui/icons-material/Person";
 import HomeIcon from "@mui/icons-material/Home";
 import BookIcon from "@mui/icons-material/Book";
-import BookmarkIcon from "@mui/icons-material/Bookmark";
+
 import ExitToAppIcon from "@mui/icons-material/ExitToApp";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import InstagramIcon from "@mui/icons-material/Instagram";
@@ -97,7 +97,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     ...(isAuthenticated
       ? [
           { text: "Dashboard", icon: <DashboardIcon />, path: "/dashboard" },
-          { text: "Wishlist", icon: <BookmarkIcon />, path: "/wishlist" },
+
         ]
       : []),
   ];

@@ -44,7 +44,7 @@ export class AdminBooksService {
     private readonly uploadService: UploadService,
   ) {
     this.VND_TO_USD_RATE =
-      this.configService.get<number>('currency.vndToUsdRate') || 25000;
+      1;
   }
 
   // Helper method to process image URLs without currency conversion (admin panel uses USD directly)

@@ -8,11 +8,11 @@ import DashboardPage from "./pages/DashboardPage";
 import BooksPage from "./pages/BooksPage";
 import BookDetailPage from "./pages/BookDetailPage";
 import CartPage from "./pages/CartPage";
-import WishlistPage from "./pages/WishlistPage";
+
 import ProtectedRoute from "./routes/ProtectedRoute";
 import { useAuthStore } from "./store/authStore";
 import { useCartStore } from "./store/cartStore";
-import { useWishlistStore } from "./store/wishlistStore";
+
 import EditProfilePage from "./pages/EditProfilePage";
 import TestApiComponent from "./components/TestApiComponent";
 import CheckoutPage from "./pages/CheckoutPage";
@@ -148,15 +148,14 @@ const theme = createTheme({
 const App: React.FC = () => {
   const { fetchCurrentUser } = useAuthStore();
   const { loadCart } = useCartStore();
-  const { loadWishlist } = useWishlistStore();
+
   const { checkAuth } = useAdminAuthStore();
 
   useEffect(() => {
     fetchCurrentUser();
     loadCart();
-    loadWishlist();
     checkAuth(); // Initialize admin auth check
-  }, [fetchCurrentUser, loadCart, loadWishlist, checkAuth]);
+  }, [fetchCurrentUser, loadCart, checkAuth]);
 
   return (
     <ThemeProvider theme={theme}>
@@ -184,7 +183,7 @@ const App: React.FC = () => {
               path="/dashboard/edit-profile"
               element={<EditProfilePage />}
             />
-            <Route path="/wishlist" element={<WishlistPage />} />
+
             {/* Add more protected routes here */}
           </Route>
 

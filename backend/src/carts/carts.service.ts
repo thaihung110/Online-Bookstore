@@ -35,6 +35,19 @@ export class CartsService {
       });
     }
 
+    // Debug: Log cart data being returned
+    console.log('Debug - getCart returning:', {
+      userId,
+      cartId: cart._id,
+      itemsCount: cart.items.length,
+      items: cart.items.map((item) => ({
+        bookId: (item.book as any)._id ? (item.book as any)._id.toString() : item.book.toString(),
+        quantity: item.quantity,
+        priceAtAdd: item.priceAtAdd,
+        isTicked: item.isTicked,
+      })),
+    });
+
     return cart;
   }
 
@@ -524,25 +537,72 @@ export class CartsService {
     updateDto: { quantity?: number; isTicked?: boolean },
   ): Promise<CartDocument> {
     const bookObjectId = new Types.ObjectId(bookId);
-    const cart = await this.cartModel.findOne({ user: userId });
-    if (!cart) throw new NotFoundException('Cart not found');
-    const itemIndex = cart.items.findIndex(
-      (item) => item.book.toString() === bookObjectId.toString(),
-    );
-    if (itemIndex === -1) throw new NotFoundException('Item not found in cart');
-    // Cập nhật quantity nếu có
+
+    console.log('Debug - updateItemInCart called:', {
+      userId,
+      bookId,
+      bookObjectId: bookObjectId.toString(),
+      updateDto,
+    });
+
+    // Use atomic update with MongoDB operators instead of loading and saving
+    const updateFields: any = {};
+
     if (updateDto.quantity !== undefined) {
-      if (updateDto.quantity < 1)
+      if (updateDto.quantity < 1) {
         throw new BadRequestException('Quantity must be >= 1');
-      cart.items[itemIndex].quantity = updateDto.quantity;
+      }
+      updateFields['items.$.quantity'] = updateDto.quantity;
     }
-    // Cập nhật isTicked nếu có
+
     if (updateDto.isTicked !== undefined) {
-      cart.items[itemIndex].isTicked = updateDto.isTicked;
+      updateFields['items.$.isTicked'] = updateDto.isTicked;
     }
-    await cart.save();
-    return this.cartModel
-      .findOne({ user: userId })
-      .populate({ path: 'items.book', model: 'Book' });
+
+    console.log('Debug - updateItemInCart atomic update fields:', updateFields);
+
+    // Perform atomic update
+    const result = await this.cartModel.findOneAndUpdate(
+      {
+        user: userId,
+        'items.book': bookObjectId,
+      },
+      {
+        $set: updateFields,
+      },
+      { new: true }
+    );
+
+    if (!result) {
+      throw new NotFoundException('Item not found in cart');
+    }
+
+    console.log('Debug - updateItemInCart after atomic update:', {
+      items: result.items.map((item) => ({
+        bookId: item.book.toString(),
+        quantity: item.quantity,
+        priceAtAdd: item.priceAtAdd,
+        isTicked: item.isTicked,
+      })),
+    });
+
+    // Recalculate subtotal
+    await this.recalculateSubtotal(result);
+    await result.save();
+
+    console.log('Debug - updateItemInCart after recalculate and save:', {
+      items: result.items.map((item) => ({
+        bookId: item.book.toString(),
+        quantity: item.quantity,
+        priceAtAdd: item.priceAtAdd,
+        isTicked: item.isTicked,
+      })),
+    });
+
+    // Return populated cart
+    return this.cartModel.findById(result._id).populate({
+      path: 'items.book',
+      model: 'Book',
+    });
   }
 }

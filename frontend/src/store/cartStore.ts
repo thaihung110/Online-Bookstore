@@ -87,13 +87,28 @@ export const useCartStore = create<CartState>()(
 
       updateItemQuantity: async (bookId: string, quantity: number) => {
         try {
+          console.log("CartStore: updateItemQuantity called with bookId:", bookId, "quantity:", quantity);
           set({ isLoading: true, error: null });
           const updatedCart = await apiUpdateCartItem({
             bookId,
             quantity,
           });
+          console.log("CartStore: API returned updated cart:", updatedCart);
+          console.log("CartStore: Cart items:", updatedCart.items);
+          console.log("CartStore: Looking for bookId:", bookId);
+
+          // Find the specific item to log its quantity
+          const updatedItem = updatedCart.items.find((item: any) => {
+            console.log("CartStore: Checking item.book.id:", item.book.id, "vs bookId:", bookId);
+            return item.book.id === bookId;
+          });
+          console.log("CartStore: Updated item found:", updatedItem);
+          console.log("CartStore: Updated item quantity:", updatedItem?.quantity);
+
           set({ cart: updatedCart, isLoading: false });
+          console.log("CartStore: State updated successfully");
         } catch (error: any) {
+          console.error("CartStore: Error updating item quantity:", error);
           set({
             error:
               error instanceof Error
