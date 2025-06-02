@@ -10,6 +10,8 @@ import { CartsModule } from './carts';
 import { OrdersModule } from './orders';
 import { WishlistsModule } from './wishlists/wishlists.module';
 import { PaymentsModule } from './payments/payments.module';
+import { AdminModule } from './admin/admin.module';
+import { UploadModule } from './upload/upload.module';
 import { BooksUpdater } from './scripts/update-books';
 import { Book, BookSchema } from './books/schemas/book.schema';
 
@@ -27,6 +29,13 @@ import { Book, BookSchema } from './books/schemas/book.schema';
           },
           database: {
             uri: process.env.MONGO_URI,
+          },
+          r2: {
+            accessKey: process.env.CF_R2_ACCESS_KEY,
+            secretKey: process.env.CF_R2_SECRET_KEY,
+            endpoint: process.env.CF_R2_ENDPOINT,
+            bucketName: process.env.CF_BUCKET_NAME,
+            region: process.env.CF_R2_REGION,
           },
         }),
       ],
@@ -61,6 +70,8 @@ import { Book, BookSchema } from './books/schemas/book.schema';
     OrdersModule,
     WishlistsModule,
     PaymentsModule,
+    AdminModule,
+    UploadModule,
   ],
   controllers: [AppController],
   providers: [

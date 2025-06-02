@@ -20,7 +20,7 @@ export class Book {
   @Prop({ type: Number, default: 0, min: 0, max: 100 })
   discountRate: number;
 
-  @Prop({ required: true, type: Number })
+  @Prop({ type: Number })
   price: number;
 
   @Prop({ required: true, type: Number, default: 0 })
@@ -35,8 +35,14 @@ export class Book {
   @Prop({ required: true, type: Number })
   publicationYear: number;
 
+  @Prop({ type: Number, min: 1 })
+  pageCount: number;
+
   @Prop({ type: [String], index: true })
   genres: string[];
+
+  @Prop({ default: 'English' })
+  language: string;
 
   @Prop()
   coverImage: string;
@@ -62,12 +68,13 @@ export class Book {
 
 export const BookSchema = SchemaFactory.createForClass(Book);
 
+
+
 // Calculate price from originalPrice and discountRate
 BookSchema.pre('save', function (next) {
-  if (this.originalPrice && this.discountRate) {
-    this.price = this.originalPrice * (1 - this.discountRate / 100);
-  } else if (this.originalPrice) {
-    this.price = this.originalPrice;
+  if (this.originalPrice !== undefined) {
+    const discountRate = this.discountRate || 0;
+    this.price = this.originalPrice * (1 - discountRate / 100);
   }
   next();
 });

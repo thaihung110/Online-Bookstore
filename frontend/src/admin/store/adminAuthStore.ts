@@ -1,6 +1,8 @@
 import { create } from "zustand";
 import axios from "axios";
 
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:3001/api";
+
 interface Admin {
   id: string;
   name: string;
@@ -28,46 +30,58 @@ export const useAdminAuthStore = create<AdminAuthState>((set) => ({
     try {
       set({ isLoading: true, error: null });
 
-      // In a real implementation, this would call the actual API
-      // For now we'll simulate an API call with local storage
-      // TODO: Replace with actual API call when backend is ready
+      // Real API call to backend
+      const response = await axios.post(`${API_URL}/auth/login`, {
+        email,
+        password,
+      });
 
-      // Simulate API delay
-      await new Promise((resolve) => setTimeout(resolve, 800));
+      const { token, user } = response.data;
 
-      // Mock admin login - replace with actual API call
-      if (email === "admin@bookstore.com" && password === "admin123") {
-        const adminData = {
-          id: "1",
-          name: "Admin User",
-          email: "admin@bookstore.com",
-        };
-
-        // Store token in localStorage (replace with JWT from actual API)
-        localStorage.setItem("adminToken", "mock-jwt-token");
-        localStorage.setItem("adminData", JSON.stringify(adminData));
-
-        set({
-          admin: adminData,
-          isAuthenticated: true,
-          isLoading: false,
-          error: null,
-        });
-      } else {
+      // Check if user has admin role
+      if (user.role !== 'admin') {
         set({
           admin: null,
           isAuthenticated: false,
           isLoading: false,
-          error: "Invalid email or password",
+          error: "Access denied. Admin privileges required.",
         });
+        return;
       }
-    } catch (error) {
+
+      // Store token and admin data
+      localStorage.setItem("adminToken", token);
+      localStorage.setItem("adminData", JSON.stringify({
+        id: user.id,
+        name: user.username || user.email,
+        email: user.email,
+      }));
+
+      set({
+        admin: {
+          id: user.id,
+          name: user.username || user.email,
+          email: user.email,
+        },
+        isAuthenticated: true,
+        isLoading: false,
+        error: null,
+      });
+    } catch (error: any) {
       console.error("Login error:", error);
+
+      let errorMessage = "Login failed. Please try again.";
+      if (error.response?.status === 401) {
+        errorMessage = "Invalid email or password";
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+
       set({
         admin: null,
         isAuthenticated: false,
         isLoading: false,
-        error: "Login failed. Please try again.",
+        error: errorMessage,
       });
     }
   },
@@ -100,31 +114,40 @@ export const useAdminAuthStore = create<AdminAuthState>((set) => ({
         return;
       }
 
-      // Get admin data from localStorage
-      const adminDataStr = localStorage.getItem("adminData");
+      // Verify token with backend
+      const response = await axios.get(`${API_URL}/auth/profile`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
 
-      if (adminDataStr) {
-        const adminData = JSON.parse(adminDataStr);
-        set({
-          admin: adminData,
-          isAuthenticated: true,
-          isLoading: false,
-        });
-      } else {
+      const user = response.data;
+
+      // Check if user has admin role
+      if (user.role !== 'admin') {
+        localStorage.removeItem("adminToken");
+        localStorage.removeItem("adminData");
         set({
           admin: null,
           isAuthenticated: false,
           isLoading: false,
+          error: "Access denied. Admin privileges required.",
         });
+        return;
       }
 
-      // TODO: Replace with actual API verification of token
-      // when backend is ready
-      // const response = await axios.get('/api/admin/auth/me', {
-      //   headers: { Authorization: `Bearer ${token}` }
-      // });
-      // set({ admin: response.data, isAuthenticated: true, isLoading: false });
-    } catch (error) {
+      // Update admin data
+      const adminData = {
+        id: user.id,
+        name: user.username || user.email,
+        email: user.email,
+      };
+
+      localStorage.setItem("adminData", JSON.stringify(adminData));
+      set({
+        admin: adminData,
+        isAuthenticated: true,
+        isLoading: false,
+      });
+    } catch (error: any) {
       console.error("Auth check error:", error);
       // If verification fails, clear storage and set not authenticated
       localStorage.removeItem("adminToken");

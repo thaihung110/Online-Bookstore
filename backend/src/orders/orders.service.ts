@@ -12,6 +12,7 @@ import { UsersService } from '../users/users.service';
 import { BooksService } from '../books/books.service';
 import { CartsService } from '../carts/carts.service';
 import { BookDocument } from '../books/schemas/book.schema';
+import { UploadService } from '../upload/upload.service';
 
 @Injectable()
 export class OrdersService {
@@ -20,6 +21,7 @@ export class OrdersService {
     private readonly usersService: UsersService,
     private readonly booksService: BooksService,
     private readonly cartsService: CartsService,
+    private readonly uploadService: UploadService,
   ) {}
 
   async createOrder(
@@ -158,6 +160,18 @@ export class OrdersService {
         `Order with ID "${orderId}" does not belong to the user.`,
       );
     }
+
+    // Process cover images for all books in order items
+    if (order.items) {
+      await Promise.all(
+        order.items.map(async (item: any) => {
+          if (item.book && item.book.coverImage) {
+            item.book.coverImage = await this.uploadService.processImageUrl(item.book.coverImage);
+          }
+        })
+      );
+    }
+
     return order;
   }
 

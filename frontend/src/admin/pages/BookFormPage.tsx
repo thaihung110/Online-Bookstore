@@ -14,13 +14,12 @@ import {
   FormHelperText,
   Chip,
   OutlinedInput,
-  Checkbox,
-  FormControlLabel,
   CircularProgress,
   Alert,
   Divider,
   useTheme,
   SelectChangeEvent,
+  LinearProgress,
 } from "@mui/material";
 import {
   Save as SaveIcon,
@@ -28,7 +27,7 @@ import {
   CloudUpload as CloudUploadIcon,
 } from "@mui/icons-material";
 import { BookFormData } from "../types/book.types";
-import { getBook, createBook, updateBook } from "../api/bookApi";
+import { getBook, createBook, updateBook, uploadBookCover } from "../api/bookApi";
 
 // Available book genres
 const AVAILABLE_GENRES = [
@@ -87,21 +86,25 @@ const BookFormPage: React.FC = () => {
   const theme = useTheme();
   const isEditMode = !!id;
 
+  // Calculate current price based on original price and discount rate
+  const calculateCurrentPrice = (originalPrice: number, discountRate: number): number => {
+    return originalPrice * (1 - discountRate / 100);
+  };
+
   // Form state
   const [formData, setFormData] = useState<BookFormData>({
     title: "",
     author: "",
     description: "",
-    price: 0,
+    originalPrice: 0,
+    discountRate: 0,
     isbn: "",
-    publicationDate: "",
+    publicationYear: new Date().getFullYear(),
     publisher: "",
     pageCount: 0,
     genres: [],
     language: "English",
-    stockQuantity: 0,
-    isOnSale: false,
-    salePrice: undefined,
+    stock: 0,
     coverImage: null,
     coverImageUrl: "",
   });
@@ -115,6 +118,12 @@ const BookFormPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
+  // Upload state
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string>("");
+
   // Load book data if in edit mode
   useEffect(() => {
     const loadBook = async () => {
@@ -124,22 +133,26 @@ const BookFormPage: React.FC = () => {
         setLoading(true);
         const bookData = await getBook(id);
 
+
+
         setFormData({
-          title: bookData.title,
-          author: bookData.author,
-          description: bookData.description,
-          price: bookData.price,
-          salePrice: bookData.salePrice,
-          isbn: bookData.isbn,
-          publicationDate: bookData.publicationDate.split("T")[0], // Format date for input
-          publisher: bookData.publisher,
-          pageCount: bookData.pageCount,
-          genres: bookData.genres,
-          language: bookData.language,
-          stockQuantity: bookData.stockQuantity,
-          isOnSale: bookData.isOnSale,
-          coverImageUrl: bookData.coverImage,
+          title: bookData.title || "",
+          author: bookData.author || "",
+          description: bookData.description || "",
+          originalPrice: bookData.originalPrice || 0,
+          discountRate: bookData.discountRate || 0,
+          isbn: bookData.isbn || "",
+          publicationYear: bookData.publicationYear || new Date().getFullYear(),
+          publisher: bookData.publisher || "",
+          pageCount: bookData.pageCount || 0,
+          genres: bookData.genres || [],
+          language: bookData.language || "English",
+          stock: bookData.stock || 0,
+          coverImageUrl: bookData.coverImage || "",
         });
+
+        // Set preview URL for existing image
+        setPreviewUrl(bookData.coverImage || "");
       } catch (err) {
         console.error("Failed to load book:", err);
         setError("Failed to load book data. Please try again.");
@@ -198,32 +211,43 @@ const BookFormPage: React.FC = () => {
     }
   };
 
-  // Handle checkbox changes
-  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, checked } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: checked,
-      // If isOnSale is unchecked, reset salePrice
-      ...(name === "isOnSale" && !checked ? { salePrice: undefined } : {}),
-    }));
-  };
 
-  // Handle file upload
+
+  // Handle file selection (only preview, don't upload yet)
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
+
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        setError('Please select a valid image file');
+        return;
+      }
+
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setError('Image file size must be less than 5MB');
+        return;
+      }
+
+      setSelectedFile(file);
       setFormData((prev) => ({ ...prev, coverImage: file }));
 
-      // Create a preview URL
+      // Create a local preview URL
       const reader = new FileReader();
       reader.onload = () => {
-        setFormData((prev) => ({
-          ...prev,
-          coverImageUrl: reader.result as string,
-        }));
+        setPreviewUrl(reader.result as string);
       };
       reader.readAsDataURL(file);
+
+      // Clear any previous errors
+      if (errors.coverImage) {
+        setErrors((prev) => {
+          const newErrors = { ...prev };
+          delete newErrors.coverImage;
+          return newErrors;
+        });
+      }
     }
   };
 
@@ -246,22 +270,14 @@ const BookFormPage: React.FC = () => {
       newErrors.description = "Description is required";
     }
 
-    // Price validation
-    if (formData.price <= 0) {
-      newErrors.price = "Price must be greater than 0";
+    // Original price validation
+    if (formData.originalPrice <= 0) {
+      newErrors.originalPrice = "Original price must be greater than 0";
     }
 
-    // Sale price validation
-    if (formData.isOnSale && (!formData.salePrice || formData.salePrice <= 0)) {
-      newErrors.salePrice = "Sale price must be greater than 0";
-    }
-
-    if (
-      formData.isOnSale &&
-      formData.salePrice &&
-      formData.salePrice >= formData.price
-    ) {
-      newErrors.salePrice = "Sale price must be less than regular price";
+    // Discount rate validation
+    if (formData.discountRate < 0 || formData.discountRate > 100) {
+      newErrors.discountRate = "Discount rate must be between 0 and 100";
     }
 
     // ISBN validation
@@ -275,9 +291,14 @@ const BookFormPage: React.FC = () => {
       newErrors.isbn = "ISBN must be a valid 10 or 13 digit number";
     }
 
-    // Publication date validation
-    if (!formData.publicationDate) {
-      newErrors.publicationDate = "Publication date is required";
+    // Publication year validation
+    if (!formData.publicationYear) {
+      newErrors.publicationYear = "Publication year is required";
+    } else {
+      const currentYear = new Date().getFullYear();
+      if (formData.publicationYear < 1000 || formData.publicationYear > currentYear + 5) {
+        newErrors.publicationYear = `Publication year must be between 1000 and ${currentYear + 5}`;
+      }
     }
 
     // Publisher validation
@@ -296,12 +317,12 @@ const BookFormPage: React.FC = () => {
     }
 
     // Stock quantity validation
-    if (formData.stockQuantity < 0) {
-      newErrors.stockQuantity = "Stock quantity cannot be negative";
+    if (formData.stock < 0) {
+      newErrors.stock = "Stock quantity cannot be negative";
     }
 
     // Cover image validation for new books
-    if (!isEditMode && !formData.coverImage && !formData.coverImageUrl) {
+    if (!isEditMode && !selectedFile && !previewUrl) {
       newErrors.coverImage = "Cover image is required";
     }
 
@@ -328,33 +349,58 @@ const BookFormPage: React.FC = () => {
     setSuccess(null);
 
     try {
+      let finalFormData = { ...formData };
+
+      // If there's a selected file, upload it first
+      if (selectedFile) {
+        setUploading(true);
+        try {
+          const s3Key = await uploadBookCover(selectedFile, (progress) => {
+            setUploadProgress(progress);
+          });
+
+          // Update form data with S3 key instead of file
+          finalFormData = {
+            ...finalFormData,
+            coverImage: null, // Remove file object
+            coverImageUrl: s3Key, // Use S3 key
+          };
+        } catch (uploadError) {
+          console.error("Failed to upload image:", uploadError);
+          setError("Failed to upload image. Please try again.");
+          return;
+        } finally {
+          setUploading(false);
+          setUploadProgress(0);
+        }
+      }
+
       if (isEditMode) {
-        await updateBook(id, formData);
+        await updateBook(id, finalFormData);
         setSuccess("Book updated successfully");
       } else {
-        await createBook(formData);
+        await createBook(finalFormData);
         setSuccess("Book created successfully");
 
         // Clear form data on successful creation
-        if (!isEditMode) {
-          setFormData({
-            title: "",
-            author: "",
-            description: "",
-            price: 0,
-            isbn: "",
-            publicationDate: "",
-            publisher: "",
-            pageCount: 0,
-            genres: [],
-            language: "English",
-            stockQuantity: 0,
-            isOnSale: false,
-            salePrice: undefined,
-            coverImage: null,
-            coverImageUrl: "",
-          });
-        }
+        setFormData({
+          title: "",
+          author: "",
+          description: "",
+          originalPrice: 0,
+          discountRate: 0,
+          isbn: "",
+          publicationYear: new Date().getFullYear(),
+          publisher: "",
+          pageCount: 0,
+          genres: [],
+          language: "English",
+          stock: 0,
+          coverImage: null,
+          coverImageUrl: "",
+        });
+        setSelectedFile(null);
+        setPreviewUrl("");
       }
 
       // Navigate back to book list after a short delay
@@ -492,16 +538,14 @@ const BookFormPage: React.FC = () => {
                   <TextField
                     fullWidth
                     required
-                    label="Publication Date"
-                    name="publicationDate"
-                    type="date"
-                    value={formData.publicationDate}
-                    onChange={handleInputChange}
-                    InputLabelProps={{
-                      shrink: true,
-                    }}
-                    error={!!errors.publicationDate}
-                    helperText={errors.publicationDate}
+                    label="Publication Year"
+                    name="publicationYear"
+                    type="number"
+                    value={formData.publicationYear === 0 ? "" : formData.publicationYear}
+                    onChange={handleNumberInputChange}
+                    InputProps={{ inputProps: { min: 1000, max: new Date().getFullYear() + 5 } }}
+                    error={!!errors.publicationYear}
+                    helperText={errors.publicationYear || "Enter the year the book was published"}
                   />
                 </Grid>
 
@@ -590,15 +634,15 @@ const BookFormPage: React.FC = () => {
                     fullWidth
                     required
                     label="Stock Quantity"
-                    name="stockQuantity"
+                    name="stock"
                     type="number"
                     value={
-                      formData.stockQuantity === 0 ? "" : formData.stockQuantity
+                      formData.stock === 0 ? "" : formData.stock
                     }
                     onChange={handleNumberInputChange}
                     InputProps={{ inputProps: { min: 0 } }}
-                    error={!!errors.stockQuantity}
-                    helperText={errors.stockQuantity}
+                    error={!!errors.stock}
+                    helperText={errors.stock}
                   />
                 </Grid>
               </Grid>
@@ -613,54 +657,56 @@ const BookFormPage: React.FC = () => {
                   <TextField
                     fullWidth
                     required
-                    label="Regular Price"
-                    name="price"
+                    label="Original Price"
+                    name="originalPrice"
                     type="number"
-                    value={formData.price === 0 ? "" : formData.price}
+                    value={formData.originalPrice === 0 ? "" : formData.originalPrice}
                     onChange={handleNumberInputChange}
                     InputProps={{
                       startAdornment: <Typography sx={{ mr: 1 }}>$</Typography>,
                       inputProps: { min: 0, step: 0.01 },
                     }}
-                    error={!!errors.price}
-                    helperText={errors.price}
+                    error={!!errors.originalPrice}
+                    helperText={errors.originalPrice || "The original price before any discounts"}
                   />
                 </Grid>
 
-                <Grid size={6} sx={{ display: "flex", alignItems: "center" }}>
-                  <FormControlLabel
-                    control={
-                      <Checkbox
-                        checked={formData.isOnSale}
-                        onChange={handleCheckboxChange}
-                        name="isOnSale"
-                      />
+                <Grid size={6}>
+                  <TextField
+                    fullWidth
+                    required
+                    label="Discount Rate (%)"
+                    name="discountRate"
+                    type="number"
+                    value={formData.discountRate === 0 ? "" : formData.discountRate}
+                    onChange={handleNumberInputChange}
+                    InputProps={{
+                      endAdornment: <Typography sx={{ ml: 1 }}>%</Typography>,
+                      inputProps: { min: 0, max: 100, step: 0.01 },
+                    }}
+                    error={!!errors.discountRate}
+                    helperText={
+                      errors.discountRate || "Percentage discount (0-100%)"
                     }
-                    label="On Sale"
                   />
                 </Grid>
 
-                {formData.isOnSale && (
-                  <Grid size={6}>
-                    <TextField
-                      fullWidth
-                      required
-                      label="Sale Price"
-                      name="salePrice"
-                      type="number"
-                      value={formData.salePrice || ""}
-                      onChange={handleNumberInputChange}
-                      InputProps={{
-                        startAdornment: (
-                          <Typography sx={{ mr: 1 }}>$</Typography>
-                        ),
-                        inputProps: { min: 0, step: 0.01 },
-                      }}
-                      error={!!errors.salePrice}
-                      helperText={errors.salePrice}
-                    />
-                  </Grid>
-                )}
+                <Grid size={6}>
+                  <TextField
+                    fullWidth
+                    label="Current Price (Calculated)"
+                    value={`$${calculateCurrentPrice(formData.originalPrice, formData.discountRate).toFixed(2)}`}
+                    InputProps={{
+                      readOnly: true,
+                    }}
+                    helperText="Automatically calculated from original price and discount rate"
+                    sx={{
+                      "& .MuiInputBase-input": {
+                        backgroundColor: theme.palette.grey[100],
+                      },
+                    }}
+                  />
+                </Grid>
               </Grid>
             </Grid>
 
@@ -689,10 +735,10 @@ const BookFormPage: React.FC = () => {
                   backgroundColor: "background.paper",
                 }}
               >
-                {formData.coverImageUrl ? (
+                {previewUrl || formData.coverImageUrl ? (
                   <Box
                     component="img"
-                    src={formData.coverImageUrl}
+                    src={previewUrl || formData.coverImageUrl}
                     alt="Book cover preview"
                     sx={{
                       maxWidth: "100%",
@@ -727,6 +773,15 @@ const BookFormPage: React.FC = () => {
                 <FormHelperText error>{errors.coverImage}</FormHelperText>
               )}
 
+              {uploading && (
+                <Box sx={{ mt: 2 }}>
+                  <Typography variant="body2" color="text.secondary" gutterBottom>
+                    Uploading image... {uploadProgress}%
+                  </Typography>
+                  <LinearProgress variant="determinate" value={uploadProgress} />
+                </Box>
+              )}
+
               <Typography variant="caption" color="text.secondary">
                 Recommended size: 800x1200 pixels (2:3 ratio)
               </Typography>
@@ -746,10 +801,17 @@ const BookFormPage: React.FC = () => {
               type="submit"
               variant="contained"
               color="primary"
-              disabled={saving}
-              startIcon={saving ? <CircularProgress size={20} /> : <SaveIcon />}
+              disabled={saving || uploading}
+              startIcon={(saving || uploading) ? <CircularProgress size={20} /> : <SaveIcon />}
             >
-              {saving ? "Saving..." : isEditMode ? "Update Book" : "Add Book"}
+              {uploading
+                ? "Uploading..."
+                : saving
+                ? "Saving..."
+                : isEditMode
+                ? "Update Book"
+                : "Add Book"
+              }
             </Button>
           </Box>
         </Box>

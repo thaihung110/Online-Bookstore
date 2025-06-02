@@ -168,7 +168,7 @@ const MOCK_RECENT_ORDERS = [
 // Mock top selling books
 const MOCK_TOP_BOOKS = [
   {
-    id: "1",
+    _id: "1",
     title: "To Kill a Mockingbird",
     author: "Harper Lee",
     sales: 45,
@@ -176,7 +176,7 @@ const MOCK_TOP_BOOKS = [
     price: 12.99,
   },
   {
-    id: "2",
+    _id: "2",
     title: "1984",
     author: "George Orwell",
     sales: 38,
@@ -184,7 +184,7 @@ const MOCK_TOP_BOOKS = [
     price: 10.99,
   },
   {
-    id: "3",
+    _id: "3",
     title: "The Great Gatsby",
     author: "F. Scott Fitzgerald",
     sales: 32,
@@ -192,7 +192,7 @@ const MOCK_TOP_BOOKS = [
     price: 9.99,
   },
   {
-    id: "4",
+    _id: "4",
     title: "Pride and Prejudice",
     author: "Jane Austen",
     sales: 29,
@@ -200,7 +200,7 @@ const MOCK_TOP_BOOKS = [
     price: 8.99,
   },
   {
-    id: "5",
+    _id: "5",
     title: "The Catcher in the Rye",
     author: "J.D. Salinger",
     sales: 26,
@@ -468,14 +468,14 @@ const AdminDashboardPage: React.FC = () => {
                 </TableHead>
                 <TableBody>
                   {MOCK_TOP_BOOKS.map((book) => (
-                    <TableRow key={book.id} hover>
+                    <TableRow key={book._id} hover>
                       <TableCell>
                         <Link
                           component="button"
                           variant="body2"
                           color="primary"
                           onClick={() => {
-                            navigate(`/admin/books/edit/${book.id}`);
+                            navigate(`/admin/books/edit/${book._id}`);
                           }}
                           sx={{
                             display: "-webkit-box",

@@ -35,7 +35,10 @@ import {
   Link as RouterLink,
   useLocation,
   Link as RouterDomLink,
+  Outlet,
+  useNavigate,
 } from "react-router-dom";
+import { useAdminAuthStore } from "../../store/adminAuthStore";
 
 // Define the drawer width
 const DRAWER_WIDTH = 240;
@@ -44,10 +47,8 @@ const DRAWER_WIDTH = 240;
 const MENU_ITEMS = [
   { text: "Dashboard", icon: <DashboardIcon />, path: "/admin" },
   { text: "Books", icon: <BookIcon />, path: "/admin/books" },
-  { text: "Users", icon: <PeopleIcon />, path: "/admin/users" },
-  { text: "Categories", icon: <CategoryIcon />, path: "/admin/categories" },
   { text: "Orders", icon: <OrdersIcon />, path: "/admin/orders" },
-  { text: "Settings", icon: <SettingsIcon />, path: "/admin/settings" },
+  { text: "Users", icon: <PeopleIcon />, path: "/admin/users" },
 ];
 
 // Route mapping for breadcrumbs
@@ -62,22 +63,26 @@ const ROUTE_MAPPING: Record<string, string> = {
   edit: "Edit",
 };
 
-interface AdminLayoutProps {
-  children: React.ReactNode;
-}
-
 /**
  * Admin layout component with responsive sidebar and breadcrumbs
  */
-const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
+const AdminLayout: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { logout } = useAdminAuthStore();
 
   // Toggle the mobile drawer
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
+  };
+
+  // Handle admin logout
+  const handleLogout = () => {
+    logout();
+    navigate("/admin/login");
   };
 
   // Generate breadcrumbs based on current route
@@ -150,7 +155,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
           </ListItemButton>
         </ListItem>
         <ListItem disablePadding>
-          <ListItemButton>
+          <ListItemButton onClick={handleLogout}>
             <ListItemIcon>
               <LogoutIcon />
             </ListItemIcon>
@@ -248,7 +253,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
           {generateBreadcrumbs()}
         </Breadcrumbs>
         <Container maxWidth="xl" disableGutters>
-          {children}
+          <Outlet />
         </Container>
       </Box>
     </Box>

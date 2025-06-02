@@ -12,6 +12,7 @@ import {
 } from './schemas/wishlist.schema';
 import { AddToWishlistDto } from './dto/add-to-wishlist.dto';
 import { Book, BookDocument } from '../books/schemas/book.schema';
+import { UploadService } from '../upload/upload.service';
 
 interface WishlistResponse {
   _id: string;
@@ -31,6 +32,7 @@ export class WishlistsService {
   constructor(
     @InjectModel(Wishlist.name) private wishlistModel: Model<WishlistDocument>,
     @InjectModel(Book.name) private bookModel: Model<BookDocument>,
+    private readonly uploadService: UploadService,
   ) {}
 
   /**
@@ -63,15 +65,25 @@ export class WishlistsService {
       select: 'title author price coverImage stock',
     });
 
-    // Format the response
+    // Process cover images for all books and format the response
+    const processedItems = await Promise.all(
+      wishlist.items.map(async (item) => {
+        const book = item.bookId as any;
+        if (book && book.coverImage) {
+          book.coverImage = await this.uploadService.processImageUrl(book.coverImage);
+        }
+        return {
+          _id: (item as any)._id.toString(),
+          book: book,
+          addedAt: item.addedAt,
+        };
+      })
+    );
+
     return {
       _id: wishlist._id ? wishlist._id.toString() : '',
       userId: wishlist.userId.toString(),
-      items: wishlist.items.map((item) => ({
-        _id: (item as any)._id.toString(),
-        book: item.bookId,
-        addedAt: item.addedAt,
-      })),
+      items: processedItems,
       totalItems: wishlist.items.length,
       createdAt: (wishlist as any).createdAt,
       updatedAt: (wishlist as any).updatedAt,

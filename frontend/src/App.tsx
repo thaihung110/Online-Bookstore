@@ -32,6 +32,7 @@ import {
 } from "./admin/pages";
 import AdminProtectedRoute from "./admin/components/layout/AdminProtectedRoute";
 import AdminLayout from "./admin/components/layout/AdminLayout";
+import { useAdminAuthStore } from "./admin/store/adminAuthStore";
 
 // Create a custom theme inspired by elegant bookstores
 const theme = createTheme({
@@ -148,12 +149,14 @@ const App: React.FC = () => {
   const { fetchCurrentUser } = useAuthStore();
   const { loadCart } = useCartStore();
   const { loadWishlist } = useWishlistStore();
+  const { checkAuth } = useAdminAuthStore();
 
   useEffect(() => {
     fetchCurrentUser();
     loadCart();
     loadWishlist();
-  }, [fetchCurrentUser, loadCart, loadWishlist]);
+    checkAuth(); // Initialize admin auth check
+  }, [fetchCurrentUser, loadCart, loadWishlist, checkAuth]);
 
   return (
     <ThemeProvider theme={theme}>
@@ -188,28 +191,26 @@ const App: React.FC = () => {
           {/* Admin routes */}
           <Route path="/admin/login" element={<AdminLoginPage />} />
           <Route
-            path="/admin"
+            path="/admin/*"
             element={
               <AdminProtectedRoute>
-                <AdminLayout>
-                  <Routes>
-                    <Route index element={<AdminDashboardPage />} />
-                    <Route path="books" element={<BookManagementPage />} />
-                    <Route path="books/add" element={<BookFormPage />} />
-                    <Route path="books/edit/:id" element={<BookFormPage />} />
-                    <Route path="users" element={<UserManagementPage />} />
-                    <Route path="users/add" element={<UserFormPage />} />
-                    <Route path="users/edit/:id" element={<UserFormPage />} />
-                    <Route path="orders" element={<OrdersManagementPage />} />
-                    <Route
-                      path="promotions"
-                      element={<PromotionsManagementPage />}
-                    />
-                  </Routes>
-                </AdminLayout>
+                <AdminLayout />
               </AdminProtectedRoute>
             }
-          />
+          >
+            <Route index element={<AdminDashboardPage />} />
+            <Route path="books" element={<BookManagementPage />} />
+            <Route path="books/add" element={<BookFormPage />} />
+            <Route path="books/edit/:id" element={<BookFormPage />} />
+            <Route path="users" element={<UserManagementPage />} />
+            <Route path="users/add" element={<UserFormPage />} />
+            <Route path="users/edit/:id" element={<UserFormPage />} />
+            <Route path="orders" element={<OrdersManagementPage />} />
+            <Route
+              path="promotions"
+              element={<PromotionsManagementPage />}
+            />
+          </Route>
 
           {/* Redirect any unknown routes to home */}
           <Route path="*" element={<Navigate to="/" replace />} />

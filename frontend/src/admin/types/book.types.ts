@@ -1,20 +1,21 @@
 export interface Book {
-  id: string;
+  _id: string;
+  id?: string; // Optional for backward compatibility
   title: string;
   author: string;
   description: string;
-  price: number;
-  salePrice?: number;
+  price: number; // Calculated from originalPrice and discountRate
+  originalPrice: number;
+  discountRate: number; // Percentage discount (0-100)
   coverImage: string;
   isbn: string;
-  publicationDate: string;
+  publicationYear: number; // Use publication year instead of full date
   publisher: string;
   pageCount: number;
   genres: string[];
   language: string;
-  stockQuantity: number;
+  stock: number;
   rating: number;
-  isOnSale: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -23,18 +24,17 @@ export interface BookFormData {
   title: string;
   author: string;
   description: string;
-  price: number;
-  salePrice?: number;
+  originalPrice: number; // Base price before discount
+  discountRate: number; // Percentage discount (0-100)
   coverImage?: File | null;
   coverImageUrl?: string;
   isbn: string;
-  publicationDate: string;
+  publicationYear: number; // Use publication year instead of full date
   publisher: string;
   pageCount: number;
   genres: string[];
   language: string;
-  stockQuantity: number;
-  isOnSale: boolean;
+  stock: number;
 }
 
 export interface BookFilters {

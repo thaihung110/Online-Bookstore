@@ -2,12 +2,15 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import { ConfigService } from '@nestjs/config';
 import { Book, BookDocument } from '../../books/schemas/book.schema';
 import { CreateBookDto } from '../../books/dto/create-book.dto';
 import { UpdateBookDto } from '../../books/dto/update-book.dto';
+import { UploadService } from '../../upload/upload.service';
 
 export interface BookFilters {
   page: number;
@@ -32,7 +35,31 @@ export interface BookListResponse {
 
 @Injectable()
 export class AdminBooksService {
-  constructor(@InjectModel(Book.name) private bookModel: Model<BookDocument>) {}
+  private readonly logger = new Logger(AdminBooksService.name);
+  private readonly VND_TO_USD_RATE: number;
+
+  constructor(
+    @InjectModel(Book.name) private bookModel: Model<BookDocument>,
+    private readonly configService: ConfigService,
+    private readonly uploadService: UploadService,
+  ) {
+    this.VND_TO_USD_RATE =
+      this.configService.get<number>('currency.vndToUsdRate') || 25000;
+  }
+
+  // Helper method to process image URLs without currency conversion (admin panel uses USD directly)
+  private async processBookData(book: any): Promise<any> {
+    if (!book) return null;
+    const bookObj = book.toObject ? book.toObject() : { ...book };
+
+    // Process image URL using UploadService
+    const coverImage = await this.uploadService.processImageUrl(bookObj.coverImage);
+
+    return {
+      ...bookObj,
+      coverImage,
+    };
+  }
 
   async findAll(filters: BookFilters): Promise<BookListResponse> {
     const {
@@ -79,7 +106,7 @@ export class AdminBooksService {
     }
 
     if (inStock !== undefined) {
-      query.stockQuantity = inStock ? { $gt: 0 } : { $lte: 0 };
+      query.stock = inStock ? { $gt: 0 } : { $lte: 0 };
     }
 
     // Count total documents
@@ -97,8 +124,13 @@ export class AdminBooksService {
       .limit(limit)
       .exec();
 
+    // Process books with async image URL processing
+    const processedBooks = await Promise.all(
+      books.map(book => this.processBookData(book))
+    );
+
     return {
-      books,
+      books: processedBooks,
       total,
       page,
       limit,
@@ -111,7 +143,7 @@ export class AdminBooksService {
     if (!book) {
       throw new NotFoundException(`Book with ID ${id} not found`);
     }
-    return book;
+    return await this.processBookData(book);
   }
 
   async create(createBookDto: CreateBookDto): Promise<Book> {
@@ -125,8 +157,18 @@ export class AdminBooksService {
       }
     }
 
-    const newBook = new this.bookModel(createBookDto);
-    return newBook.save();
+    // Handle coverImageUrl field - use it as coverImage if coverImage is not provided
+    const bookData = { ...createBookDto };
+    if (!bookData.coverImage && bookData.coverImageUrl) {
+      bookData.coverImage = bookData.coverImageUrl;
+    }
+
+    // Remove coverImageUrl from the data as it's not part of the schema
+    delete bookData.coverImageUrl;
+
+    const newBook = new this.bookModel(bookData);
+    const savedBook = await newBook.save();
+    return await this.processBookData(savedBook);
   }
 
   async update(id: string, updateBookDto: UpdateBookDto): Promise<Book> {
@@ -145,15 +187,26 @@ export class AdminBooksService {
       }
     }
 
-    const updatedBook = await this.bookModel
-      .findByIdAndUpdate(id, updateBookDto, { new: true })
-      .exec();
+    // Handle coverImageUrl field - use it as coverImage if coverImage is not provided
+    const updateData = { ...updateBookDto };
+    if (!updateData.coverImage && updateData.coverImageUrl) {
+      updateData.coverImage = updateData.coverImageUrl;
+    }
 
-    if (!updatedBook) {
+    // Remove coverImageUrl from the data as it's not part of the schema
+    delete updateData.coverImageUrl;
+
+    // Use findById + save to trigger pre-save hooks
+    const bookToUpdate = await this.bookModel.findById(id).exec();
+    if (!bookToUpdate) {
       throw new NotFoundException(`Book with ID ${id} not found`);
     }
 
-    return updatedBook;
+    // Update the book with new data
+    Object.assign(bookToUpdate, updateData);
+    const updatedBook = await bookToUpdate.save();
+
+    return await this.processBookData(updatedBook);
   }
 
   async delete(id: string): Promise<void> {

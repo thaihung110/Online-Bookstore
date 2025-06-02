@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import {
   Box,
   Button,
@@ -140,7 +140,7 @@ const BookList: React.FC<BookListProps> = ({
                         : "desc"
                       : "asc"
                   }
-                  onClick={createSortHandler("stockQuantity")}
+                  onClick={createSortHandler("stock")}
                 >
                   Stock
                 </TableSortLabel>
@@ -175,7 +175,7 @@ const BookList: React.FC<BookListProps> = ({
             ) : (
               books.map((book) => (
                 <TableRow
-                  key={book.id}
+                  key={book._id}
                   sx={{
                     "&:hover": { backgroundColor: "rgba(0, 0, 0, 0.04)" },
                   }}
@@ -206,7 +206,7 @@ const BookList: React.FC<BookListProps> = ({
                   </TableCell>
                   <TableCell>{book.author}</TableCell>
                   <TableCell>
-                    {book.isOnSale && book.salePrice ? (
+                    {book.discountRate > 0 ? (
                       <>
                         <Typography
                           variant="body2"
@@ -217,14 +217,21 @@ const BookList: React.FC<BookListProps> = ({
                             mr: 1,
                           }}
                         >
-                          ${book.price.toFixed(2)}
+                          ${book.originalPrice.toFixed(2)}
                         </Typography>
                         <Typography
                           variant="body1"
                           component="span"
                           sx={{ color: "error.main", fontWeight: "bold" }}
                         >
-                          ${book.salePrice.toFixed(2)}
+                          ${book.price.toFixed(2)}
+                        </Typography>
+                        <Typography
+                          variant="caption"
+                          component="span"
+                          sx={{ color: "success.main", ml: 1 }}
+                        >
+                          ({book.discountRate}% off)
                         </Typography>
                       </>
                     ) : (
@@ -254,8 +261,8 @@ const BookList: React.FC<BookListProps> = ({
                   </TableCell>
                   <TableCell>
                     <Chip
-                      label={book.stockQuantity}
-                      color={book.stockQuantity > 0 ? "success" : "error"}
+                      label={book.stock}
+                      color={book.stock > 0 ? "success" : "error"}
                       size="small"
                     />
                   </TableCell>
@@ -264,7 +271,7 @@ const BookList: React.FC<BookListProps> = ({
                       <IconButton
                         aria-label="edit"
                         size="small"
-                        onClick={() => handleEditBook(book.id)}
+                        onClick={() => handleEditBook(book._id)}
                       >
                         <EditIcon fontSize="small" />
                       </IconButton>

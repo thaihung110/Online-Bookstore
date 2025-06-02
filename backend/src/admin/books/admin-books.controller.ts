@@ -24,6 +24,11 @@ import { AdminBooksService } from './admin-books.service';
 import { CreateBookDto } from '../../books/dto/create-book.dto';
 import { UpdateBookDto } from '../../books/dto/update-book.dto';
 import { Book } from '../../books/schemas/book.schema';
+import { UploadService } from '../../upload/upload.service';
+import {
+  UploadPresignedUrlDto,
+  UploadPresignedUrlResponseDto
+} from '../../upload/dto/upload-presigned-url.dto';
 
 @ApiTags('admin-books')
 @Controller('admin/books')
@@ -31,7 +36,27 @@ import { Book } from '../../books/schemas/book.schema';
 @Roles('admin')
 @ApiBearerAuth()
 export class AdminBooksController {
-  constructor(private readonly adminBooksService: AdminBooksService) {}
+  constructor(
+    private readonly adminBooksService: AdminBooksService,
+    private readonly uploadService: UploadService,
+  ) {}
+
+  @Post('upload-presigned-url')
+  @ApiOperation({ summary: 'Generate presigned URL for book cover upload' })
+  @ApiResponse({
+    status: 201,
+    description: 'Presigned URL generated successfully',
+    type: UploadPresignedUrlResponseDto,
+  })
+  @ApiResponse({ status: 400, description: 'Invalid file type or parameters' })
+  async getUploadPresignedUrl(
+    @Body() uploadDto: UploadPresignedUrlDto,
+  ): Promise<UploadPresignedUrlResponseDto> {
+    return this.uploadService.generateUploadPresignedUrl(
+      uploadDto.fileName,
+      uploadDto.contentType,
+    );
+  }
 
   @Get()
   @ApiOperation({ summary: 'Get all books with pagination and filters' })

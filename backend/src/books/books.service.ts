@@ -5,51 +5,44 @@ import { Book, BookDocument } from './schemas/book.schema';
 import { CreateBookDto } from './dto/create-book.dto';
 import { UpdateBookDto } from './dto/update-book.dto';
 import { QueryBookDto, SortField, SortOrder } from './dto/query-book.dto';
+import { UploadService } from '../upload/upload.service';
 
 @Injectable()
 export class BooksService {
   private readonly logger = new Logger(BooksService.name);
-  private readonly VND_TO_USD_RATE = 25000;
 
-  constructor(@InjectModel(Book.name) private bookModel: Model<BookDocument>) {}
+  constructor(
+    @InjectModel(Book.name) private bookModel: Model<BookDocument>,
+    private readonly uploadService: UploadService,
+  ) {}
 
-  // Helper method to convert prices from VND to USD
-  private convertPricesToUSD(book: any): any {
+  // Helper method to process book data (prices are already in USD, just process image URLs)
+  private async processBookData(book: any): Promise<any> {
     if (!book) return null;
     const bookObj = book.toObject ? book.toObject() : { ...book };
 
-    // Chuẩn hóa coverImage
-    let coverImage = bookObj.coverImage;
-    if (
-      !coverImage ||
-      typeof coverImage !== 'string' ||
-      coverImage.trim() === ''
-    ) {
-      this.logger.warn(
-        `Book (id=${bookObj._id || bookObj.id || 'unknown'}) missing coverImage, fallback to /placeholder-book.jpg`,
-      );
-      coverImage = '/placeholder-book.jpg';
-    } else if (!coverImage.startsWith('http')) {
-      this.logger.warn(
-        `Book (id=${bookObj._id || bookObj.id || 'unknown'}) has invalid coverImage: ${coverImage}, fallback to /placeholder-book.jpg`,
-      );
-      coverImage = '/placeholder-book.jpg';
-    }
+    // Process image URL using UploadService
+    const coverImage = await this.uploadService.processImageUrl(bookObj.coverImage);
 
     return {
       ...bookObj,
-      price: Number((bookObj.price / this.VND_TO_USD_RATE).toFixed(2)),
-      originalPrice: Number(
-        (bookObj.originalPrice / this.VND_TO_USD_RATE).toFixed(2),
-      ),
       coverImage,
     };
   }
 
   async create(createBookDto: CreateBookDto): Promise<Book> {
-    const newBook = new this.bookModel(createBookDto);
+    // Handle coverImageUrl field - use it as coverImage if coverImage is not provided
+    const bookData = { ...createBookDto };
+    if (!bookData.coverImage && bookData.coverImageUrl) {
+      bookData.coverImage = bookData.coverImageUrl;
+    }
+
+    // Remove coverImageUrl from the data as it's not part of the schema
+    delete bookData.coverImageUrl;
+
+    const newBook = new this.bookModel(bookData);
     const savedBook = await newBook.save();
-    return this.convertPricesToUSD(savedBook);
+    return await this.processBookData(savedBook);
   }
 
   async findAll(
@@ -102,7 +95,7 @@ export class BooksService {
         // Look for exact genre matches in the dataset
         for (const genre of genresArray) {
           const exactMatches = allBooks.filter((book) =>
-            book.genres.some(
+            book.genres && Array.isArray(book.genres) && book.genres.some(
               (bookGenre) => bookGenre.toLowerCase() === genre.toLowerCase(),
             ),
           );
@@ -117,7 +110,7 @@ export class BooksService {
 
           // Compare with partial matches
           const partialMatches = allBooks.filter((book) =>
-            book.genres.some((bookGenre) =>
+            book.genres && Array.isArray(book.genres) && book.genres.some((bookGenre) =>
               bookGenre.toLowerCase().includes(genre.toLowerCase()),
             ),
           );
@@ -181,14 +174,14 @@ export class BooksService {
         this.logger.log(`Final filter object: ${JSON.stringify(filter)}`);
       }
 
-      // Price range filter (convert USD to VND for query)
+      // Price range filter (prices are stored in USD)
       if (queryDto.minPrice !== undefined || queryDto.maxPrice !== undefined) {
         filter.price = {};
         if (queryDto.minPrice !== undefined) {
-          filter.price.$gte = queryDto.minPrice * this.VND_TO_USD_RATE;
+          filter.price.$gte = queryDto.minPrice;
         }
         if (queryDto.maxPrice !== undefined) {
-          filter.price.$lte = queryDto.maxPrice * this.VND_TO_USD_RATE;
+          filter.price.$lte = queryDto.maxPrice;
         }
       }
 
@@ -243,9 +236,9 @@ export class BooksService {
         `Found ${books.length} books out of ${total} total matches`,
       );
 
-      // Convert prices to USD before returning
-      const transformedBooks = books.map((book) =>
-        this.convertPricesToUSD(book),
+      // Process image URLs before returning (prices are already in USD)
+      const transformedBooks = await Promise.all(
+        books.map((book) => this.processBookData(book))
       );
 
       return {
@@ -281,8 +274,10 @@ export class BooksService {
 
       this.logger.log(`Found ${books.length} featured books`);
 
-      // Convert prices to USD before returning
-      return books.map((book) => this.convertPricesToUSD(book));
+      // Process image URLs before returning (prices are already in USD)
+      return await Promise.all(
+        books.map((book) => this.processBookData(book))
+      );
     } catch (error) {
       this.logger.error(
         `Error finding featured books: ${error.message}`,
@@ -297,17 +292,29 @@ export class BooksService {
     if (!book) {
       throw new NotFoundException(`Book with ID "${id}" not found`);
     }
-    return this.convertPricesToUSD(book);
+    return await this.processBookData(book);
   }
 
   async update(id: string, updateBookDto: UpdateBookDto): Promise<Book> {
-    const updatedBook = await this.bookModel
-      .findByIdAndUpdate(id, updateBookDto, { new: true })
-      .exec();
-    if (!updatedBook) {
+    // Handle coverImageUrl field - use it as coverImage if coverImage is not provided
+    const updateData = { ...updateBookDto };
+    if (!updateData.coverImage && updateData.coverImageUrl) {
+      updateData.coverImage = updateData.coverImageUrl;
+    }
+
+    // Remove coverImageUrl from the data as it's not part of the schema
+    delete updateData.coverImageUrl;
+
+    // Use findById + save to trigger pre-save hooks
+    const bookToUpdate = await this.bookModel.findById(id).exec();
+    if (!bookToUpdate) {
       throw new NotFoundException(`Book with ID "${id}" not found`);
     }
-    return this.convertPricesToUSD(updatedBook);
+
+    // Update the book with new data
+    Object.assign(bookToUpdate, updateData);
+    const updatedBook = await bookToUpdate.save();
+    return await this.processBookData(updatedBook);
   }
 
   async remove(id: string): Promise<{ deleted: boolean; message?: string }> {

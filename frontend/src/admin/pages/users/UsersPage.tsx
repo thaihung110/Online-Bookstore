@@ -12,7 +12,7 @@ import {
   UserRole,
 } from "../../types/user.types";
 import { useUserFilters } from "../../hooks/useUserFilters";
-import AdminLayout from "../../components/layout/AdminLayout";
+
 
 // Mock data for demonstration
 const MOCK_USERS: User[] = [
@@ -185,7 +185,7 @@ const UsersPage: React.FC = () => {
   };
 
   return (
-    <AdminLayout>
+    <>
       <Box sx={{ display: "flex", justifyContent: "space-between", mb: 3 }}>
         <Typography variant="h4" component="h1">
           User Management
@@ -222,7 +222,7 @@ const UsersPage: React.FC = () => {
         onClose={handleCloseDeleteDialog}
         onConfirm={handleDeleteUser}
       />
-    </AdminLayout>
+    </>
   );
 };
 

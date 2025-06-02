@@ -97,7 +97,7 @@ const BookManagementPage: React.FC = () => {
     setDeleteLoading(true);
 
     try {
-      await deleteBook(bookToDelete.id);
+      await deleteBook(bookToDelete._id);
       setDeleteDialogOpen(false);
       setBookToDelete(null);
 

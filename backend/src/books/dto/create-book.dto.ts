@@ -3,12 +3,12 @@ import {
   IsNotEmpty,
   IsNumber,
   Min,
+  Max,
   IsOptional,
   IsArray,
   ArrayMinSize,
   IsBoolean,
   IsDateString,
-  Max,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -37,6 +37,8 @@ export class CreateBookDto {
   @IsNotEmpty()
   description: string;
 
+
+
   @ApiProperty({
     description: 'The original price of the book before discount',
     example: 24.99,
@@ -46,24 +48,14 @@ export class CreateBookDto {
   originalPrice: number;
 
   @ApiPropertyOptional({
-    description: 'Discount rate for the book (percentage)',
-    example: 10,
-    minimum: 0,
-    maximum: 100,
+    description: 'The discount rate percentage (0-100)',
+    example: 25,
   })
   @IsOptional()
   @IsNumber()
   @Min(0)
   @Max(100)
   discountRate?: number;
-
-  @ApiProperty({
-    description: 'The current price of the book after discount',
-    example: 19.99,
-  })
-  @IsNumber()
-  @Min(0)
-  price: number;
 
   @ApiProperty({ description: 'The available stock of the book', example: 100 })
   @IsNumber()
@@ -86,12 +78,38 @@ export class CreateBookDto {
   @IsNotEmpty()
   publisher: string;
 
+  @ApiPropertyOptional({
+    description: 'The publication date of the book',
+    example: '2023-01-01',
+  })
+  @IsOptional()
+  @IsString()
+  publicationDate?: string;
+
   @ApiProperty({
     description: 'The publication year of the book',
     example: 1925,
   })
   @IsNumber()
   publicationYear: number;
+
+  @ApiProperty({
+    description: 'The number of pages in the book',
+    example: 180,
+  })
+  @IsNumber()
+  @Min(1)
+  pageCount: number;
+
+  @ApiPropertyOptional({
+    description: 'The language of the book',
+    example: 'English',
+  })
+  @IsOptional()
+  @IsString()
+  language?: string;
+
+
 
   @ApiPropertyOptional({
     description: 'Genres of the book',
@@ -111,6 +129,14 @@ export class CreateBookDto {
   @IsOptional()
   @IsString()
   coverImage?: string;
+
+  @ApiPropertyOptional({
+    description: 'URL of the book cover image (alternative field name)',
+    example: 'http://example.com/cover.jpg',
+  })
+  @IsOptional()
+  @IsString()
+  coverImageUrl?: string;
 
   @ApiPropertyOptional({
     description: 'Is the book available for pre-order?',
