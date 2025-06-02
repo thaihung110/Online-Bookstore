@@ -29,8 +29,7 @@ export class AuthService {
         return null;
       }
 
-      const isPasswordValid = await user.comparePassword(password);
-      if (!isPasswordValid) {
+      if (user.password !== password) {
         this.logger.debug(`Invalid password for user with email: ${email}`);
         return null;
       }

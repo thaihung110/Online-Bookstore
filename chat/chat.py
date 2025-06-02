@@ -90,7 +90,33 @@ def load_books():
             },
         )
     )
-    book_embeddings = np.array([book["embedding"] for book in books])
+    # Xác định độ dài embedding chuẩn
+    embedding_lengths = [
+        len(book["embedding"])
+        for book in books
+        if book.get("embedding") is not None
+    ]
+    if not embedding_lengths:
+        print("❌ Không tìm thấy embedding hợp lệ nào trong database.")
+        return np.array([]), []
+    expected_length = max(set(embedding_lengths), key=embedding_lengths.count)
+    # Lọc các book có embedding đúng độ dài
+    valid_books = []
+    invalid_count = 0
+    for i, book in enumerate(books):
+        emb = book.get("embedding")
+        if emb is not None and len(emb) == expected_length:
+            valid_books.append(book)
+        else:
+            invalid_count += 1
+            print(
+                f"⚠️ Book ở vị trí {i} có embedding không hợp lệ: {len(emb) if emb is not None else 'None'}"
+            )
+    if invalid_count > 0:
+        print(
+            f"⚠️ Tổng số book bị loại do embedding không hợp lệ: {invalid_count}"
+        )
+    book_embeddings = np.array([book["embedding"] for book in valid_books])
     book_metadata = [
         {
             "title": book.get("title", "Unknown Title"),
@@ -100,7 +126,7 @@ def load_books():
             "stock": book.get("stock", "N/A"),
             "isbn": book.get("isbn", "N/A"),
         }
-        for book in books
+        for book in valid_books
     ]
     return book_embeddings, book_metadata
 

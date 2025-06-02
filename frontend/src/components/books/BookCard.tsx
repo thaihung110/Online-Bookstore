@@ -41,6 +41,21 @@ const BookCard: React.FC<BookCardProps> = memo(({ book }) => {
   // Placeholder image as data URL to avoid network requests
   const placeholderImage = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjMwMCIgdmlld0JveD0iMCAwIDIwMCAzMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMzAwIiBmaWxsPSIjRjVGNUY1Ii8+CjxwYXRoIGQ9Ik04MCA5MEgxMjBWMTEwSDgwVjkwWiIgZmlsbD0iI0NDQ0NDQyIvPgo8cGF0aCBkPSJNNjAgMTMwSDE0MFYxNDBINjBWMTMwWiIgZmlsbD0iI0NDQ0NDQyIvPgo8cGF0aCBkPSJNNjAgMTUwSDE0MFYxNjBINjBWMTUwWiIgZmlsbD0iI0NDQ0NDQyIvPgo8cGF0aCBkPSJNNjAgMTcwSDE0MFYxODBINjBWMTcwWiIgZmlsbD0iI0NDQ0NDQyIvPgo8dGV4dCB4PSIxMDAiIHk9IjIyMCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzk5OTk5OSIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0Ij5ObyBJbWFnZTwvdGV4dD4KPC9zdmc+";
 
+  // Guard: Không hiển thị sách nếu dữ liệu không hợp lệ
+  if (
+    book.price === 0 ||
+    (isDiscounted &&
+      (book.originalPrice === null || book.originalPrice === undefined))
+  ) {
+    if (process.env.NODE_ENV !== "production") {
+      console.warn(
+        `BookCard: Không hiển thị sách do dữ liệu không hợp lệ:`,
+        book
+      );
+    }
+    return null;
+  }
+
   // Handle image loading
   const handleImageLoad = () => setImageLoaded(true);
   const handleImageError = () => {
@@ -66,14 +81,17 @@ const BookCard: React.FC<BookCardProps> = memo(({ book }) => {
   };
 
   // Debug: Log giá trị đầu vào
-  console.log(
-    "BookCard:",
-    book.title,
-    "price:",
-    book.price,
-    "originalPrice:",
-    book.originalPrice
-  );
+  if (process.env.NODE_ENV !== "production") {
+    console.log(
+      "BookCard:",
+      book.title,
+      "price:",
+      book.price,
+      "originalPrice:",
+      book.originalPrice
+    );
+  }
+
   // Không chuyển đổi giá nữa, chỉ hiển thị trực tiếp
   const priceUsd = book.price;
   const originalPriceUsd = book.originalPrice;
@@ -248,6 +266,34 @@ const BookCard: React.FC<BookCardProps> = memo(({ book }) => {
                 ${(originalPriceUsd || 0).toFixed(2)}
               </Typography>
             )}
+            {priceUsd === null || priceUsd === undefined ? (
+              <Typography
+                variant="h6"
+                color="warning.main"
+                sx={{ fontWeight: "bold" }}
+              >
+                Contact
+              </Typography>
+            ) : (
+              <Typography
+                variant="h6"
+                color={isDiscounted ? "error.main" : "primary.main"}
+                sx={{ fontWeight: "bold" }}
+              >
+                ${priceUsd.toFixed(2)}
+              </Typography>
+            )}
+            {isDiscounted &&
+              originalPriceUsd !== null &&
+              originalPriceUsd !== undefined && (
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ textDecoration: "line-through" }}
+                >
+                  ${originalPriceUsd.toFixed(2)}
+                </Typography>
+              )}
           </Stack>
           {book.stock === 0 && (
             <Typography variant="body2" color="error" sx={{ mt: 1 }}>

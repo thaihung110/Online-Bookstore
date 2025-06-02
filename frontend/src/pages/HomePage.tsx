@@ -21,24 +21,15 @@ import WhatshotIcon from "@mui/icons-material/Whatshot";
 import EmojiObjectsIcon from "@mui/icons-material/EmojiObjects";
 import MainLayout from "../components/layouts/MainLayout";
 import BookCard from "../components/books/BookCard";
-import { Book, getFeaturedBooks, getAllGenres } from "../api/books";
-
-const FEATURED_GENRE_IMAGES: Record<string, string> = {
-  Fiction:
-    "https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=400&q=80", // Old books on a wooden shelf
-  "Non-Fiction":
-    "https://images.unsplash.com/photo-1464983953574-0892a716854b?auto=format&fit=crop&w=400&q=80", // Stack of books on white table
-  "Science Fiction":
-    "https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=crop&w=400&q=80", // Futuristic city/space
-  Mystery:
-    "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80", // Foggy forest, mystery
-  Romance:
-    "https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=400&q=80", // Book with heart-shaped pages
-  Biography:
-    "https://images.unsplash.com/photo-1515378791036-0648a3ef77b2?auto=format&fit=crop&w=400&q=80", // Person reading book
-  Fantasy:
-    "https://images.unsplash.com/photo-1503676382389-4809596d5290?auto=format&fit=crop&w=400&q=80", // Book with magical lights
-};
+import {
+  Book,
+  getFeaturedBooks,
+  getAllGenres,
+  getRecommendedBookIds,
+  getBooksByIds,
+} from "../api/books";
+import { getCurrentUser } from "../api/auth";
+import { getRecommendedBooksByUsername } from "../api/books";
 
 const FEATURED_GENRES = [
   "Fiction",
@@ -94,16 +85,36 @@ const HomePage: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    // Giả lập: lấy ngẫu nhiên 6 sách từ featuredBooks nếu chưa có API riêng
-    if (featuredBooks.length > 0) {
+    const fetchRecommendedBooks = async () => {
       setLoadingRecommended(true);
-      setTimeout(() => {
-        const shuffled = [...featuredBooks].sort(() => 0.5 - Math.random());
-        setRecommendedBooks(shuffled.slice(0, 6));
+      setErrorRecommended(null);
+      try {
+        // Lấy username từ API profile
+        const user = await getCurrentUser();
+        console.log("[DEBUG] Current user from /auth/profile:", user);
+        const username = user?.username; // Dùng username thay vì email
+        console.log("[DEBUG] Username used for recommend API:", username);
+        if (username) {
+          const books = await getRecommendedBooksByUsername(username, 6);
+          if (books && books.length > 0) {
+            setRecommendedBooks(books);
+            setLoadingRecommended(false);
+            return;
+          } else {
+            setErrorRecommended("No recommendations found");
+          }
+        } else {
+          setErrorRecommended("You need to login to get recommendations");
+        }
+      } catch (err) {
+        setErrorRecommended("You need to login to get recommendations");
+        console.error(err);
+      } finally {
         setLoadingRecommended(false);
-      }, 500);
-    }
-  }, [featuredBooks]);
+      }
+    };
+    fetchRecommendedBooks();
+  }, []);
 
   // Lấy 7 genres nổi bật đầu tiên có trong data
   const featuredGenres = FEATURED_GENRES.filter((g) =>

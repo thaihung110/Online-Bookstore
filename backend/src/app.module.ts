@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, MiddlewareConsumer, RequestMethod } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { AppController } from './app.controller';
@@ -14,6 +14,7 @@ import { AdminModule } from './admin/admin.module';
 import { UploadModule } from './upload/upload.module';
 import { BooksUpdater } from './scripts/update-books';
 import { Book, BookSchema } from './books/schemas/book.schema';
+import { RecommendProxyMiddleware } from './proxy/recommend-proxy.middleware';
 
 @Module({
   imports: [
@@ -87,4 +88,10 @@ import { Book, BookSchema } from './books/schemas/book.schema';
     },
   ],
 })
-export class AppModule {}
+export class AppModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer
+      .apply(RecommendProxyMiddleware)
+      .forRoutes({ path: 'api/recommend/*', method: RequestMethod.ALL });
+  }
+}
