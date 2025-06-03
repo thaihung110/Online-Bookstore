@@ -25,6 +25,10 @@ export interface Order {
   notes: string;
   createdAt: string;
   updatedAt: string;
+  subtotal: number;
+  tax: number;
+  shippingCost: number;
+  discount: number;
 }
 
 export interface OrderFilters {

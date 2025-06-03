@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Box,
   Typography,
@@ -18,8 +18,24 @@ import {
   CircularProgress,
   Alert,
   Pagination,
+  IconButton,
+  Tooltip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Snackbar,
 } from "@mui/material";
+import {
+  Visibility,
+  Edit,
+  Delete,
+  Refresh,
+  LocalShipping,
+} from "@mui/icons-material";
 import { useOrderStore } from "../store/orderStore";
+import { Order, OrderFormData } from "../types/order.types";
 
 const OrdersManagementPage: React.FC = () => {
   // Order store state and actions
@@ -29,11 +45,34 @@ const OrdersManagementPage: React.FC = () => {
     currentPage,
     totalPages,
     isLoading,
+    isUpdating,
+    isDeleting,
     error,
+    updateError,
+    deleteError,
     filters,
     setFilters,
     fetchOrders,
+    updateOrderStatus,
+    deleteOrder,
+    resetErrors,
   } = useOrderStore();
+
+  // Local state for dialogs and forms
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState("");
+  const [snackbarSeverity, setSnackbarSeverity] = useState<"success" | "error">("success");
+
+  // Form state for editing orders
+  const [editForm, setEditForm] = useState<OrderFormData>({
+    status: "",
+    trackingNumber: "",
+    notes: "",
+  });
 
   // Load orders on mount and when filters change
   useEffect(() => {
@@ -51,6 +90,77 @@ const OrdersManagementPage: React.FC = () => {
     page: number
   ) => {
     handleFilterChange("page", page);
+  };
+
+  // Handle view order
+  const handleViewOrder = (order: Order) => {
+    setSelectedOrder(order);
+    setViewDialogOpen(true);
+  };
+
+  // Handle edit order
+  const handleEditOrder = (order: Order) => {
+    setSelectedOrder(order);
+    setEditForm({
+      status: order.status,
+      trackingNumber: order.trackingNumber || "",
+      notes: order.notes || "",
+    });
+    setEditDialogOpen(true);
+  };
+
+  // Handle delete order
+  const handleDeleteOrder = (order: Order) => {
+    setSelectedOrder(order);
+    setDeleteDialogOpen(true);
+  };
+
+  // Handle refresh
+  const handleRefresh = () => {
+    fetchOrders();
+    showSnackbar("Orders refreshed", "success");
+  };
+
+  // Show snackbar notification
+  const showSnackbar = (message: string, severity: "success" | "error") => {
+    setSnackbarMessage(message);
+    setSnackbarSeverity(severity);
+    setSnackbarOpen(true);
+  };
+
+  // Handle form submission for editing
+  const handleEditSubmit = async () => {
+    if (!selectedOrder) return;
+
+    try {
+      await updateOrderStatus(selectedOrder.id, editForm);
+      setEditDialogOpen(false);
+      showSnackbar("Order updated successfully", "success");
+    } catch (error) {
+      showSnackbar("Failed to update order", "error");
+    }
+  };
+
+  // Handle delete confirmation
+  const handleDeleteConfirm = async () => {
+    if (!selectedOrder) return;
+
+    try {
+      await deleteOrder(selectedOrder.id);
+      setDeleteDialogOpen(false);
+      showSnackbar("Order deleted successfully", "success");
+    } catch (error) {
+      showSnackbar("Failed to delete order", "error");
+    }
+  };
+
+  // Close dialogs
+  const closeDialogs = () => {
+    setViewDialogOpen(false);
+    setEditDialogOpen(false);
+    setDeleteDialogOpen(false);
+    setSelectedOrder(null);
+    resetErrors();
   };
 
   // Get status chip color
@@ -88,9 +198,53 @@ const OrdersManagementPage: React.FC = () => {
 
   return (
     <Box>
-      <Typography variant="h4" component="h1" gutterBottom>
-        Order Management
-      </Typography>
+      {/* Header with title and refresh button */}
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
+        <Typography variant="h4" component="h1">
+          Order Management
+        </Typography>
+        <Button
+          variant="outlined"
+          startIcon={<Refresh />}
+          onClick={handleRefresh}
+          disabled={isLoading}
+        >
+          Refresh
+        </Button>
+      </Box>
+
+      {/* Summary stats */}
+      <Paper sx={{ p: 2, mb: 3 }}>
+        <Typography variant="h6" gutterBottom>
+          Summary
+        </Typography>
+        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
+          <Box sx={{ minWidth: 120 }}>
+            <Typography variant="body2" color="text.secondary">
+              Total Orders
+            </Typography>
+            <Typography variant="h6">{totalOrders}</Typography>
+          </Box>
+          <Box sx={{ minWidth: 120 }}>
+            <Typography variant="body2" color="text.secondary">
+              Current Page
+            </Typography>
+            <Typography variant="h6">{currentPage} of {totalPages}</Typography>
+          </Box>
+          <Box sx={{ minWidth: 120 }}>
+            <Typography variant="body2" color="text.secondary">
+              Orders per Page
+            </Typography>
+            <Typography variant="h6">{filters.limit}</Typography>
+          </Box>
+          <Box sx={{ minWidth: 120 }}>
+            <Typography variant="body2" color="text.secondary">
+              Showing
+            </Typography>
+            <Typography variant="h6">{orders.length} orders</Typography>
+          </Box>
+        </Box>
+      </Paper>
 
       {/* Basic filters */}
       <Paper sx={{ p: 2, mb: 3 }}>
@@ -160,16 +314,34 @@ const OrdersManagementPage: React.FC = () => {
                   <TableCell>Items</TableCell>
                   <TableCell>Total</TableCell>
                   <TableCell>Status</TableCell>
+                  <TableCell>Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {orders.map((order) => (
                   <TableRow key={order.id}>
-                    <TableCell>{order.id}</TableCell>
+                    <TableCell>
+                      <Typography variant="body2" fontWeight="medium">
+                        #{order.id.slice(-8)}
+                      </Typography>
+                    </TableCell>
                     <TableCell>{formatDate(order.createdAt)}</TableCell>
-                    <TableCell>{order.user.name}</TableCell>
+                    <TableCell>
+                      <Box>
+                        <Typography variant="body2" fontWeight="medium">
+                          {order.user.name}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {order.user.email}
+                        </Typography>
+                      </Box>
+                    </TableCell>
                     <TableCell>{order.items.length} items</TableCell>
-                    <TableCell>${(order.totalAmount || 0).toFixed(2)}</TableCell>
+                    <TableCell>
+                      <Typography variant="body2" fontWeight="medium">
+                        ${(order.totalAmount || 0).toFixed(2)}
+                      </Typography>
+                    </TableCell>
                     <TableCell>
                       <Chip
                         label={
@@ -179,6 +351,42 @@ const OrdersManagementPage: React.FC = () => {
                         color={getStatusColor(order.status) as any}
                         size="small"
                       />
+                    </TableCell>
+                    <TableCell>
+                      <Box sx={{ display: "flex", gap: 0.5 }}>
+                        <Tooltip title="View Details">
+                          <IconButton
+                            size="small"
+                            onClick={() => handleViewOrder(order)}
+                          >
+                            <Visibility fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Edit Order">
+                          <IconButton
+                            size="small"
+                            onClick={() => handleEditOrder(order)}
+                          >
+                            <Edit fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        {order.status === "shipped" && (
+                          <Tooltip title="Tracking">
+                            <IconButton size="small">
+                              <LocalShipping fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+                        <Tooltip title="Delete Order">
+                          <IconButton
+                            size="small"
+                            color="error"
+                            onClick={() => handleDeleteOrder(order)}
+                          >
+                            <Delete fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </Box>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -207,6 +415,183 @@ const OrdersManagementPage: React.FC = () => {
           </Box>
         )}
       </Paper>
+
+      {/* View Order Dialog */}
+      <Dialog open={viewDialogOpen} onClose={closeDialogs} maxWidth="md" fullWidth>
+        <DialogTitle>Order Details</DialogTitle>
+        <DialogContent>
+          {selectedOrder && (
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+              <Box sx={{ display: "flex", flexDirection: { xs: "column", sm: "row" }, gap: 3 }}>
+                <Box sx={{ flex: 1 }}>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Order Information
+                  </Typography>
+                  <Typography variant="body2">
+                    <strong>Order ID:</strong> #{selectedOrder.id.slice(-8)}
+                  </Typography>
+                  <Typography variant="body2">
+                    <strong>Status:</strong> {selectedOrder.status}
+                  </Typography>
+                  <Typography variant="body2">
+                    <strong>Created:</strong> {formatDate(selectedOrder.createdAt)}
+                  </Typography>
+                  <Typography variant="body2">
+                    <strong>Updated:</strong> {formatDate(selectedOrder.updatedAt)}
+                  </Typography>
+                  <Typography variant="body2">
+                    <strong>Total:</strong> ${selectedOrder.totalAmount.toFixed(2)}
+                  </Typography>
+                  {selectedOrder.trackingNumber && (
+                    <Typography variant="body2">
+                      <strong>Tracking:</strong> {selectedOrder.trackingNumber}
+                    </Typography>
+                  )}
+                </Box>
+                <Box sx={{ flex: 1 }}>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Customer Information
+                  </Typography>
+                  <Typography variant="body2">
+                    <strong>Name:</strong> {selectedOrder.user.name}
+                  </Typography>
+                  <Typography variant="body2">
+                    <strong>Email:</strong> {selectedOrder.user.email}
+                  </Typography>
+                  <Typography variant="body2">
+                    <strong>Shipping Address:</strong> {selectedOrder.shippingAddress}
+                  </Typography>
+                </Box>
+              </Box>
+              <Box>
+                <Typography variant="subtitle2" gutterBottom>
+                  Order Items
+                </Typography>
+                {selectedOrder.items.map((item, index) => (
+                  <Box key={index} sx={{ mb: 1, p: 1, border: 1, borderColor: "divider", borderRadius: 1 }}>
+                    <Typography variant="body2">
+                      <strong>{item.book.title}</strong> by {item.book.author}
+                    </Typography>
+                    <Typography variant="body2">
+                      Quantity: {item.quantity} × ${item.price.toFixed(2)} = ${(item.quantity * item.price).toFixed(2)}
+                    </Typography>
+                  </Box>
+                ))}
+              </Box>
+              {selectedOrder.notes && (
+                <Box>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Notes
+                  </Typography>
+                  <Typography variant="body2">{selectedOrder.notes}</Typography>
+                </Box>
+              )}
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeDialogs}>Close</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Edit Order Dialog */}
+      <Dialog open={editDialogOpen} onClose={closeDialogs} maxWidth="sm" fullWidth>
+        <DialogTitle>Edit Order</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}>
+            <FormControl fullWidth>
+              <InputLabel>Status</InputLabel>
+              <Select
+                value={editForm.status}
+                label="Status"
+                onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
+              >
+                <MenuItem value="pending">Pending</MenuItem>
+                <MenuItem value="processing">Processing</MenuItem>
+                <MenuItem value="shipped">Shipped</MenuItem>
+                <MenuItem value="delivered">Delivered</MenuItem>
+                <MenuItem value="cancelled">Cancelled</MenuItem>
+                <MenuItem value="refunded">Refunded</MenuItem>
+              </Select>
+            </FormControl>
+            <TextField
+              fullWidth
+              label="Tracking Number"
+              value={editForm.trackingNumber}
+              onChange={(e) => setEditForm({ ...editForm, trackingNumber: e.target.value })}
+              placeholder="Enter tracking number"
+            />
+            <TextField
+              fullWidth
+              multiline
+              rows={3}
+              label="Notes"
+              value={editForm.notes}
+              onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
+              placeholder="Add notes about this order"
+            />
+          </Box>
+          {updateError && (
+            <Alert severity="error" sx={{ mt: 2 }}>
+              {updateError}
+            </Alert>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeDialogs}>Cancel</Button>
+          <Button
+            onClick={handleEditSubmit}
+            variant="contained"
+            disabled={isUpdating}
+          >
+            {isUpdating ? <CircularProgress size={20} /> : "Update Order"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Order Dialog */}
+      <Dialog open={deleteDialogOpen} onClose={closeDialogs}>
+        <DialogTitle>Delete Order</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to delete order #{selectedOrder?.id.slice(-8)}?
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            This action cannot be undone.
+          </Typography>
+          {deleteError && (
+            <Alert severity="error" sx={{ mt: 2 }}>
+              {deleteError}
+            </Alert>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeDialogs}>Cancel</Button>
+          <Button
+            onClick={handleDeleteConfirm}
+            color="error"
+            variant="contained"
+            disabled={isDeleting}
+          >
+            {isDeleting ? <CircularProgress size={20} /> : "Delete"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Snackbar for notifications */}
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={6000}
+        onClose={() => setSnackbarOpen(false)}
+      >
+        <Alert
+          onClose={() => setSnackbarOpen(false)}
+          severity={snackbarSeverity}
+          sx={{ width: '100%' }}
+        >
+          {snackbarMessage}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

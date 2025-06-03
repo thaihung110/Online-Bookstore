@@ -5,6 +5,12 @@ import {
   OrderFormData,
   OrderListResponse,
 } from "../types/order.types";
+import {
+  mapOrderListResponse,
+  mapOrder,
+  mapOrderDataToBackend,
+  handleApiError,
+} from "../utils/orderDataMapper";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:3001/api";
 
@@ -44,345 +50,113 @@ const buildQueryParams = (filters: OrderFilters): string => {
   return params.toString();
 };
 
-// Mock data for orders (temporary until backend is ready)
-const MOCK_ORDERS: Order[] = [
-  {
-    id: "1",
-    user: {
-      id: "1",
-      name: "John Doe",
-      email: "john.doe@example.com",
-    },
-    items: [
-      {
-        book: {
-          id: "101",
-          title: "The Great Gatsby",
-          author: "F. Scott Fitzgerald",
-          price: 12.99,
-          coverImage: "https://example.com/covers/gatsby.jpg",
-        },
-        quantity: 1,
-        price: 12.99,
-      },
-      {
-        book: {
-          id: "102",
-          title: "To Kill a Mockingbird",
-          author: "Harper Lee",
-          price: 14.99,
-          coverImage: "https://example.com/covers/mockingbird.jpg",
-        },
-        quantity: 1,
-        price: 14.99,
-      },
-    ],
-    status: "delivered",
-    totalAmount: 27.98,
-    shippingAddress: "123 Main St, Anytown, USA",
-    trackingNumber: "TRACK123456",
-    notes: "Leave at door",
-    createdAt: "2023-09-15T10:30:00Z",
-    updatedAt: "2023-09-17T14:20:00Z",
-  },
-  {
-    id: "2",
-    user: {
-      id: "2",
-      name: "Jane Smith",
-      email: "jane.smith@example.com",
-    },
-    items: [
-      {
-        book: {
-          id: "103",
-          title: "1984",
-          author: "George Orwell",
-          price: 11.99,
-          coverImage: "https://example.com/covers/1984.jpg",
-        },
-        quantity: 2,
-        price: 23.98,
-      },
-    ],
-    status: "processing",
-    totalAmount: 23.98,
-    shippingAddress: "456 Oak Ave, Somewhere, USA",
-    trackingNumber: null,
-    notes: "",
-    createdAt: "2023-09-20T09:15:00Z",
-    updatedAt: "2023-09-20T09:15:00Z",
-  },
-  {
-    id: "3",
-    user: {
-      id: "3",
-      name: "Admin User",
-      email: "admin@bookstore.com",
-    },
-    items: [
-      {
-        book: {
-          id: "104",
-          title: "The Hobbit",
-          author: "J.R.R. Tolkien",
-          price: 16.99,
-          coverImage: "https://example.com/covers/hobbit.jpg",
-        },
-        quantity: 1,
-        price: 16.99,
-      },
-    ],
-    status: "shipped",
-    totalAmount: 16.99,
-    shippingAddress: "789 Admin St, Adminville, USA",
-    trackingNumber: "TRACK789012",
-    notes: "",
-    createdAt: "2023-09-18T11:20:00Z",
-    updatedAt: "2023-09-19T08:30:00Z",
-  },
-  {
-    id: "4",
-    user: {
-      id: "4",
-      name: "Bob Johnson",
-      email: "bob.johnson@example.com",
-    },
-    items: [
-      {
-        book: {
-          id: "105",
-          title: "Pride and Prejudice",
-          author: "Jane Austen",
-          price: 9.99,
-          coverImage: "https://example.com/covers/pride.jpg",
-        },
-        quantity: 1,
-        price: 9.99,
-      },
-    ],
-    status: "cancelled",
-    totalAmount: 9.99,
-    shippingAddress: "789 Pine Rd, Elsewhere, USA",
-    trackingNumber: null,
-    notes: "Customer cancelled order",
-    createdAt: "2023-09-14T15:45:00Z",
-    updatedAt: "2023-09-15T09:10:00Z",
-  },
-  {
-    id: "5",
-    user: {
-      id: "5",
-      name: "Sarah Williams",
-      email: "sarah.williams@example.com",
-    },
-    items: [
-      {
-        book: {
-          id: "106",
-          title: "The Catcher in the Rye",
-          author: "J.D. Salinger",
-          price: 13.99,
-          coverImage: "https://example.com/covers/catcher.jpg",
-        },
-        quantity: 1,
-        price: 13.99,
-      },
-      {
-        book: {
-          id: "107",
-          title: "Lord of the Flies",
-          author: "William Golding",
-          price: 12.99,
-          coverImage: "https://example.com/covers/flies.jpg",
-        },
-        quantity: 1,
-        price: 12.99,
-      },
-    ],
-    status: "pending",
-    totalAmount: 26.98,
-    shippingAddress: "321 Maple Dr, Nowhere, USA",
-    trackingNumber: null,
-    notes: "",
-    createdAt: "2023-09-21T10:00:00Z",
-    updatedAt: "2023-09-21T10:00:00Z",
-  },
-];
+// ✅ REAL API IMPLEMENTATION - Mock data removed
+// All functions now use real backend API calls with proper data mapping
 
-// Get all orders with filters (with mock implementation for now)
+// Get all orders with filters - REAL API IMPLEMENTATION
 export const getOrders = async (
   filters: OrderFilters
 ): Promise<OrderListResponse> => {
   try {
-    // In the future, this will be replaced with a real API call
-    // const response = await axios.get(`${API_URL}/admin/orders?${buildQueryParams(filters)}`, getAuthHeaders());
-    // return response.data;
+    console.log('[Admin API] Fetching orders with filters:', filters);
 
-    // Mock implementation
-    await new Promise((resolve) => setTimeout(resolve, 800)); // Simulate delay
+    // Make real API call to backend
+    const response = await axios.get(
+      `${API_URL}/admin/orders?${buildQueryParams(filters)}`,
+      getAuthHeaders()
+    );
 
-    let filteredOrders = [...MOCK_ORDERS];
+    console.log('[Admin API] Raw backend response:', response.data);
 
-    // Apply filters
-    if (filters.status) {
-      filteredOrders = filteredOrders.filter(
-        (order) => order.status === filters.status
-      );
-    }
+    // Transform backend response to frontend format
+    const transformedResponse = mapOrderListResponse(response.data);
 
-    if (filters.userId) {
-      filteredOrders = filteredOrders.filter(
-        (order) => order.user.id === filters.userId
-      );
-    }
+    console.log('[Admin API] Transformed response:', transformedResponse);
 
-    if (filters.minTotal !== undefined) {
-      filteredOrders = filteredOrders.filter(
-        (order) => order.totalAmount >= filters.minTotal!
-      );
-    }
-
-    if (filters.maxTotal !== undefined) {
-      filteredOrders = filteredOrders.filter(
-        (order) => order.totalAmount <= filters.maxTotal!
-      );
-    }
-
-    if (filters.startDate) {
-      const startDate = new Date(filters.startDate);
-      filteredOrders = filteredOrders.filter(
-        (order) => new Date(order.createdAt) >= startDate
-      );
-    }
-
-    if (filters.endDate) {
-      const endDate = new Date(filters.endDate);
-      filteredOrders = filteredOrders.filter(
-        (order) => new Date(order.createdAt) <= endDate
-      );
-    }
-
-    // Apply sorting
-    if (filters.sortBy) {
-      const direction = filters.sortOrder === "desc" ? -1 : 1;
-
-      filteredOrders.sort((a, b) => {
-        switch (filters.sortBy) {
-          case "createdAt":
-            return (
-              direction *
-              (new Date(a.createdAt).getTime() -
-                new Date(b.createdAt).getTime())
-            );
-          case "totalAmount":
-            return direction * (a.totalAmount - b.totalAmount);
-          case "status":
-            return direction * a.status.localeCompare(b.status);
-          default:
-            return 0;
-        }
-      });
-    }
-
-    // Calculate pagination
-    const total = filteredOrders.length;
-    const totalPages = Math.ceil(total / filters.limit);
-    const startIndex = (filters.page - 1) * filters.limit;
-    const endIndex = startIndex + filters.limit;
-    const paginatedOrders = filteredOrders.slice(startIndex, endIndex);
-
-    return {
-      orders: paginatedOrders,
-      total,
-      page: filters.page,
-      limit: filters.limit,
-      totalPages,
-    };
+    return transformedResponse;
   } catch (error) {
     console.error("Error fetching orders:", error);
-    throw error;
+    const errorMessage = handleApiError(error);
+    throw new Error(errorMessage);
   }
 };
 
-// Get a single order by ID
+// Get a single order by ID - REAL API IMPLEMENTATION
 export const getOrder = async (id: string): Promise<Order> => {
   try {
-    // In the future, this will be replaced with a real API call
-    // const response = await axios.get(`${API_URL}/admin/orders/${id}`, getAuthHeaders());
-    // return response.data;
+    console.log(`[Admin API] Fetching order ${id}`);
 
-    // Mock implementation
-    await new Promise((resolve) => setTimeout(resolve, 500)); // Simulate delay
+    // Make real API call to backend
+    const response = await axios.get(
+      `${API_URL}/admin/orders/${id}`,
+      getAuthHeaders()
+    );
 
-    const order = MOCK_ORDERS.find((o) => o.id === id);
+    console.log(`[Admin API] Raw order response:`, response.data);
 
-    if (!order) {
-      throw new Error("Order not found");
-    }
+    // Transform backend response to frontend format
+    const transformedOrder = mapOrder(response.data);
 
-    return order;
+    console.log(`[Admin API] Transformed order:`, transformedOrder);
+
+    return transformedOrder;
   } catch (error) {
     console.error(`Error fetching order ${id}:`, error);
-    throw error;
+    const errorMessage = handleApiError(error);
+    throw new Error(errorMessage);
   }
 };
 
-// Update an order
+// Update an order - REAL API IMPLEMENTATION
 export const updateOrder = async (
   id: string,
   orderData: OrderFormData
 ): Promise<Order> => {
   try {
-    // In the future, this will be replaced with a real API call
-    // const response = await axios.put(`${API_URL}/admin/orders/${id}`, orderData, getAuthHeaders());
-    // return response.data;
+    console.log(`[Admin API] Updating order ${id} with data:`, orderData);
 
-    // Mock implementation
-    await new Promise((resolve) => setTimeout(resolve, 700)); // Simulate delay
+    // Transform frontend data to backend format
+    const backendData = mapOrderDataToBackend(orderData);
 
-    const orderIndex = MOCK_ORDERS.findIndex((o) => o.id === id);
+    console.log(`[Admin API] Backend update data:`, backendData);
 
-    if (orderIndex === -1) {
-      throw new Error("Order not found");
-    }
+    // Make real API call to backend
+    const response = await axios.put(
+      `${API_URL}/admin/orders/${id}`,
+      backendData,
+      getAuthHeaders()
+    );
 
-    // Create updated order
-    const updatedOrder = {
-      ...MOCK_ORDERS[orderIndex],
-      ...orderData,
-      updatedAt: new Date().toISOString(),
-    };
+    console.log(`[Admin API] Update response:`, response.data);
 
-    // Update the mock data (in a real app, this would be unnecessary)
-    MOCK_ORDERS[orderIndex] = updatedOrder;
+    // Transform backend response to frontend format
+    const transformedOrder = mapOrder(response.data);
 
-    return updatedOrder;
+    console.log(`[Admin API] Transformed updated order:`, transformedOrder);
+
+    return transformedOrder;
   } catch (error) {
     console.error(`Error updating order ${id}:`, error);
-    throw error;
+    const errorMessage = handleApiError(error);
+    throw new Error(errorMessage);
   }
 };
 
-// Delete an order
+// Delete an order - REAL API IMPLEMENTATION
 export const deleteOrder = async (id: string): Promise<void> => {
   try {
-    // In the future, this will be replaced with a real API call
-    // await axios.delete(`${API_URL}/admin/orders/${id}`, getAuthHeaders());
+    console.log(`[Admin API] Deleting order ${id}`);
 
-    // Mock implementation
-    await new Promise((resolve) => setTimeout(resolve, 600)); // Simulate delay
+    // Make real API call to backend
+    await axios.delete(
+      `${API_URL}/admin/orders/${id}`,
+      getAuthHeaders()
+    );
 
-    const orderIndex = MOCK_ORDERS.findIndex((o) => o.id === id);
-
-    if (orderIndex === -1) {
-      throw new Error("Order not found");
-    }
-
-    // Remove from mock data (in a real app, this would be unnecessary)
-    MOCK_ORDERS.splice(orderIndex, 1);
+    console.log(`[Admin API] Order ${id} deleted successfully`);
   } catch (error) {
     console.error(`Error deleting order ${id}:`, error);
-    throw error;
+    const errorMessage = handleApiError(error);
+    throw new Error(errorMessage);
   }
 };
