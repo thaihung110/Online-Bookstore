@@ -22,7 +22,6 @@ import {
 } from "@mui/material";
 import {
   Menu as MenuIcon,
-  Dashboard as DashboardIcon,
   Book as BookIcon,
   People as PeopleIcon,
   Category as CategoryIcon,
@@ -45,7 +44,6 @@ const DRAWER_WIDTH = 240;
 
 // Menu items for the sidebar
 const MENU_ITEMS = [
-  { text: "Dashboard", icon: <DashboardIcon />, path: "/admin" },
   { text: "Books", icon: <BookIcon />, path: "/admin/books" },
   { text: "Orders", icon: <OrdersIcon />, path: "/admin/orders" },
   { text: "Users", icon: <PeopleIcon />, path: "/admin/users" },
@@ -53,7 +51,7 @@ const MENU_ITEMS = [
 
 // Route mapping for breadcrumbs
 const ROUTE_MAPPING: Record<string, string> = {
-  admin: "Dashboard",
+  admin: "Admin",
   books: "Books",
   users: "Users",
   categories: "Categories",
@@ -244,11 +242,11 @@ const AdminLayout: React.FC = () => {
         <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 3 }}>
           <Link
             component={RouterLink}
-            to="/admin"
+            to="/admin/books"
             color="inherit"
             underline="hover"
           >
-            Dashboard
+            Admin
           </Link>
           {generateBreadcrumbs()}
         </Breadcrumbs>

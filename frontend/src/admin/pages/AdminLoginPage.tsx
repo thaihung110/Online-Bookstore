@@ -65,7 +65,7 @@ const AdminLoginPage: React.FC = () => {
   // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
-      navigate("/admin");
+      navigate("/admin/books");
     }
   }, [isAuthenticated, navigate]);
 

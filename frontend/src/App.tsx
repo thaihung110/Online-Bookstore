@@ -22,7 +22,6 @@ import ChatbotWidget from "./components/ChatbotWidget";
 // Admin imports
 import {
   AdminLoginPage,
-  AdminDashboardPage,
   BookManagementPage,
   BookFormPage,
   UserManagementPage,
@@ -197,7 +196,7 @@ const App: React.FC = () => {
               </AdminProtectedRoute>
             }
           >
-            <Route index element={<AdminDashboardPage />} />
+            <Route index element={<Navigate to="/admin/books" replace />} />
             <Route path="books" element={<BookManagementPage />} />
             <Route path="books/add" element={<BookFormPage />} />
             <Route path="books/edit/:id" element={<BookFormPage />} />
