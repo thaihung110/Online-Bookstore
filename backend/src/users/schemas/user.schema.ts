@@ -30,8 +30,6 @@ export class User {
   @Prop({ type: Date, default: null })
   resetPasswordExpires: Date;
 
-
-
   @Prop({ type: Number, default: 0 })
   loyaltyPoints: number;
 
@@ -39,21 +37,6 @@ export class User {
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
-
-// Middleware to hash password before saving
-UserSchema.pre<UserDocument>('save', async function (next) {
-  if (!this.isModified('password')) {
-    return next();
-  }
-
-  try {
-    const salt = await bcrypt.genSalt(10);
-    this.password = await bcrypt.hash(this.password, salt);
-    next();
-  } catch (error) {
-    next(error as Error);
-  }
-});
 
 // Đăng ký phương thức comparePassword vào schema methods
 UserSchema.methods.comparePassword = async function (

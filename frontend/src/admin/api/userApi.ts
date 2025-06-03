@@ -41,70 +41,6 @@ const buildQueryParams = (filters: UserFilters): string => {
   return params.toString();
 };
 
-// Mock data for users (temporary until backend is ready)
-const MOCK_USERS: User[] = [
-  {
-    id: "1",
-    name: "John Doe",
-    email: "john.doe@example.com",
-    role: UserRole.USER,
-    avatar: "https://randomuser.me/api/portraits/men/1.jpg",
-    address: "123 Main St, Anytown, USA",
-    phone: "555-123-4567",
-    isActive: true,
-    createdAt: "2024-01-01",
-    updatedAt: "2024-01-01",
-  },
-  {
-    id: "2",
-    name: "Jane Smith",
-    email: "jane.smith@example.com",
-    role: UserRole.USER,
-    avatar: "https://randomuser.me/api/portraits/women/2.jpg",
-    address: "456 Oak Ave, Somewhere, USA",
-    phone: "555-987-6543",
-    isActive: true,
-    createdAt: "2024-01-02",
-    updatedAt: "2024-01-02",
-  },
-  {
-    id: "3",
-    name: "Admin User",
-    email: "admin@bookstore.com",
-    role: UserRole.ADMIN,
-    avatar: "https://randomuser.me/api/portraits/men/10.jpg",
-    address: "789 Admin St, Adminville, USA",
-    phone: "555-111-2222",
-    isActive: true,
-    createdAt: "2024-01-03",
-    updatedAt: "2024-01-03",
-  },
-  {
-    id: "4",
-    name: "Bob Johnson",
-    email: "bob.johnson@example.com",
-    role: UserRole.USER,
-    avatar: "https://randomuser.me/api/portraits/men/3.jpg",
-    address: "789 Pine Rd, Elsewhere, USA",
-    phone: "555-555-5555",
-    isActive: false,
-    createdAt: "2024-01-04",
-    updatedAt: "2024-01-04",
-  },
-  {
-    id: "5",
-    name: "Sarah Williams",
-    email: "sarah.williams@example.com",
-    role: UserRole.USER,
-    avatar: "https://randomuser.me/api/portraits/women/4.jpg",
-    address: "321 Maple Dr, Nowhere, USA",
-    phone: "555-222-3333",
-    isActive: true,
-    createdAt: "2024-01-05",
-    updatedAt: "2024-01-05",
-  },
-];
-
 // Get all users from backend API
 export const getUsers = async (): Promise<User[]> => {
   try {
@@ -135,29 +71,16 @@ export const getUser = async (id: string): Promise<User> => {
 // Create a new user
 export const createUser = async (userData: UserFormData): Promise<User> => {
   try {
-    // In the future, this will be replaced with a real API call
-    // const response = await axios.post(`${API_URL}/admin/users`, userData, getAuthHeaders());
-    // return response.data;
-
-    // Mock implementation
-    await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate delay
-
-    const newUser: User = {
-      id: String(MOCK_USERS.length + 1),
-      ...userData,
-      avatar: `https://randomuser.me/api/portraits/${
-        userData.name.includes("Jane") || userData.name.includes("Sarah")
-          ? "women"
-          : "men"
-      }/${Math.floor(Math.random() * 100)}.jpg`,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+    // Map name -> username, chỉ gửi các trường backend yêu cầu
+    const payload: any = {
+      username: userData.name,
+      email: userData.email,
+      password: userData.password,
+      role: userData.role,
     };
-
-    // In a real implementation, the server would add the user to the database
-    // Here we're just returning the new user object
-
-    return newUser;
+    const response = await axios.post(`${API_URL}/users`, payload);
+    const user = response.data;
+    return { ...user, id: user._id || user.id };
   } catch (error) {
     console.error("Error creating user:", error);
     throw error;
@@ -171,11 +94,14 @@ export const updateUser = async (
 ): Promise<User> => {
   try {
     // Map name -> username, chỉ gửi các trường backend yêu cầu
-    const payload = {
+    const payload: any = {
       username: userData.name,
       email: userData.email,
       role: userData.role,
     };
+    if (userData.password) {
+      payload.password = userData.password;
+    }
     const response = await axios.put(`${API_URL}/users/${id}`, payload);
     const user = response.data;
     return { ...user, id: user._id || user.id };

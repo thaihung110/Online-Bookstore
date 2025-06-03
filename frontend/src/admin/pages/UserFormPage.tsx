@@ -182,10 +182,21 @@ const UserFormPage: React.FC = () => {
           role: formData.role,
           isActive: formData.isActive, // giữ đúng type, userApi sẽ filter lại
         };
+        if (formData.password) {
+          updatedData.password = formData.password;
+        }
         await updateUser(id, updatedData);
         setSuccess("User updated successfully");
       } else {
-        await createUser(formData);
+        // For create mode, chỉ gửi các trường backend yêu cầu
+        const newUserData: UserFormData = {
+          name: formData.name,
+          email: formData.email,
+          password: formData.password,
+          role: formData.role,
+          isActive: formData.isActive, // giữ đúng type, userApi sẽ filter lại
+        };
+        await createUser(newUserData);
         setSuccess("User created successfully");
 
         // Clear form data on successful creation

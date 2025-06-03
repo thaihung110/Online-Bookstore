@@ -12,38 +12,7 @@ import {
   UserRole,
 } from "../../types/user.types";
 import { useUserFilters } from "../../hooks/useUserFilters";
-
-
-// Mock data for demonstration
-const MOCK_USERS: User[] = [
-  {
-    id: "1",
-    name: "Admin User",
-    email: "admin@example.com",
-    role: UserRole.ADMIN,
-    isActive: true,
-    createdAt: "2023-01-01T00:00:00Z",
-    updatedAt: "2023-01-01T00:00:00Z",
-  },
-  {
-    id: "2",
-    name: "John Doe",
-    email: "john.doe@example.com",
-    role: UserRole.USER,
-    isActive: true,
-    createdAt: "2023-02-15T00:00:00Z",
-    updatedAt: "2023-02-15T00:00:00Z",
-  },
-  {
-    id: "3",
-    name: "Jane Smith",
-    email: "jane.smith@example.com",
-    role: UserRole.USER,
-    isActive: false,
-    createdAt: "2023-03-20T00:00:00Z",
-    updatedAt: "2023-03-20T00:00:00Z",
-  },
-];
+import { getUsers, deleteUser as apiDeleteUser } from "../../api/userApi";
 
 /**
  * Admin users management page
@@ -64,22 +33,17 @@ const UsersPage: React.FC = () => {
     const fetchUsers = async () => {
       setLoading(true);
       try {
-        // This would be an API call in a real application
-        // const response = await userService.getUsers(filters);
-
-        // Mock implementation
-        await new Promise((resolve) => setTimeout(resolve, 500));
-
-        // Filter and paginate mock data
-        let filteredUsers = [...MOCK_USERS];
+        // Gọi API thật để lấy danh sách user
+        const allUsers = await getUsers();
+        let filteredUsers = [...allUsers];
 
         // Apply search filter
         if (filters.search) {
           const searchLower = filters.search.toLowerCase();
           filteredUsers = filteredUsers.filter(
             (user) =>
-              user.name.toLowerCase().includes(searchLower) ||
-              user.email.toLowerCase().includes(searchLower)
+              (user.name || "").toLowerCase().includes(searchLower) ||
+              (user.email || "").toLowerCase().includes(searchLower)
           );
         }
 
@@ -162,19 +126,12 @@ const UsersPage: React.FC = () => {
 
     setDeleteLoading(true);
     try {
-      // This would be an API call in a real application
-      // await userService.deleteUser(deleteUser.id);
-
-      // Mock deletion
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      // Update UI
+      // Gọi API thật để xoá user
+      await apiDeleteUser(deleteUser.id);
       setUsers((prevUsers) =>
         prevUsers.filter((user) => user.id !== deleteUser.id)
       );
       setTotalUsers((prevTotal) => prevTotal - 1);
-
-      // Close dialog
       setDeleteUser(null);
     } catch (error) {
       console.error("Error deleting user:", error);

@@ -400,6 +400,7 @@ const UserManagementPage: React.FC = () => {
             <TableHead>
               <TableRow>
                 <TableCell>Name</TableCell>
+                <TableCell>Username</TableCell>
                 <TableCell>Email</TableCell>
                 <TableCell>Role</TableCell>
                 <TableCell>Status</TableCell>
@@ -433,6 +434,7 @@ const UserManagementPage: React.FC = () => {
                         <Typography variant="body2">{user.name}</Typography>
                       </Box>
                     </TableCell>
+                    <TableCell>{user.username}</TableCell>
                     <TableCell>{user.email}</TableCell>
                     <TableCell>
                       <Chip

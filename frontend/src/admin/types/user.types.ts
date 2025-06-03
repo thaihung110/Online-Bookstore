@@ -25,6 +25,7 @@ export type SortOrder = "asc" | "desc";
 export interface User {
   id: string;
   name: string;
+  username: string;
   email: string;
   role: UserRole;
   avatar?: string;
