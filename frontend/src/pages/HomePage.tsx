@@ -53,9 +53,6 @@ const HomePage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [genres, setGenres] = useState<string[]>([]);
   const [loadingGenres, setLoadingGenres] = useState(false);
-  const [recommendedBooks, setRecommendedBooks] = useState<Book[]>([]);
-  const [loadingRecommended, setLoadingRecommended] = useState(false);
-  const [errorRecommended, setErrorRecommended] = useState<string | null>(null);
 
   useEffect(() => {
     const loadFeaturedBooks = async () => {
@@ -82,38 +79,6 @@ const HomePage: React.FC = () => {
         setGenres(allGenres);
       })
       .finally(() => setLoadingGenres(false));
-  }, []);
-
-  useEffect(() => {
-    const fetchRecommendedBooks = async () => {
-      setLoadingRecommended(true);
-      setErrorRecommended(null);
-      try {
-        // Lấy username từ API profile
-        const user = await getCurrentUser();
-        console.log("[DEBUG] Current user from /auth/profile:", user);
-        const username = user?.username; // Dùng username thay vì email
-        console.log("[DEBUG] Username used for recommend API:", username);
-        if (username) {
-          const books = await getRecommendedBooksByUsername(username, 6);
-          if (books && books.length > 0) {
-            setRecommendedBooks(books);
-            setLoadingRecommended(false);
-            return;
-          } else {
-            setErrorRecommended("No recommendations found");
-          }
-        } else {
-          setErrorRecommended("You need to login to get recommendations");
-        }
-      } catch (err) {
-        setErrorRecommended("You need to login to get recommendations");
-        console.error(err);
-      } finally {
-        setLoadingRecommended(false);
-      }
-    };
-    fetchRecommendedBooks();
   }, []);
 
   // Lấy 7 genres nổi bật đầu tiên có trong data
@@ -398,57 +363,6 @@ const HomePage: React.FC = () => {
             View All Books
           </Button>
         </Box>
-      </Container>
-
-      {/* Recommended for you Section */}
-      <Container maxWidth="lg" sx={{ mb: 8, px: { xs: 2, md: 3 } }}>
-        <Box sx={{ display: "flex", alignItems: "center", mb: 4 }}>
-          <WhatshotIcon color="secondary" sx={{ fontSize: 32, mr: 2 }} />
-          <Typography
-            component="h2"
-            variant="h4"
-            gutterBottom
-            sx={{
-              fontFamily: "'Playfair Display', serif",
-              fontWeight: 600,
-              position: "relative",
-              display: "inline-block",
-              mb: 0,
-            }}
-          >
-            Recommended for you
-            <Box
-              sx={{
-                position: "absolute",
-                width: "40%",
-                height: "3px",
-                bottom: "-8px",
-                left: "0",
-                backgroundColor: "secondary.main",
-              }}
-            />
-          </Typography>
-        </Box>
-        {loadingRecommended ? (
-          <Box sx={{ display: "flex", justifyContent: "center", my: 4 }}>
-            <CircularProgress />
-          </Box>
-        ) : errorRecommended ? (
-          <Box sx={{ textAlign: "center", my: 4 }}>
-            <Typography color="error">{errorRecommended}</Typography>
-          </Box>
-        ) : (
-          <Box sx={{ display: "flex", flexWrap: "wrap", mx: -1.5 }}>
-            {recommendedBooks.map((book) => (
-              <Box
-                key={book.id}
-                sx={{ width: { xs: "100%", sm: "50%", md: "33.33%" }, p: 1.5 }}
-              >
-                <BookCard book={book} />
-              </Box>
-            ))}
-          </Box>
-        )}
       </Container>
     </MainLayout>
   );
