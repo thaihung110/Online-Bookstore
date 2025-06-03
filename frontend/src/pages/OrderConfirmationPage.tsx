@@ -61,38 +61,49 @@ const OrderConfirmationPage: React.FC = () => {
 
   // Xóa giỏ hàng khi đơn hàng đã hoàn thành
   useEffect(() => {
-    if (payment?.status === "COMPLETED") {
-      // Giả lập xóa giỏ hàng sau khi thanh toán thành công
+    // Clear cart for successful payments OR when we have a valid order (COD case)
+    const shouldClearCart =
+      payment?.status === "COMPLETED" || // VNPAY success
+      (order && (payment?.status === "PENDING" || !payment)) || // COD or order without payment
+      (order && payment?.paymentMethod === "COD"); // Explicit COD check
+
+    if (shouldClearCart) {
+      console.log('[Order Confirmation] Clearing cart - Order:', !!order, 'Payment status:', payment?.status, 'Payment method:', payment?.paymentMethod);
       clearCart();
     }
 
-    // Cleanup khi unmount
+    // Cleanup khi unmount - delay reset to allow user to stay on success page
     return () => {
-      // Đặt lại store checkout khi rời khỏi trang
-      resetCheckout();
+      // Don't immediately reset checkout store to preserve order data for success page
+      // Users can manually navigate away using the buttons provided
+      // resetCheckout();
     };
-  }, [clearCart, resetCheckout, payment]);
+  }, [clearCart, resetCheckout, payment, order]);
 
-  // Chuyển hướng nếu không có đơn hàng và payment
-  useEffect(() => {
-    if (!order && !payment && !location.search) {
-      navigate("/");
-    }
-  }, [order, payment, navigate, location.search]);
+  // Only redirect if we're sure there's no order data and no payment info
+  // Remove automatic redirect to let users stay on success page
+  // useEffect(() => {
+  //   if (!order && !payment && !location.search) {
+  //     navigate("/");
+  //   }
+  // }, [order, payment, navigate, location.search]);
 
   // Tạo ID đơn hàng giả lập nếu chưa có
   const orderId =
-    order?.id ||
+    order?._id ||
     payment?.orderId ||
     `ORD-${Date.now().toString().substring(5)}`;
   const orderDate = order?.createdAt || new Date().toISOString();
-  const totalAmount = order?.totalAmount || payment?.amount || 0;
 
-  // Check payment status
+  // Calculate total amount - backend uses 'total' field (in USD)
+  const totalAmount = order?.total || payment?.amount || 0;
+
+  // Check payment status - handle COD orders as successful
   const paymentStatus = payment?.status || "PENDING";
-  const isPaymentSuccessful = paymentStatus === "COMPLETED";
+  const isCODOrder = payment?.paymentMethod === "COD" || (!payment && order);
+  const isPaymentSuccessful = paymentStatus === "COMPLETED" || isCODOrder;
   const isPaymentFailed = paymentStatus === "FAILED";
-  const isPaymentPending = paymentStatus === "PENDING";
+  const isPaymentPending = paymentStatus === "PENDING" && !isCODOrder;
 
   if (isLoading) {
     return (
@@ -134,11 +145,12 @@ const OrderConfirmationPage: React.FC = () => {
                   sx={{ fontSize: 60, mb: 2 }}
                 />
                 <Typography variant="h4" gutterBottom>
-                  Thanh toán thành công!
+                  {isCODOrder ? "Đặt hàng thành công!" : "Thanh toán thành công!"}
                 </Typography>
                 <Typography variant="body1" color="text.secondary">
                   Cảm ơn bạn đã đặt hàng. Đơn hàng của bạn đã được xác nhận và
                   đang được xử lý.
+                  {isCODOrder && " Bạn sẽ thanh toán khi nhận hàng."}
                 </Typography>
               </>
             ) : isPaymentFailed ? (
@@ -199,6 +211,8 @@ const OrderConfirmationPage: React.FC = () => {
                 <Typography variant="body1">
                   {payment?.paymentMethod === "VNPAY"
                     ? "VNPAY"
+                    : payment?.paymentMethod === "COD" || isCODOrder
+                    ? "Thanh toán khi nhận hàng (COD)"
                     : "Thẻ ngân hàng"}
                 </Typography>
               </Box>
@@ -219,7 +233,9 @@ const OrderConfirmationPage: React.FC = () => {
                   fontWeight="bold"
                 >
                   {isPaymentSuccessful
-                    ? "Thanh toán thành công"
+                    ? isCODOrder
+                      ? "Đặt hàng thành công - COD"
+                      : "Thanh toán thành công"
                     : isPaymentFailed
                     ? "Thanh toán thất bại"
                     : "Đang xử lý"}
@@ -254,6 +270,10 @@ const OrderConfirmationPage: React.FC = () => {
               component={RouterLink}
               to="/books"
               startIcon={<ShoppingBagIcon />}
+              onClick={() => {
+                // Reset checkout store when user manually navigates away
+                resetCheckout();
+              }}
             >
               Tiếp tục mua sắm
             </Button>
@@ -263,6 +283,10 @@ const OrderConfirmationPage: React.FC = () => {
               component={RouterLink}
               to="/"
               startIcon={<HomeIcon />}
+              onClick={() => {
+                // Reset checkout store when user manually navigates away
+                resetCheckout();
+              }}
             >
               Về trang chủ
             </Button>

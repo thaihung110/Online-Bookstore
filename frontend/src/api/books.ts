@@ -4,6 +4,7 @@ import { useMemo } from "react";
 
 export interface Book {
   id: string;
+  _id?: string; // Preserve original MongoDB _id for backend operations
   title: string;
   author: string;
   description: string;
@@ -92,8 +93,9 @@ const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 // Transform book data from API to frontend format
 const transformBookData = (bookData: RawBookData): Book => {
-  // Convert _id to id if necessary
+  // Convert _id to id if necessary, but preserve _id for backend operations
   const id = bookData._id || bookData.id || "";
+  const _id = bookData._id || bookData.id || ""; // Preserve original _id
 
   // Ensure numeric values
   const originalPrice = Number(bookData.originalPrice) || bookData.price;
@@ -115,6 +117,7 @@ const transformBookData = (bookData: RawBookData): Book => {
 
   return {
     id,
+    _id, // Include original MongoDB _id
     title: bookData.title.trim(),
     author: bookData.author.trim(),
     description: bookData.description.trim(),

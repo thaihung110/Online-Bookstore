@@ -3,8 +3,9 @@ import { Book } from "./books"; // Assuming Book type is needed for cart items
 
 // Transform raw book data from backend to frontend format
 const transformBookData = (bookData: any): Book => {
-  // Convert _id to id if necessary
+  // Convert _id to id if necessary, but preserve _id for backend operations
   const id = bookData._id || bookData.id || "";
+  const _id = bookData._id || bookData.id || ""; // Preserve original _id
 
   // Ensure numeric values
   const originalPrice = Number(bookData.originalPrice) || bookData.price;
@@ -23,6 +24,7 @@ const transformBookData = (bookData: any): Book => {
 
   return {
     id,
+    _id, // Include original MongoDB _id
     title: bookData.title?.trim() || "",
     author: bookData.author?.trim() || "",
     description: bookData.description?.trim() || "",

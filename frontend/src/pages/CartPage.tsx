@@ -26,6 +26,7 @@ import { useCartStore } from "../store/cartStore";
 import { CartItem } from "../api/cart";
 import { vndToUsd } from "../utils/currency";
 import CartValidationAlert from "../components/cart/CartValidationAlert";
+import { calculateOrderTotal } from "../utils/price-calculator";
 
 const CartItemRow: React.FC<{
   item: CartItem;
@@ -247,7 +248,6 @@ const CartPage: React.FC = () => {
     clearCart,
     updateItemSelection,
     getSelectedItems,
-    getSelectedTotalPrice,
     validateCart,
     getValidationIssues,
     hasValidationIssues,
@@ -291,17 +291,21 @@ const CartPage: React.FC = () => {
   const selectedCartItems = getSelectedItems();
   const validationIssues = getValidationIssues();
 
-  // Calculate totals using backend selected items
-  const subtotal = vndToUsd(getSelectedTotalPrice());
-  const discount = 0;
-  const totalItems = selectedCartItems.reduce(
-    (sum, item) => sum + item.quantity,
-    0
-  );
-  const shippingCost = subtotal > 50 ? 0 : totalItems > 0 ? 5.99 : 0;
-  const taxRate = 0.08;
-  const taxAmount = subtotal * taxRate;
-  const orderTotal = subtotal + shippingCost + taxAmount - discount;
+  // Use universal price calculator - SINGLE SOURCE OF TRUTH
+  const cartItems = selectedCartItems.map(item => ({
+    quantity: item.quantity,
+    priceAtAdd: vndToUsd(item.priceAtAdd), // Convert to USD if needed
+  }));
+
+  const calculation = calculateOrderTotal(cartItems);
+
+  // Extract values for display
+  const subtotal = calculation.subtotal;
+  const shippingCost = calculation.shippingCost;
+  const taxAmount = calculation.taxAmount;
+  const discount = calculation.discount;
+  const orderTotal = calculation.total;
+  const totalItems = calculation.totalItems;
 
   if (isLoading && !cart?.items.length) {
     return (

@@ -52,25 +52,31 @@ const BookDetailPage: React.FC = () => {
 
   const handleAddToCart = () => {
     if (currentBook) {
-      addItem(currentBook.id, 1);
+      const bookId = currentBook._id || currentBook.id; // Use MongoDB _id for backend
+      console.log('[BookDetailPage] Adding to cart with bookId:', bookId, 'book:', currentBook);
+      addItem(bookId, 1);
     }
   };
 
   // Adapter cho buyNow
-  const addItemAdapter = (book: Book, quantity: number = 1) =>
-    addItem(book.id, quantity);
+  const addItemAdapter = (book: Book, quantity: number = 1) => {
+    const bookId = book._id || book.id; // Use MongoDB _id for backend
+    console.log('[BookDetailPage] Buy now with bookId:', bookId, 'book:', book);
+    return addItem(bookId, quantity);
+  };
 
   const handleBuyNow = async () => {
     if (currentBook) {
       try {
         // Nếu chưa có trong cart thì thêm vào
-        if (!isInCart(currentBook.id)) {
+        const frontendId = currentBook.id; // Use frontend id for isInCart check
+        if (!isInCart(frontendId)) {
           await addItemAdapter(currentBook, 1);
         }
         // Luôn set localStorage trước khi chuyển trang
-        const selected = { [currentBook.id]: true };
+        const selected = { [frontendId]: true };
         localStorage.setItem("cart-selected-items", JSON.stringify(selected));
-        localStorage.setItem("cart-buynow-id", currentBook.id);
+        localStorage.setItem("cart-buynow-id", frontendId);
         navigate("/cart");
       } catch (error) {
         console.error("Error during buy now process:", error);

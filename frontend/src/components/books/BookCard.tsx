@@ -63,7 +63,9 @@ const BookCard: React.FC<BookCardProps> = memo(({ book }) => {
   // Handle cart actions
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
-    addItem(book.id, 1);
+    const bookId = book._id || book.id; // Use MongoDB _id for backend
+    console.log('[BookCard] Adding to cart with bookId:', bookId, 'book:', book);
+    addItem(bookId, 1);
   };
 
 

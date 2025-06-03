@@ -1,12 +1,12 @@
 /**
- * Format số thành chuỗi tiền tệ VND
+ * Format số thành chuỗi tiền tệ USD
  * @param amount Số tiền cần format
- * @returns Chuỗi đã format VND
+ * @returns Chuỗi đã format USD
  */
 export const formatCurrency = (amount: number): string => {
-  return new Intl.NumberFormat("vi-VN", {
+  return new Intl.NumberFormat("en-US", {
     style: "currency",
-    currency: "VND",
+    currency: "USD",
   }).format(amount);
 };
 

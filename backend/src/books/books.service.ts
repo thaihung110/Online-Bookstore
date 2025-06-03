@@ -296,11 +296,27 @@ export class BooksService {
   }
 
   async findOne(id: string): Promise<Book> {
-    const book = await this.bookModel.findById(id).exec();
-    if (!book) {
-      throw new NotFoundException(`Book with ID "${id}" not found`);
+    console.log('[Books Service] findOne called with ID:', id);
+    console.log('[Books Service] ID type:', typeof id);
+    console.log('[Books Service] ID length:', id.length);
+
+    try {
+      const book = await this.bookModel.findById(id).exec();
+      console.log('[Books Service] MongoDB query result:', book ? 'Found' : 'Not found');
+
+      if (!book) {
+        console.log('[Books Service] Book not found, throwing NotFoundException');
+        throw new NotFoundException(`Book with ID "${id}" not found`);
+      }
+
+      console.log('[Books Service] Found book:', book._id, book.title);
+      const processedBook = await this.processBookData(book);
+      console.log('[Books Service] Processed book successfully');
+      return processedBook;
+    } catch (error) {
+      console.error('[Books Service] Error in findOne:', error);
+      throw error;
     }
-    return await this.processBookData(book);
   }
 
   async update(id: string, updateBookDto: UpdateBookDto): Promise<Book> {

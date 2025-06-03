@@ -10,26 +10,19 @@ import {
   PaymentMethod,
   VNPayDetails,
 } from "../api/payments";
+import {
+  createOrder as apiCreateOrder,
+  CreateOrderRequest,
+  Order as ApiOrder,
+  PaymentMethod as OrderPaymentMethod,
+} from "../api/orders";
 import { useCartStore } from "./cartStore";
 import { Address } from "../utils/checkout";
 import { vndToUsd } from "../utils/currency";
+import { calculateOrderTotal } from "../utils/price-calculator";
 
-// Interface cho đơn hàng
-export interface Order {
-  id: string;
-  items: any[]; // CartItem[]
-  totalAmount: number;
-  shippingAddress: Address;
-  billingAddress?: Address;
-  status: string;
-  createdAt: string;
-}
-
-// Shipping cost calculation
-export const calculateShippingCost = (subtotal: number, totalItems: number): number => {
-  // Free shipping for orders over $50, otherwise $5.99 if there are items
-  return subtotal > 50 ? 0 : totalItems > 0 ? 5.99 : 0;
-};
+// Use the Order interface from API instead of local definition
+export type Order = ApiOrder;
 
 // Interface cho state của checkout store
 interface CheckoutState {
@@ -72,20 +65,50 @@ interface CheckoutState {
   removeCartItem: (id: string) => void;
 }
 
-// Mock API tạo đơn hàng (sẽ được thay thế bằng API thực)
-const createOrder = async (data: any): Promise<Order> => {
-  // Giả lập gọi API
-  await new Promise((resolve) => setTimeout(resolve, 1000));
+// Real API order creation - replaces mock implementation
+const createOrder = async (data: {
+  items: { bookId: string; quantity: number; priceAtAdd: number }[];
+  totalAmount: number;
+  shippingAddress: Address;
+  billingAddress?: Address;
+  paymentMethod: string;
+}): Promise<Order> => {
+  try {
+    console.log('[Checkout Store] Creating order with real API:', data);
 
-  return {
-    id: `ORD-${Date.now()}`,
-    items: data.items,
-    totalAmount: data.totalAmount,
-    shippingAddress: data.shippingAddress,
-    billingAddress: data.billingAddress,
-    status: "PENDING",
-    createdAt: new Date().toISOString(),
-  };
+    // Map checkout data to API format
+    const orderRequest: CreateOrderRequest = {
+      items: data.items.map(item => ({
+        bookId: item.bookId,
+        quantity: item.quantity,
+      })),
+      shippingAddress: {
+        fullName: data.shippingAddress.fullName,
+        addressLine1: data.shippingAddress.address,
+        addressLine2: data.shippingAddress.ward || '', // Use ward as addressLine2
+        city: data.shippingAddress.city,
+        state: data.shippingAddress.district || '', // Use district as state
+        postalCode: data.shippingAddress.zipCode || '',
+        country: 'Vietnam', // Default to Vietnam
+        phoneNumber: data.shippingAddress.phoneNumber,
+      },
+      paymentInfo: {
+        method: data.paymentMethod.toLowerCase() as OrderPaymentMethod,
+      },
+      isGift: false,
+    };
+
+    // Call real API
+    const apiOrder = await apiCreateOrder(orderRequest);
+
+    console.log('[Checkout Store] Order created successfully:', apiOrder);
+
+    // Return the API response directly since we're now using the correct Order type
+    return apiOrder;
+  } catch (error) {
+    console.error('[Checkout Store] Order creation failed:', error);
+    throw error;
+  }
 };
 
 export const useCheckoutStore = create<CheckoutState>()(
@@ -125,32 +148,62 @@ export const useCheckoutStore = create<CheckoutState>()(
 
       setActiveStep: (step: number) => set({ activeStep: step }),
 
-  // Get shipping cost based on cart contents
+  // Get shipping cost based on cart contents using universal calculator
   getShippingCost: () => {
     const cartStore = useCartStore.getState();
     const cartItems = cartStore.getCartItems();
-    const totalPrice = cartStore.getTotalPrice();
-    const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
-    return calculateShippingCost(totalPrice, totalItems);
+
+    // Convert cart items to universal format
+    const universalCartItems = cartItems.map(item => ({
+      quantity: item.quantity,
+      priceAtAdd: item.priceAtAdd, // Already in USD
+    }));
+
+    const calculation = calculateOrderTotal(universalCartItems);
+    return calculation.shippingCost;
   },
 
       // Thao tác với API
-      placeOrder: async () => {
+      placeOrder: async (retryCount = 0) => {
+        const maxRetries = 3;
         try {
           set({ isLoading: true, error: null });
 
-          const { shippingAddress, billingAddress, useShippingAsBilling } =
+          const { shippingAddress, billingAddress, useShippingAsBilling, paymentMethod } =
             get();
           const cartStore = useCartStore.getState();
           const cartItems = cartStore.getCartItems();
+
+          console.log('[Checkout Store] Raw cart items from store:', cartItems);
+          console.log('[Checkout Store] Cart items count:', cartItems.length);
+
           const tickedItems = cartItems.filter(
             (item) => (item as any).isTicked !== false
           );
-          const paymentItems = tickedItems.map((item) => ({
-            bookId: item.book.id,
-            quantity: item.quantity,
-            priceAtAdd: item.priceAtAdd,
-          }));
+
+          console.log('[Checkout Store] Ticked items:', tickedItems);
+          console.log('[Checkout Store] Ticked items count:', tickedItems.length);
+
+          const paymentItems = tickedItems.map((item, index) => {
+            const bookId = item.book._id || item.book.id; // Use original MongoDB _id for backend
+            console.log(`[Checkout Store] Mapping cart item ${index}:`, {
+              fullItem: item,
+              book: item.book,
+              originalBookId: item.book.id,
+              mongoId: item.book._id,
+              usingBookId: bookId,
+              quantity: item.quantity,
+              priceAtAdd: item.priceAtAdd,
+              isTicked: item.isTicked
+            });
+            return {
+              bookId,
+              quantity: item.quantity,
+              priceAtAdd: item.priceAtAdd,
+            };
+          });
+
+          console.log('[Checkout Store] Final payment items:', paymentItems);
 
           const subtotal = cartStore.getTotalPrice();
           const shippingCost = get().getShippingCost();
@@ -160,22 +213,43 @@ export const useCheckoutStore = create<CheckoutState>()(
             throw new Error("Shipping address is required");
           }
 
+          if (!paymentMethod) {
+            throw new Error("Payment method is required");
+          }
+
           // Dùng địa chỉ giao hàng làm địa chỉ thanh toán nếu đã chọn
           const finalBillingAddress = useShippingAsBilling
             ? shippingAddress
             : billingAddress;
 
-          // Gọi API tạo đơn hàng
+          // Gọi API tạo đơn hàng với real backend API
           const order = await createOrder({
             items: paymentItems,
             totalAmount,
             shippingAddress,
             billingAddress: finalBillingAddress,
+            paymentMethod,
           });
 
+          console.log('[Checkout Store] Order placed successfully, cart should be cleared by backend');
           set({ order, isLoading: false });
           return order;
         } catch (error) {
+          console.error('[Checkout Store] Failed to place order (attempt ' + (retryCount + 1) + '):', error);
+
+          // Check if this is a retryable error and we haven't exceeded max retries
+          const isRetryableError = error instanceof Error &&
+            (error.message.includes('Network error') ||
+             error.message.includes('Server error') ||
+             error.message.includes('timeout'));
+
+          if (isRetryableError && retryCount < maxRetries) {
+            console.log('[Checkout Store] Retrying order creation...');
+            // Wait a bit before retrying (exponential backoff)
+            await new Promise(resolve => setTimeout(resolve, Math.pow(2, retryCount) * 1000));
+            return get().placeOrder(retryCount + 1);
+          }
+
           set({
             error:
               error instanceof Error ? error.message : "Failed to place order",
@@ -204,7 +278,7 @@ export const useCheckoutStore = create<CheckoutState>()(
           }
 
           // Nếu là VNPAY, amount phải là VND
-          let amount = order.totalAmount; // This already includes shipping cost from placeOrder
+          let amount = order.total; // Use 'total' field from API response
           if (paymentMethod === "VNPAY") {
             if (amount < 1000) {
               amount = Math.round(amount * 25000);
@@ -213,7 +287,7 @@ export const useCheckoutStore = create<CheckoutState>()(
 
           // Chuẩn bị dữ liệu gửi lên
           const paymentRequest: CreatePaymentRequest = {
-            orderId: order.id,
+            orderId: order._id, // Use '_id' field from API response
             paymentMethod,
             amount,
             fullName: shippingAddress.fullName,
@@ -225,7 +299,7 @@ export const useCheckoutStore = create<CheckoutState>()(
 
           // Log chi tiết để debug
           console.log("[DEBUG] paymentRequest:", paymentRequest);
-          console.log("[DEBUG] orderId:", order.id);
+          console.log("[DEBUG] orderId:", order._id);
           console.log("[DEBUG] paymentMethod:", paymentMethod);
           console.log("[DEBUG] amount:", amount);
           console.log("[DEBUG] fullName:", shippingAddress.fullName);
