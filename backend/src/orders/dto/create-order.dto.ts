@@ -75,7 +75,8 @@ class ShippingAddressDto {
 }
 
 enum PaymentMethod {
-  CREDIT_CARD = 'credit_card',
+  COD = 'cod',
+  VNPAY = 'vnpay',
   PAYPAL = 'paypal',
   GIFT_CARD = 'gift_card', // For future use
   LOYALTY_POINTS = 'loyalty_points', // For future use
@@ -86,7 +87,7 @@ class PaymentInfoDto {
   @ApiProperty({
     description: 'Payment method used',
     enum: PaymentMethod,
-    example: PaymentMethod.MOCK,
+    example: PaymentMethod.COD,
   })
   @IsEnum(PaymentMethod)
   @IsNotEmpty()
