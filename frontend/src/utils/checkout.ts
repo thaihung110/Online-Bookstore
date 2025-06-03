@@ -34,13 +34,6 @@ export const canProceedToCheckout = (
     return { canProceed: false, error: "Vui lòng chọn phương thức thanh toán" };
   }
 
-  if (paymentMethod === "BANK_CARD" && !paymentDetails) {
-    return {
-      canProceed: false,
-      error: "Vui lòng điền đầy đủ thông tin thẻ ngân hàng",
-    };
-  }
-
   return { canProceed: true };
 };
 
@@ -82,7 +75,7 @@ export const processCheckoutPayment = async (
       };
     }
 
-    // Nếu là thẻ ngân hàng hoặc thanh toán thành công
+    // Nếu là COD hoặc thanh toán thành công
     if (result.success) {
       return { success: true };
     }

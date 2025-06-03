@@ -13,7 +13,7 @@ import {
 import { useCheckoutStore } from "../../store/checkoutStore";
 import { PaymentMethod } from "../../api/payments";
 import PaymentIcon from "@mui/icons-material/Payment";
-import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
+import LocalShippingIcon from "@mui/icons-material/LocalShipping";
 
 const PaymentMethodSelector: React.FC = () => {
   const { paymentMethod, setPaymentMethod } = useCheckoutStore();
@@ -69,21 +69,20 @@ const PaymentMethodSelector: React.FC = () => {
               sx={{
                 p: 2,
                 borderColor:
-                  paymentMethod === "BANK_CARD" ? "primary.main" : "divider",
-                borderWidth: paymentMethod === "BANK_CARD" ? 2 : 1,
+                  paymentMethod === "COD" ? "primary.main" : "divider",
+                borderWidth: paymentMethod === "COD" ? 2 : 1,
               }}
             >
               <FormControlLabel
-                value="BANK_CARD"
+                value="COD"
                 control={<Radio />}
                 label={
                   <Stack direction="row" spacing={2} alignItems="center">
-                    <AccountBalanceIcon color="primary" />
+                    <LocalShippingIcon color="primary" />
                     <Box>
-                      <Typography variant="subtitle1">Thẻ ngân hàng</Typography>
+                      <Typography variant="subtitle1">Thanh toán khi nhận hàng</Typography>
                       <Typography variant="body2" color="text.secondary">
-                        Thanh toán trực tiếp bằng thẻ ngân hàng (Visa,
-                        MasterCard, JCB,...).
+                        Thanh toán bằng tiền mặt khi nhận hàng. Không cần thẻ ngân hàng hay ví điện tử.
                       </Typography>
                     </Box>
                   </Stack>

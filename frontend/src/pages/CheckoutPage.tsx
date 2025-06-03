@@ -12,7 +12,6 @@ import {
   Alert,
   Snackbar,
   Divider,
-  Stack,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import MainLayout from "../components/layouts/MainLayout";
@@ -20,8 +19,7 @@ import MainLayout from "../components/layouts/MainLayout";
 import ShippingAddressForm from "../components/checkout/ShippingAddressForm";
 // @ts-ignore
 import PaymentMethodSelector from "../components/checkout/PaymentMethodSelector";
-// @ts-ignore
-import BankCardForm from "../components/checkout/BankCardForm";
+
 // @ts-ignore
 import OrderSummary from "../components/checkout/OrderSummary";
 import { useCheckoutStore } from "../store/checkoutStore";
@@ -74,7 +72,7 @@ const CheckoutPage: React.FC = () => {
       const { canProceed, error } = canProceedToCheckout(
         shippingAddress,
         activeStep === 1 ? paymentMethod : "temp",
-        activeStep === 1 && paymentMethod === "BANK_CARD" ? paymentDetails : {}
+        activeStep === 1 ? paymentDetails : {}
       );
 
       if (!canProceed && error) {
@@ -159,12 +157,7 @@ const CheckoutPage: React.FC = () => {
             <Box>
               {activeStep === 0 && <ShippingAddressForm />}
 
-              {activeStep === 1 && (
-                <Stack spacing={3}>
-                  <PaymentMethodSelector />
-                  {paymentMethod === "BANK_CARD" && <BankCardForm />}
-                </Stack>
-              )}
+              {activeStep === 1 && <PaymentMethodSelector />}
 
               {activeStep === 2 && <OrderSummary />}
 

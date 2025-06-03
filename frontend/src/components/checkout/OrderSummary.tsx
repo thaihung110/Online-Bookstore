@@ -13,10 +13,9 @@ import {
 } from "@mui/material";
 import LocationOnIcon from "@mui/icons-material/LocationOn";
 import PaymentIcon from "@mui/icons-material/Payment";
-import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
+import LocalShippingIcon from "@mui/icons-material/LocalShipping";
 import { useCheckoutStore } from "../../store/checkoutStore";
 import { useCartStore } from "../../store/cartStore";
-import { formatCurrency } from "../../utils/format";
 import { CartItem } from "../../api/cart";
 
 const OrderSummary: React.FC = () => {
@@ -25,7 +24,7 @@ const OrderSummary: React.FC = () => {
     billingAddress,
     useShippingAsBilling,
     paymentMethod,
-    paymentDetails,
+    getShippingCost,
   } = useCheckoutStore();
 
   const getCartItems = useCartStore((state) => state.getCartItems);
@@ -36,6 +35,9 @@ const OrderSummary: React.FC = () => {
   const totalPrice = getTotalPrice();
   const totalQuantity = getTotalQuantity();
 
+  // Calculate shipping cost
+  const shippingCost = getShippingCost();
+
   // Chuyển đổi giá từ VND sang USD
   const VND_TO_USD = 1;
   const cartItemsUsd = cartItems.map((item) => ({
@@ -43,6 +45,7 @@ const OrderSummary: React.FC = () => {
     priceAtAdd: item.priceAtAdd / VND_TO_USD,
   }));
   const totalPriceUsd = totalPrice / VND_TO_USD;
+  const shippingCostUsd = shippingCost / VND_TO_USD;
 
   // Hiển thị địa chỉ định dạng đầy đủ
   const formatAddress = (address: any) => {
@@ -63,9 +66,8 @@ const OrderSummary: React.FC = () => {
       return "Thanh toán qua cổng VNPAY";
     }
 
-    if (paymentMethod === "BANK_CARD" && paymentDetails) {
-      const details = paymentDetails as any;
-      return `Thẻ ngân hàng: ${details.cardNumber} - ${details.cardholderName}`;
+    if (paymentMethod === "COD") {
+      return "Thanh toán khi nhận hàng (COD)";
     }
 
     return "Chưa có thông tin thanh toán";
@@ -125,7 +127,7 @@ const OrderSummary: React.FC = () => {
               {paymentMethod === "VNPAY" ? (
                 <PaymentIcon color="primary" />
               ) : (
-                <AccountBalanceIcon color="primary" />
+                <LocalShippingIcon color="primary" />
               )}
               <Typography variant="subtitle1">
                 Phương thức thanh toán
@@ -173,13 +175,13 @@ const OrderSummary: React.FC = () => {
 
               <ListItem sx={{ py: 1, px: 0 }}>
                 <ListItemText primary="Phí vận chuyển" />
-                <Typography variant="body1">{formatCurrency(0)}</Typography>
+                <Typography variant="body1">${shippingCostUsd.toFixed(2)}</Typography>
               </ListItem>
 
               <ListItem sx={{ py: 1, px: 0 }}>
                 <ListItemText primary="Tổng cộng" />
                 <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-                  ${totalPriceUsd.toFixed(2)}
+                  ${(totalPriceUsd + shippingCostUsd).toFixed(2)}
                 </Typography>
               </ListItem>
             </List>

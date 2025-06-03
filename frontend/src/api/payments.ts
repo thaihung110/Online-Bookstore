@@ -1,15 +1,7 @@
 import api from "./axios";
 
-export type PaymentMethod = "VNPAY" | "BANK_CARD";
+export type PaymentMethod = "VNPAY" | "COD";
 export type PaymentStatus = "PENDING" | "COMPLETED" | "FAILED" | "REFUNDED";
-
-// Interface cho thông tin thẻ ngân hàng
-export interface BankCardDetails {
-  cardNumber: string;
-  cardholderName: string;
-  expiryDate: string; // Định dạng MM/YY
-  cvv: string;
-}
 
 // Interface cho thông tin VNPay
 export interface VNPayDetails {

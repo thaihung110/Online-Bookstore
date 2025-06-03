@@ -8,7 +8,6 @@ import {
   CreatePaymentRequest,
   Payment,
   PaymentMethod,
-  BankCardDetails,
   VNPayDetails,
 } from "../api/payments";
 import { useCartStore } from "./cartStore";
@@ -26,6 +25,12 @@ export interface Order {
   createdAt: string;
 }
 
+// Shipping cost calculation
+export const calculateShippingCost = (subtotal: number, totalItems: number): number => {
+  // Free shipping for orders over $50, otherwise $5.99 if there are items
+  return subtotal > 50 ? 0 : totalItems > 0 ? 5.99 : 0;
+};
+
 // Interface cho state của checkout store
 interface CheckoutState {
   // Dữ liệu
@@ -33,7 +38,7 @@ interface CheckoutState {
   billingAddress: Address | null;
   useShippingAsBilling: boolean;
   paymentMethod: PaymentMethod | null;
-  paymentDetails: BankCardDetails | VNPayDetails | null;
+  paymentDetails: VNPayDetails | null;
   order: Order | null;
   payment: Payment | null;
 
@@ -49,6 +54,7 @@ interface CheckoutState {
   setPaymentMethod: (method: any) => void;
   setPaymentDetails: (details: any) => void;
   setActiveStep: (step: number) => void;
+  getShippingCost: () => number;
 
   // Thao tác với API
   placeOrder: () => Promise<Order>;
@@ -119,6 +125,15 @@ export const useCheckoutStore = create<CheckoutState>()(
 
       setActiveStep: (step: number) => set({ activeStep: step }),
 
+  // Get shipping cost based on cart contents
+  getShippingCost: () => {
+    const cartStore = useCartStore.getState();
+    const cartItems = cartStore.getCartItems();
+    const totalPrice = cartStore.getTotalPrice();
+    const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+    return calculateShippingCost(totalPrice, totalItems);
+  },
+
       // Thao tác với API
       placeOrder: async () => {
         try {
@@ -137,7 +152,9 @@ export const useCheckoutStore = create<CheckoutState>()(
             priceAtAdd: item.priceAtAdd,
           }));
 
-          const totalAmount = cartStore.getTotalPrice();
+          const subtotal = cartStore.getTotalPrice();
+          const shippingCost = get().getShippingCost();
+          const totalAmount = subtotal + shippingCost;
 
           if (!shippingAddress) {
             throw new Error("Shipping address is required");
@@ -187,7 +204,7 @@ export const useCheckoutStore = create<CheckoutState>()(
           }
 
           // Nếu là VNPAY, amount phải là VND
-          let amount = order.totalAmount;
+          let amount = order.totalAmount; // This already includes shipping cost from placeOrder
           if (paymentMethod === "VNPAY") {
             if (amount < 1000) {
               amount = Math.round(amount * 25000);
