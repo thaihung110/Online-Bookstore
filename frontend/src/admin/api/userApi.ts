@@ -105,80 +105,15 @@ const MOCK_USERS: User[] = [
   },
 ];
 
-// Get all users with filters (with mock implementation for now)
-export const getUsers = async (
-  filters: UserFilters
-): Promise<UserListResponse> => {
+// Get all users from backend API
+export const getUsers = async (): Promise<User[]> => {
   try {
-    // In the future, this will be replaced with a real API call
-    // const response = await axios.get(`${API_URL}/admin/users?${buildQueryParams(filters)}`, getAuthHeaders());
-    // return response.data;
-
-    // Mock implementation
-    await new Promise((resolve) => setTimeout(resolve, 800)); // Simulate delay
-
-    let filteredUsers = [...MOCK_USERS];
-
-    // Apply filters
-    if (filters.search) {
-      const searchLower = filters.search.toLowerCase();
-      filteredUsers = filteredUsers.filter(
-        (user) =>
-          user.name.toLowerCase().includes(searchLower) ||
-          user.email.toLowerCase().includes(searchLower)
-      );
-    }
-
-    if (filters.role) {
-      filteredUsers = filteredUsers.filter(
-        (user) => user.role === filters.role
-      );
-    }
-
-    if (filters.isActive !== undefined) {
-      filteredUsers = filteredUsers.filter(
-        (user) => user.isActive === filters.isActive
-      );
-    }
-
-    // Apply sorting
-    if (filters.sortBy) {
-      const direction = filters.sortOrder === "desc" ? -1 : 1;
-
-      filteredUsers.sort((a, b) => {
-        switch (filters.sortBy) {
-          case "name":
-            return direction * a.name.localeCompare(b.name);
-          case "email":
-            return direction * a.email.localeCompare(b.email);
-          case "role":
-            return direction * a.role.localeCompare(b.role);
-          case "createdAt":
-            return (
-              direction *
-              (new Date(a.createdAt).getTime() -
-                new Date(b.createdAt).getTime())
-            );
-          default:
-            return 0;
-        }
-      });
-    }
-
-    // Calculate pagination
-    const total = filteredUsers.length;
-    const totalPages = Math.ceil(total / filters.limit);
-    const startIndex = (filters.page - 1) * filters.limit;
-    const endIndex = startIndex + filters.limit;
-    const paginatedUsers = filteredUsers.slice(startIndex, endIndex);
-
-    return {
-      users: paginatedUsers,
-      total,
-      page: filters.page,
-      limit: filters.limit,
-      totalPages,
-    };
+    const response = await axios.get(`${API_URL}/users`);
+    // Map _id to id if needed
+    return response.data.map((user: any) => ({
+      ...user,
+      id: user._id || user.id,
+    }));
   } catch (error) {
     console.error("Error fetching users:", error);
     throw error;
@@ -188,20 +123,9 @@ export const getUsers = async (
 // Get a single user by ID
 export const getUser = async (id: string): Promise<User> => {
   try {
-    // In the future, this will be replaced with a real API call
-    // const response = await axios.get(`${API_URL}/admin/users/${id}`, getAuthHeaders());
-    // return response.data;
-
-    // Mock implementation
-    await new Promise((resolve) => setTimeout(resolve, 500)); // Simulate delay
-
-    const user = MOCK_USERS.find((u) => u.id === id);
-
-    if (!user) {
-      throw new Error("User not found");
-    }
-
-    return user;
+    const response = await axios.get(`${API_URL}/users/${id}`);
+    const user = response.data;
+    return { ...user, id: user._id || user.id };
   } catch (error) {
     console.error(`Error fetching user with ID ${id}:`, error);
     throw error;
@@ -246,29 +170,15 @@ export const updateUser = async (
   userData: UserFormData
 ): Promise<User> => {
   try {
-    // In the future, this will be replaced with a real API call
-    // const response = await axios.put(`${API_URL}/admin/users/${id}`, userData, getAuthHeaders());
-    // return response.data;
-
-    // Mock implementation
-    await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate delay
-
-    const userIndex = MOCK_USERS.findIndex((u) => u.id === id);
-
-    if (userIndex === -1) {
-      throw new Error("User not found");
-    }
-
-    const updatedUser: User = {
-      ...MOCK_USERS[userIndex],
-      ...userData,
-      updatedAt: new Date().toISOString(),
+    // Map name -> username, chỉ gửi các trường backend yêu cầu
+    const payload = {
+      username: userData.name,
+      email: userData.email,
+      role: userData.role,
     };
-
-    // In a real implementation, the server would update the user in the database
-    // Here we're just returning the updated user object
-
-    return updatedUser;
+    const response = await axios.put(`${API_URL}/users/${id}`, payload);
+    const user = response.data;
+    return { ...user, id: user._id || user.id };
   } catch (error) {
     console.error(`Error updating user with ID ${id}:`, error);
     throw error;
@@ -278,20 +188,7 @@ export const updateUser = async (
 // Delete a user
 export const deleteUser = async (id: string): Promise<void> => {
   try {
-    // In the future, this will be replaced with a real API call
-    // await axios.delete(`${API_URL}/admin/users/${id}`, getAuthHeaders());
-
-    // Mock implementation
-    await new Promise((resolve) => setTimeout(resolve, 800)); // Simulate delay
-
-    const userIndex = MOCK_USERS.findIndex((u) => u.id === id);
-
-    if (userIndex === -1) {
-      throw new Error("User not found");
-    }
-
-    // In a real implementation, the server would delete the user from the database
-    // Here we're just simulating a successful deletion
+    await axios.delete(`${API_URL}/users/${id}`);
   } catch (error) {
     console.error(`Error deleting user with ID ${id}:`, error);
     throw error;

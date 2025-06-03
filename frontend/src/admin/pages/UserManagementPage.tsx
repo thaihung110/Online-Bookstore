@@ -49,6 +49,7 @@ const UserManagementPage: React.FC = () => {
   const navigate = useNavigate();
 
   // State for users and pagination
+  const [allUsers, setAllUsers] = useState<User[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [totalUsers, setTotalUsers] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -71,26 +72,75 @@ const UserManagementPage: React.FC = () => {
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
-  // Load users on component mount and when filters change
+  // Load all users from backend once
   const loadUsers = useCallback(async () => {
     setLoading(true);
     setError(null);
-
     try {
-      const response = await getUsers(filters);
-      setUsers(response.users);
-      setTotalUsers(response.total);
+      const all = await getUsers();
+      // Đảm bảo tất cả user đều active trên frontend
+      setAllUsers(all.map((user) => ({ ...user, isActive: true })));
     } catch (err) {
       console.error("Failed to load users:", err);
       setError("Failed to load users. Please try again.");
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+  }, []);
 
   useEffect(() => {
     loadUsers();
   }, [loadUsers]);
+
+  // Filter, sort, and paginate users on the frontend
+  useEffect(() => {
+    let filtered = [...allUsers];
+    // Filter
+    if (filters.search) {
+      const searchLower = filters.search.toLowerCase();
+      filtered = filtered.filter(
+        (user) =>
+          (user.name || "").toLowerCase().includes(searchLower) ||
+          (user.email || "").toLowerCase().includes(searchLower)
+      );
+    }
+    if (filters.role) {
+      filtered = filtered.filter((user) => user.role === filters.role);
+    }
+    if (filters.isActive !== undefined) {
+      filtered = filtered.filter((user) => user.isActive === filters.isActive);
+    }
+    // Sort
+    if (filters.sortBy) {
+      const direction = filters.sortOrder === "desc" ? -1 : 1;
+      filtered.sort((a, b) => {
+        switch (filters.sortBy) {
+          case "name":
+            return direction * (a.name || "").localeCompare(b.name || "");
+          case "email":
+            return direction * (a.email || "").localeCompare(b.email || "");
+          case "role":
+            return direction * (a.role || "").localeCompare(b.role || "");
+          case "createdAt":
+            return (
+              direction *
+              (new Date(a.createdAt).getTime() -
+                new Date(b.createdAt).getTime())
+            );
+          default:
+            return 0;
+        }
+      });
+    }
+    // Pagination
+    const total = filtered.length;
+    const totalPages = Math.ceil(total / filters.limit);
+    const startIndex = (filters.page - 1) * filters.limit;
+    const endIndex = startIndex + filters.limit;
+    const paginated = filtered.slice(startIndex, endIndex);
+    setUsers(paginated);
+    setTotalUsers(total);
+  }, [allUsers, filters]);
 
   // Handle search
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -164,12 +214,12 @@ const UserManagementPage: React.FC = () => {
     if (!userToDelete) return;
 
     setDeleteLoading(true);
+    setError(null);
 
     try {
       await deleteUser(userToDelete.id);
       setDeleteDialogOpen(false);
       setUserToDelete(null);
-
       // Refresh the user list
       loadUsers();
     } catch (err) {

@@ -175,10 +175,12 @@ const UserFormPage: React.FC = () => {
 
     try {
       if (isEditMode) {
-        // For edit mode, only include password if provided
-        const updatedData = {
-          ...formData,
-          ...(formData.password ? {} : { password: undefined }),
+        // For edit mode, chỉ gửi các trường backend yêu cầu, nhưng vẫn tạo updatedData đúng type
+        const updatedData: UserFormData = {
+          name: formData.name,
+          email: formData.email,
+          role: formData.role,
+          isActive: formData.isActive, // giữ đúng type, userApi sẽ filter lại
         };
         await updateUser(id, updatedData);
         setSuccess("User updated successfully");
