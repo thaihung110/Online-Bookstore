@@ -24,6 +24,7 @@ import PaymentIcon from "@mui/icons-material/Payment";
 import MainLayout from "../components/layouts/MainLayout";
 import { useBookStore } from "../store/bookStore";
 import { useCartStore } from "../store/cartStore";
+import StarRating from "../components/StarRating";
 
 import { buyNow } from "../utils/checkout";
 import { Book } from "../api/books";
@@ -231,6 +232,13 @@ const BookDetailPage: React.FC = () => {
                   >
                     Buy Now
                   </Button>
+
+                  {/* Star Rating Component */}
+                  <StarRating
+                    bookId={currentBook.id}
+                    size="large"
+                    showLabel={true}
+                  />
 
                 </Stack>
               </Box>

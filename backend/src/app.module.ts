@@ -15,9 +15,13 @@ import { UploadModule } from './upload/upload.module';
 import { BooksUpdater } from './scripts/update-books';
 import { Book, BookSchema } from './books/schemas/book.schema';
 import { RecommendProxyMiddleware } from './proxy/recommend-proxy.middleware';
+import { DevtoolsModule } from '@nestjs/devtools-integration';
 
 @Module({
   imports: [
+    DevtoolsModule.register({
+      http: true,
+    }),
     // Configure environment variables and currency settings
     ConfigModule.forRoot({
       isGlobal: true,
