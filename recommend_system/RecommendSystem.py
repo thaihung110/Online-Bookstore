@@ -1,6 +1,7 @@
 from IncrementalMF import IncrementalMF
 from pymongo import MongoClient
 import numpy as np
+from bson import ObjectId
 import pickle
 import os
 
@@ -127,6 +128,7 @@ class RecommendSystem:
                     }
                 )
             )
+            
             if not ratings:
                 raise ValueError("No ratings found in the database.")
             ratings_array = np.array([[r["user_id"], r["book_id"], r["rating"],r["created_at"]] for r in ratings])
@@ -169,11 +171,57 @@ class RecommendSystem:
                 raise ValueError("No recommendations found for the user.")
             recommendations = [ book_id for book_id in recommendations]
 
+
+            if len(recommendations) < top_k:
+                print(f"Only {len(recommendations)} recommendations found for user {user_id}.")
+
             return recommendations
         except Exception as e:
             print(f"Error during recommendation: {e}")
 
 
+
+    def recommend_common_genre(self, user_id, top_k=10):
+        self.model = IncrementalMF()
+        self.model.load_model('mf_model.pkl')
+
+
+        try:
+            if self.model is None:
+                raise ValueError("Model has not been trained yet.")
+            
+            user_index = self.db["user_index"].find_one({"user_id": user_id})
+            if user_index is None:
+                raise ValueError(f"User {user_id} not found in user index.")
+            
+            user_index = user_index["user_index"]
+            
+            rated_items = self.db["user_rating"].find({"user_id": user_id}, {"book_id": 1}).limit(1)
+
+            # Lấy book_id của sách đã được đánh giá
+            current_book = rated_items[0]["book_id"] if rated_items else None
+            if not current_book:
+                raise ValueError(f"No rated items found for user {user_id}.")
+            print(f"Current genres for user {user_id}: {current_book}")
+            
+            # Lấy thể loại của sách hiện tại
+            current_genres = self.db["books"].find_one({"_id": ObjectId(current_book)}, {"genre": 1})
+            if not current_genres:
+                raise ValueError(f"No genres found for book {current_book}.")
+            
+
+            current_genre = current_genres["genre"][0] if current_genres["genre"] else None
+            
+            book_cursor = self.db["books"].find({"genre": current_genre},{"_id" : 1}).limit(top_k)
+
+            book_ids = [str(book["_id"]) for book in book_cursor]
+            return book_ids
+            # print(f"result: {list(self.db["books"].find({"genre": current_genre},{"_id" : 1}).limit(top_k))}")
+
+        except Exception as e:
+            print(f"Error during genre recommendation: {e}")
+
+    
 if __name__ == "__main__":
     # Ví dụ sử dụng
     db_uri = "mongodb://dungta:dungta1234@64.23.233.24:27017/bookstore?authSource=admin"

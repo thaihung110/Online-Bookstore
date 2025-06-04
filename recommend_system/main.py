@@ -93,6 +93,12 @@ async def recommend_books_by_username(username: str, top_k: int = Query(5, descr
     
 
 
+@app.get("/test")
+async def test(
+    user_id: str = Query(..., description="ID of the user to test recommendations"),
+    top_k: int = Query(5, description="Number of recommendations to return")
+):
+    return {"result" : recommend_system.recommend_common_genre(user_id ,top_k=top_k)}
 
 @app.get("/health")
 async def health_check()-> dict:
