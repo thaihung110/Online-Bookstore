@@ -99,9 +99,17 @@ This service provides book recommendations to users based on their behavior.
 
 ---
 
+**Run all services with one command:**
+
+In the project root:
+
+```bash
+mingw32-make all
+```
+
 **Default Port Summary:**
 
-- **Backend:** `30001`
+- **Backend:** `3001`
 - **Frontend:** `3000`
 - **Chatbot:** `8000`
 - **Recommendation:** `8081`
