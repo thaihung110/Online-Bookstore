@@ -8,12 +8,16 @@ import {
   UseGuards,
   Request,
   Put,
+  Patch,
   ParseIntPipe,
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
 import { CartsService } from './carts.service';
-import { AddItemToCartDto } from './dto/add-item-to-cart.dto';
+import {
+  AddItemToCartDto,
+  UpdateItemInCartDto,
+} from './dto/add-item-to-cart.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import {
   ApiTags,
@@ -45,45 +49,30 @@ export class CartsController {
   }
 
   @Post('items')
-  @ApiOperation({ summary: 'Add an item to the cart' })
+  @ApiOperation({ summary: 'Add item to cart' })
   @ApiBody({ type: AddItemToCartDto })
   @ApiResponse({
-    status: 200,
-    description: 'Item added to cart successfully.',
+    status: 201,
+    description: 'Item successfully added to cart',
     type: Cart,
-  }) // Changed to 200 as it returns the updated cart
-  @ApiResponse({
-    status: 400,
-    description: 'Bad Request (e.g., invalid bookId, insufficient stock).',
   })
-  @ApiResponse({ status: 401, description: 'Unauthorized.' })
-  @ApiResponse({
-    status: 404,
-    description: 'Book not found or user not found.',
-  })
-  async addItemToCart(
-    @Request() req,
-    @Body() addItemToCartDto: AddItemToCartDto,
-  ) {
-    return this.cartsService.addItem(req.user.id, addItemToCartDto);
+  @ApiResponse({ status: 400, description: 'Bad Request - Not enough stock' })
+  @ApiResponse({ status: 404, description: 'Book not found' })
+  async addToCart(@Request() req, @Body() addItemDto: AddItemToCartDto) {
+    return this.cartsService.addItem(req.user.id, addItemDto);
   }
 
-  @Put('items/:bookId')
-  @ApiOperation({ summary: 'Update item quantity in the cart' })
+  @Patch('items/:bookId')
+  @ApiOperation({ summary: 'Update item in the cart (quantity, isTicked)' })
   @ApiParam({
     name: 'bookId',
     description: 'ID of the book in the cart',
     type: String,
   })
-  @ApiBody({
-    schema: {
-      properties: { quantity: { type: 'number', example: 2, minimum: 1 } },
-      required: ['quantity'],
-    },
-  })
+  @ApiBody({ type: UpdateItemInCartDto })
   @ApiResponse({
     status: 200,
-    description: 'Item quantity updated successfully.',
+    description: 'Item updated successfully.',
     type: Cart,
   })
   @ApiResponse({
@@ -95,12 +84,12 @@ export class CartsController {
     status: 404,
     description: 'Book not found in cart or user/book not found.',
   })
-  async updateItemQuantity(
+  async updateItemInCart(
     @Request() req,
     @Param('bookId') bookId: string,
-    @Body('quantity', ParseIntPipe) quantity: number,
+    @Body() updateDto: UpdateItemInCartDto,
   ) {
-    return this.cartsService.updateItemQuantity(req.user.id, bookId, quantity);
+    return this.cartsService.updateItemInCart(req.user.id, bookId, updateDto);
   }
 
   @Delete('items/:bookId')
@@ -132,8 +121,40 @@ export class CartsController {
     type: Cart,
   })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
-  @HttpCode(HttpStatus.OK) // Or 204 if not returning content, but service returns cart
+  @HttpCode(HttpStatus.OK)
   async clearCart(@Request() req) {
     return this.cartsService.clearCart(req.user.id);
+  }
+
+  @Get('validate')
+  @ApiOperation({ summary: 'Validate cart items for stock and price changes' })
+  @ApiResponse({
+    status: 200,
+    description: 'Cart validation results.',
+    schema: {
+      type: 'object',
+      properties: {
+        isValid: { type: 'boolean' },
+        issues: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              bookId: { type: 'string' },
+              type: { type: 'string', enum: ['stock', 'price', 'unavailable'] },
+              message: { type: 'string' },
+              currentStock: { type: 'number' },
+              requestedQuantity: { type: 'number' },
+              currentPrice: { type: 'number' },
+              cartPrice: { type: 'number' },
+            },
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  async validateCart(@Request() req) {
+    return this.cartsService.validateCart(req.user.id);
   }
 }

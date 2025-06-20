@@ -8,13 +8,31 @@ import DashboardPage from "./pages/DashboardPage";
 import BooksPage from "./pages/BooksPage";
 import BookDetailPage from "./pages/BookDetailPage";
 import CartPage from "./pages/CartPage";
-import WishlistPage from "./pages/WishlistPage";
+
 import ProtectedRoute from "./routes/ProtectedRoute";
 import { useAuthStore } from "./store/authStore";
 import { useCartStore } from "./store/cartStore";
-import { useWishlistStore } from "./store/wishlistStore";
+
 import EditProfilePage from "./pages/EditProfilePage";
 import TestApiComponent from "./components/TestApiComponent";
+import CheckoutPage from "./pages/CheckoutPage";
+import OrderConfirmationPage from "./pages/OrderConfirmationPage";
+import ChatbotWidget from "./components/ChatbotWidget";
+
+// Admin imports
+import {
+  AdminLoginPage,
+  AdminDashboardPage,
+  BookManagementPage,
+  BookFormPage,
+  UserManagementPage,
+  UserFormPage,
+  OrdersManagementPage,
+  PromotionsManagementPage,
+} from "./admin/pages";
+import AdminProtectedRoute from "./admin/components/layout/AdminProtectedRoute";
+import AdminLayout from "./admin/components/layout/AdminLayout";
+import { useAdminAuthStore } from "./admin/store/adminAuthStore";
 
 // Create a custom theme inspired by elegant bookstores
 const theme = createTheme({
@@ -130,13 +148,14 @@ const theme = createTheme({
 const App: React.FC = () => {
   const { fetchCurrentUser } = useAuthStore();
   const { loadCart } = useCartStore();
-  const { loadWishlist } = useWishlistStore();
+
+  const { checkAuth } = useAdminAuthStore();
 
   useEffect(() => {
     fetchCurrentUser();
     loadCart();
-    loadWishlist();
-  }, [fetchCurrentUser, loadCart, loadWishlist]);
+    checkAuth(); // Initialize admin auth check
+  }, [fetchCurrentUser, loadCart, checkAuth]);
 
   return (
     <ThemeProvider theme={theme}>
@@ -151,6 +170,11 @@ const App: React.FC = () => {
           <Route path="/books/:id" element={<BookDetailPage />} />
           <Route path="/cart" element={<CartPage />} />
           <Route path="/api-test" element={<TestApiComponent />} />
+          <Route path="/checkout" element={<CheckoutPage />} />
+          <Route
+            path="/order-confirmation"
+            element={<OrderConfirmationPage />}
+          />
 
           {/* Protected routes */}
           <Route element={<ProtectedRoute />}>
@@ -159,14 +183,39 @@ const App: React.FC = () => {
               path="/dashboard/edit-profile"
               element={<EditProfilePage />}
             />
-            <Route path="/wishlist" element={<WishlistPage />} />
+
             {/* Add more protected routes here */}
+          </Route>
+
+          {/* Admin routes */}
+          <Route path="/admin/login" element={<AdminLoginPage />} />
+          <Route
+            path="/admin/*"
+            element={
+              <AdminProtectedRoute>
+                <AdminLayout />
+              </AdminProtectedRoute>
+            }
+          >
+            <Route index element={<AdminDashboardPage />} />
+            <Route path="books" element={<BookManagementPage />} />
+            <Route path="books/add" element={<BookFormPage />} />
+            <Route path="books/edit/:id" element={<BookFormPage />} />
+            <Route path="users" element={<UserManagementPage />} />
+            <Route path="users/add" element={<UserFormPage />} />
+            <Route path="users/edit/:id" element={<UserFormPage />} />
+            <Route path="orders" element={<OrdersManagementPage />} />
+            <Route
+              path="promotions"
+              element={<PromotionsManagementPage />}
+            />
           </Route>
 
           {/* Redirect any unknown routes to home */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
+      <ChatbotWidget />
     </ThemeProvider>
   );
 };

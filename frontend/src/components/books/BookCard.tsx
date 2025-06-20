@@ -1,195 +1,266 @@
-import React from "react";
+import React, { memo, useState } from "react";
 import {
   Card,
   CardContent,
   CardMedia,
   Typography,
-  Button,
-  CardActions,
   Box,
   Rating,
   Chip,
-  Stack,
   IconButton,
-  CircularProgress,
+  Skeleton,
+  Tooltip,
+  Stack,
+  useTheme,
 } from "@mui/material";
-import BookmarkAddOutlinedIcon from "@mui/icons-material/BookmarkAddOutlined";
-import BookmarkAddedIcon from "@mui/icons-material/BookmarkAdded";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
+import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
+
 import { Book } from "../../api/books";
 import { useCartStore } from "../../store/cartStore";
-import { useWishlistStore } from "../../store/wishlistStore";
+
 
 interface BookCardProps {
   book: Book;
-  variant?: "default" | "compact";
 }
 
-const BookCard: React.FC<BookCardProps> = ({ book, variant = "default" }) => {
-  const navigate = useNavigate();
-  const { addItem, isInCart } = useCartStore();
-  const {
-    addItemToWishlist,
-    removeItemFromWishlist,
-    isItemInWishlist,
-    isLoading: wishlistLoading,
-  } = useWishlistStore();
+const BookCard: React.FC<BookCardProps> = memo(({ book }) => {
+  const theme = useTheme();
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageError, setImageError] = useState(false);
+  const { addItem } = useCartStore();
+  const isInCart = useCartStore((state) => state.isInCart(book.id));
+  // Memoize computed values
+  const isDiscounted = book.discountRate > 0;
 
-  const alreadyInCart = isInCart(book.id);
-  const bookInWishlist = isItemInWishlist(book.id);
+  // Placeholder image as data URL to avoid network requests
+  const placeholderImage = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjMwMCIgdmlld0JveD0iMCAwIDIwMCAzMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMzAwIiBmaWxsPSIjRjVGNUY1Ii8+CjxwYXRoIGQ9Ik04MCA5MEgxMjBWMTEwSDgwVjkwWiIgZmlsbD0iI0NDQ0NDQyIvPgo8cGF0aCBkPSJNNjAgMTMwSDE0MFYxNDBINjBWMTMwWiIgZmlsbD0iI0NDQ0NDQyIvPgo8cGF0aCBkPSJNNjAgMTUwSDE0MFYxNjBINjBWMTUwWiIgZmlsbD0iI0NDQ0NDQyIvPgo8cGF0aCBkPSJNNjAgMTcwSDE0MFYxODBINjBWMTcwWiIgZmlsbD0iI0NDQ0NDQyIvPgo8dGV4dCB4PSIxMDAiIHk9IjIyMCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzk5OTk5OSIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0Ij5ObyBJbWFnZTwvdGV4dD4KPC9zdmc+";
 
-  const handleViewDetails = () => {
-    navigate(`/books/${book.id}`);
-  };
+  // Guard: Không hiển thị sách nếu dữ liệu không hợp lệ
+  if (
+    book.price === 0 ||
+    (isDiscounted &&
+      (book.originalPrice === null || book.originalPrice === undefined))
+  ) {
+    if (process.env.NODE_ENV !== "production") {
+      console.warn(
+        `BookCard: Không hiển thị sách do dữ liệu không hợp lệ:`,
+        book
+      );
+    }
+    return null;
+  }
 
-  const handleAddToCart = () => {
-    addItem(book);
-  };
-
-  const handleToggleWishlist = async () => {
-    try {
-      if (bookInWishlist) {
-        await removeItemFromWishlist(book.id);
-      } else {
-        await addItemToWishlist(book);
-      }
-    } catch (error) {
-      console.error("Failed to toggle wishlist item on card:", error);
+  // Handle image loading
+  const handleImageLoad = () => setImageLoaded(true);
+  const handleImageError = () => {
+    if (!imageError) { // Only set error once to prevent loops
+      setImageError(true);
+      setImageLoaded(true);
     }
   };
 
-  // Placeholder image if no cover is available
-  const coverImage =
-    book.coverImage || "https://via.placeholder.com/150x200?text=No+Image";
+  // Handle cart actions
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const bookId = book._id || book.id; // Use MongoDB _id for backend
+    console.log('[BookCard] Adding to cart with bookId:', bookId, 'book:', book);
+    addItem(bookId, 1);
+  };
 
-  // Display first category if available
-  const primaryCategory =
-    book.category && book.category.length > 0 ? book.category[0] : null;
 
+
+  // Debug: Log giá trị đầu vào
+  if (process.env.NODE_ENV !== "production") {
+    console.log(
+      "BookCard:",
+      book.title,
+      "price:",
+      book.price,
+      "originalPrice:",
+      book.originalPrice
+    );
+  }
+
+  // Không chuyển đổi giá nữa, chỉ hiển thị trực tiếp
+  
+  const originalPriceUsd = book.originalPrice;
+const priceUsd = book.discountRate > 0 ? originalPriceUsd * (1 - book.discountRate / 100) : originalPriceUsd ; // calculate using discountRate
   return (
     <Card
+      component={Link}
+      to={`/books/${book.id}`}
       sx={{
-        height: variant === "compact" ? 360 : 450,
+        height: 380, // Slightly reduced height for better proportions
         display: "flex",
         flexDirection: "column",
-        transition: "transform 0.2s",
+        textDecoration: "none",
+        transition: "transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out",
         "&:hover": {
-          transform: "scale(1.02)",
+          transform: "translateY(-4px)",
+          boxShadow: theme.shadows[4],
         },
       }}
-      elevation={2}
     >
-      <CardMedia
-        component="img"
-        height={variant === "compact" ? 140 : 200}
-        image={coverImage}
-        alt={book.title}
-        sx={{ objectFit: "contain", pt: 2 }}
-      />
-      <CardContent sx={{ flexGrow: 1 }}>
-        {primaryCategory && (
-          <Chip
-            label={primaryCategory}
-            size="small"
-            sx={{ mb: 1 }}
-            color="primary"
-            variant="outlined"
+      <Box sx={{ position: "relative", height: 220, flexShrink: 0 }}>
+        {!imageLoaded && (
+          <Skeleton
+            variant="rectangular"
+            sx={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              width: "100%",
+              height: "100%",
+            }}
+            animation="wave"
           />
         )}
+        <CardMedia
+          component="img"
+          image={imageError ? placeholderImage : (book.coverImage || placeholderImage )}
+          alt={book.title}
+          onLoad={handleImageLoad}
+          onError={handleImageError}
+          sx={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            opacity: imageLoaded ? 1 : 0,
+            transition: "opacity 0.3s ease-in-out",
+          }}
+        />
+        {/* Action buttons */}
+        <Box
+          sx={{
+            position: "absolute",
+            top: 8,
+            right: 8,
+            display: "flex",
+            flexDirection: "column",
+            gap: 1,
+          }}
+        >
+          <Tooltip title={isInCart ? "In Cart" : "Add to Cart"}>
+            <IconButton
+              onClick={handleAddToCart}
+              disabled={isInCart}
+              sx={{
+                bgcolor: "background.paper",
+                "&:hover": { bgcolor: "action.hover" },
+              }}
+              size="small"
+            >
+              <ShoppingCartIcon
+                color={isInCart ? "disabled" : "primary"}
+                fontSize="small"
+              />
+            </IconButton>
+          </Tooltip>
 
+        </Box>
+        {/* Discount badge */}
+        {isDiscounted && (
+          <Chip
+            label={`-${book.discountRate}%`}
+            color="error"
+            size="small"
+            sx={{
+              position: "absolute",
+              top: 8,
+              left: 8,
+              fontWeight: "bold",
+            }}
+          />
+        )}
+      </Box>
+
+      <CardContent
+        sx={{
+          flexGrow: 1,
+          display: "flex",
+          flexDirection: "column",
+          height: 180, // Fixed height for content area
+          p: 2,
+        }}
+      >
         <Typography
+          variant="h6"
+          component="h2"
           gutterBottom
-          variant={variant === "compact" ? "subtitle1" : "h6"}
-          component="div"
-          noWrap
-          title={book.title}
+          sx={{
+            fontSize: "1rem",
+            fontWeight: "bold",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            display: "-webkit-box",
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: "vertical",
+            height: "3rem", // Fixed height instead of minHeight
+            lineHeight: 1.5,
+          }}
         >
           {book.title}
         </Typography>
 
-        <Typography variant="body2" color="text.secondary" gutterBottom>
-          by {book.author}
+        <Typography
+          variant="body2"
+          color="text.secondary"
+          gutterBottom
+          sx={{
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            height: "1.5rem", // Fixed height for author
+          }}
+        >
+          {book.author}
         </Typography>
 
         {book.rating !== undefined && (
-          <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
-            <Rating
-              name={`book-rating-${book.id}`}
-              value={book.rating}
-              precision={0.5}
-              size="small"
-              readOnly
-            />
-            <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
-              {book.rating}
+          <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+            <Rating value={book.rating} readOnly size="small" precision={0.5} />
+            <Typography variant="body2" color="text.secondary">
+              {book.rating.toFixed(1)}
             </Typography>
-          </Box>
+          </Stack>
         )}
 
-        {variant !== "compact" && (
-          <Typography
-            variant="body2"
-            color="text.secondary"
-            sx={{
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              display: "-webkit-box",
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: "vertical",
-              mb: 1,
-            }}
-          >
-            {book.description}
-          </Typography>
-        )}
-
-        <Typography variant="h6" color="primary" sx={{ mt: 1 }}>
-          ${book.price.toFixed(2)}
-        </Typography>
-      </CardContent>
-
-      <CardActions sx={{ p: 2, pt: 0, justifyContent: "space-between" }}>
-        <Stack direction="row" spacing={1} sx={{ flexGrow: 1 }}>
-          <Button
-            size="small"
-            color="primary"
-            variant="outlined"
-            onClick={handleViewDetails}
-            sx={{ flexGrow: 1 }}
-          >
-            Details
-          </Button>
-          <Button
-            size="small"
-            color="primary"
-            variant="contained"
-            onClick={handleAddToCart}
-            disabled={alreadyInCart}
-            sx={{ flexGrow: 1 }}
-          >
-            {alreadyInCart ? "In Cart" : "Add to Cart"}
-          </Button>
-        </Stack>
-        <IconButton
-          aria-label={
-            bookInWishlist ? "Remove from wishlist" : "Add to wishlist"
-          }
-          onClick={handleToggleWishlist}
-          disabled={wishlistLoading}
-          color="secondary"
-          sx={{ ml: 1 }}
-        >
-          {wishlistLoading ? (
-            <CircularProgress size={24} color="inherit" />
-          ) : bookInWishlist ? (
-            <BookmarkAddedIcon />
-          ) : (
-            <BookmarkAddOutlinedIcon />
+        <Box sx={{ mt: "auto", minHeight: "3rem", display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
+          <Stack direction="row" spacing={1} alignItems="baseline">
+            <Typography
+              variant="h6"
+              color={isDiscounted ? "error.main" : "primary.main"}
+              sx={{ fontWeight: "bold" }}
+            >
+              ${(priceUsd || 0).toFixed(2)}
+            </Typography>
+            {isDiscounted &&
+              originalPriceUsd !== null &&
+              originalPriceUsd !== undefined && (
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ textDecoration: "line-through" }}
+                >
+                  ${originalPriceUsd.toFixed(2)}
+                </Typography>
+              )}
+          </Stack>
+          {book.stock === 0 && (
+            <Typography variant="body2" color="error" sx={{ mt: 0.5 }}>
+              Out of Stock
+            </Typography>
           )}
-        </IconButton>
-      </CardActions>
+        </Box>
+      </CardContent>
     </Card>
   );
-};
+});
+
+BookCard.displayName = "BookCard";
 
 export default BookCard;

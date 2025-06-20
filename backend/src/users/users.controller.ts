@@ -79,37 +79,5 @@ export class UsersController {
     return this.usersService.delete(id);
   }
 
-  @Post(':userId/wishlist/:bookId')
-  @ApiOperation({ summary: 'Add a book to user wishlist' })
-  @ApiParam({ name: 'userId', description: 'User ID' })
-  @ApiParam({ name: 'bookId', description: 'Book ID' })
-  @ApiResponse({
-    status: 200,
-    description: 'Book added to wishlist',
-    type: User,
-  })
-  @ApiResponse({ status: 404, description: 'User or book not found' })
-  async addToWishlist(
-    @Param('userId') userId: string,
-    @Param('bookId') bookId: string,
-  ): Promise<User> {
-    return this.usersService.addToWishlist(userId, bookId);
-  }
 
-  @Delete(':userId/wishlist/:bookId')
-  @ApiOperation({ summary: 'Remove a book from user wishlist' })
-  @ApiParam({ name: 'userId', description: 'User ID' })
-  @ApiParam({ name: 'bookId', description: 'Book ID' })
-  @ApiResponse({
-    status: 200,
-    description: 'Book removed from wishlist',
-    type: User,
-  })
-  @ApiResponse({ status: 404, description: 'User or book not found' })
-  async removeFromWishlist(
-    @Param('userId') userId: string,
-    @Param('bookId') bookId: string,
-  ): Promise<User> {
-    return this.usersService.removeFromWishlist(userId, bookId);
-  }
 }

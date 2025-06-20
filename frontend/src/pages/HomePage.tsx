@@ -21,7 +21,27 @@ import WhatshotIcon from "@mui/icons-material/Whatshot";
 import EmojiObjectsIcon from "@mui/icons-material/EmojiObjects";
 import MainLayout from "../components/layouts/MainLayout";
 import BookCard from "../components/books/BookCard";
-import { Book, getFeaturedBooks } from "../api/books";
+import {
+  Book,
+  getFeaturedBooks,
+  getAllGenres,
+  getRecommendedBookIds,
+  getBooksByIds,
+} from "../api/books";
+import { getCurrentUser } from "../api/auth";
+import { getRecommendedBooksByUsername } from "../api/books";
+
+const FEATURED_GENRES = [
+  "Fiction",
+  "Non-Fiction",
+  "Science Fiction",
+  "Mystery",
+  "Romance",
+  "Biography",
+  "Fantasy",
+  "History",
+  "Children",
+];
 
 const HomePage: React.FC = () => {
   const theme = useTheme();
@@ -31,6 +51,11 @@ const HomePage: React.FC = () => {
   const [featuredBooks, setFeaturedBooks] = useState<Book[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [genres, setGenres] = useState<string[]>([]);
+  const [loadingGenres, setLoadingGenres] = useState(false);
+  const [recommendedBooks, setRecommendedBooks] = useState<Book[]>([]);
+  const [loadingRecommended, setLoadingRecommended] = useState(false);
+  const [errorRecommended, setErrorRecommended] = useState<string | null>(null);
 
   useEffect(() => {
     const loadFeaturedBooks = async () => {
@@ -49,6 +74,59 @@ const HomePage: React.FC = () => {
 
     loadFeaturedBooks();
   }, []);
+
+  useEffect(() => {
+    setLoadingGenres(true);
+    getAllGenres()
+      .then((allGenres) => {
+        setGenres(allGenres);
+      })
+      .finally(() => setLoadingGenres(false));
+  }, []);
+
+  useEffect(() => {
+    const fetchRecommendedBooks = async () => {
+      setLoadingRecommended(true);
+      setErrorRecommended(null);
+      try {
+        // Lấy username từ API profile
+        const user = await getCurrentUser();
+        console.log("[DEBUG] Current user from /auth/profile:", user);
+        const username = user?.username; // Dùng username thay vì email
+        console.log("[DEBUG] Username used for recommend API:", username);
+        if (username) {
+          const books = await getRecommendedBooksByUsername(username, 6);
+          if (books && books.length > 0) {
+            setRecommendedBooks(books);
+            setLoadingRecommended(false);
+            return;
+          } else {
+            setErrorRecommended("No recommendations found");
+          }
+        } else {
+          setErrorRecommended("You need to login to get recommendations");
+        }
+      } catch (err) {
+        setErrorRecommended("You need to login to get recommendations");
+        console.error(err);
+      } finally {
+        setLoadingRecommended(false);
+      }
+    };
+    fetchRecommendedBooks();
+  }, []);
+
+  // Lấy 7 genres nổi bật đầu tiên có trong data
+  const featuredGenres = FEATURED_GENRES.filter((g) =>
+    genres.includes(g)
+  ).slice(0, 6);
+  // Nếu chưa đủ 7, bổ sung các genres khác từ data (không trùng lặp)
+  if (featuredGenres.length < 6) {
+    const extra = genres
+      .filter((g) => !featuredGenres.includes(g))
+      .slice(0, 6 - featuredGenres.length);
+    featuredGenres.push(...extra);
+  }
 
   return (
     <MainLayout>
@@ -322,187 +400,55 @@ const HomePage: React.FC = () => {
         </Box>
       </Container>
 
-      {/* Categories Section */}
-      <Box sx={{ bgcolor: "background.paper", py: 8, mb: 4 }}>
-        <Container maxWidth="lg">
-          <Box sx={{ display: "flex", alignItems: "center", mb: 4 }}>
-            <BookIcon color="primary" sx={{ fontSize: 32, mr: 2 }} />
-            <Typography
-              component="h2"
-              variant="h4"
-              gutterBottom
+      {/* Recommended for you Section */}
+      <Container maxWidth="lg" sx={{ mb: 8, px: { xs: 2, md: 3 } }}>
+        <Box sx={{ display: "flex", alignItems: "center", mb: 4 }}>
+          <WhatshotIcon color="secondary" sx={{ fontSize: 32, mr: 2 }} />
+          <Typography
+            component="h2"
+            variant="h4"
+            gutterBottom
+            sx={{
+              fontFamily: "'Playfair Display', serif",
+              fontWeight: 600,
+              position: "relative",
+              display: "inline-block",
+              mb: 0,
+            }}
+          >
+            Recommended for you
+            <Box
               sx={{
-                fontFamily: "'Playfair Display', serif",
-                fontWeight: 600,
-                position: "relative",
-                display: "inline-block",
-                mb: 0,
+                position: "absolute",
+                width: "40%",
+                height: "3px",
+                bottom: "-8px",
+                left: "0",
+                backgroundColor: "secondary.main",
               }}
-            >
-              Browse by Category
-              <Box
-                sx={{
-                  position: "absolute",
-                  width: "40%",
-                  height: "3px",
-                  bottom: "-8px",
-                  left: "0",
-                  backgroundColor: "secondary.main",
-                }}
-              />
-            </Typography>
+            />
+          </Typography>
+        </Box>
+        {loadingRecommended ? (
+          <Box sx={{ display: "flex", justifyContent: "center", my: 4 }}>
+            <CircularProgress />
           </Box>
-
-          <Box sx={{ display: "flex", flexWrap: "wrap", mx: -1 }}>
-            {[
-              {
-                name: "Fiction",
-                img: "https://source.unsplash.com/random/?fiction,novel",
-              },
-              {
-                name: "Non-Fiction",
-                img: "https://source.unsplash.com/random/?nonfiction,biography",
-              },
-              {
-                name: "Science Fiction",
-                img: "https://source.unsplash.com/random/?scifi,space",
-              },
-              {
-                name: "Mystery",
-                img: "https://source.unsplash.com/random/?mystery,detective",
-              },
-              {
-                name: "Romance",
-                img: "https://source.unsplash.com/random/?romance,love",
-              },
-              {
-                name: "Biography",
-                img: "https://source.unsplash.com/random/?biography,history",
-              },
-            ].map((category) => (
+        ) : errorRecommended ? (
+          <Box sx={{ textAlign: "center", my: 4 }}>
+            <Typography color="error">{errorRecommended}</Typography>
+          </Box>
+        ) : (
+          <Box sx={{ display: "flex", flexWrap: "wrap", mx: -1.5 }}>
+            {recommendedBooks.map((book) => (
               <Box
-                key={category.name}
-                sx={{ width: { xs: "50%", sm: "33.33%", md: "16.66%" }, p: 1 }}
+                key={book.id}
+                sx={{ width: { xs: "100%", sm: "50%", md: "33.33%" }, p: 1.5 }}
               >
-                <Card
-                  component={RouterLink}
-                  to={`/books?category=${category.name}`}
-                  sx={{
-                    height: 150,
-                    display: "flex",
-                    flexDirection: "column",
-                    justifyContent: "flex-end",
-                    position: "relative",
-                    textDecoration: "none",
-                    borderRadius: 2,
-                    overflow: "hidden",
-                    transition: "transform 0.3s",
-                    "&:hover": {
-                      transform: "scale(1.03)",
-                    },
-                  }}
-                >
-                  <CardMedia
-                    component="img"
-                    image={category.img}
-                    alt={category.name}
-                    sx={{
-                      position: "absolute",
-                      top: 0,
-                      left: 0,
-                      width: "100%",
-                      height: "100%",
-                      objectFit: "cover",
-                    }}
-                  />
-                  <Box
-                    sx={{
-                      position: "absolute",
-                      top: 0,
-                      left: 0,
-                      width: "100%",
-                      height: "100%",
-                      background:
-                        "linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.3) 50%, rgba(0,0,0,0) 100%)",
-                    }}
-                  />
-                  <CardContent
-                    sx={{ position: "relative", color: "white", p: 2 }}
-                  >
-                    <Typography variant="h6" component="div">
-                      {category.name}
-                    </Typography>
-                  </CardContent>
-                </Card>
+                <BookCard book={book} />
               </Box>
             ))}
           </Box>
-        </Container>
-      </Box>
-
-      {/* Newsletter Section */}
-      <Container maxWidth="md" sx={{ mb: 8, px: { xs: 2, md: 3 } }}>
-        <Paper
-          sx={{
-            p: { xs: 3, md: 6 },
-            backgroundColor: "primary.main",
-            color: "white",
-            borderRadius: 2,
-            position: "relative",
-            overflow: "hidden",
-          }}
-        >
-          <Box
-            sx={{
-              position: "absolute",
-              top: 0,
-              right: 0,
-              width: { xs: "100px", md: "200px" },
-              height: { xs: "100px", md: "200px" },
-              background: "rgba(255,255,255,0.1)",
-              borderRadius: "50%",
-              transform: "translate(30%, -30%)",
-            }}
-          />
-          <Box
-            sx={{
-              position: "absolute",
-              bottom: 0,
-              left: 0,
-              width: { xs: "80px", md: "150px" },
-              height: { xs: "80px", md: "150px" },
-              background: "rgba(255,255,255,0.1)",
-              borderRadius: "50%",
-              transform: "translate(-30%, 30%)",
-            }}
-          />
-          <Box
-            sx={{
-              position: "relative",
-              zIndex: 1,
-              textAlign: "center",
-              maxWidth: "600px",
-              mx: "auto",
-            }}
-          >
-            <Typography variant="h4" gutterBottom fontWeight={600}>
-              Stay Updated
-            </Typography>
-            <Typography variant="body1" paragraph sx={{ mb: 4, opacity: 0.9 }}>
-              Subscribe to our newsletter and be the first to know about new
-              releases, special promotions, and exclusive content.
-            </Typography>
-            <Button
-              variant="contained"
-              color="secondary"
-              size="large"
-              fullWidth
-              sx={{ py: 1.5 }}
-            >
-              Subscribe Now
-            </Button>
-          </Box>
-        </Paper>
+        )}
       </Container>
     </MainLayout>
   );

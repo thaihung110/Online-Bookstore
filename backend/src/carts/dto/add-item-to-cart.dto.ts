@@ -4,6 +4,8 @@ import {
   IsNumber,
   Min,
   IsMongoId,
+  IsBoolean,
+  IsOptional,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -17,23 +19,45 @@ export class AddItemToCartDto {
   bookId: string;
 
   @ApiProperty({
-    description: 'The quantity of the book to add',
+    description:
+      'The quantity of the book to add (will be added to existing quantity if book already in cart)',
     example: 1,
     minimum: 1,
   })
   @IsNumber()
   @Min(1)
   quantity: number;
+
+  @ApiProperty({
+    description: 'Whether the item is ticked/selected in the cart',
+    example: true,
+    required: false,
+    default: true,
+  })
+  @IsOptional()
+  @IsBoolean()
+  isTicked?: boolean;
 }
 
-// Optional: DTO for updating item quantity, or use AddItemToCartDto
-// export class UpdateCartItemDto {
-//   @ApiProperty({
-//     description: 'The new quantity of the book in the cart',
-//     example: 2,
-//     minimum: 1,
-//   })
-//   @IsNumber()
-//   @Min(1)
-//   quantity: number;
-// }
+export class UpdateItemInCartDto {
+  @ApiProperty({
+    description: 'The quantity of the book to update',
+    example: 2,
+    minimum: 1,
+    required: false,
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  quantity?: number;
+
+  @ApiProperty({
+    description: 'Whether the item is ticked/selected in the cart',
+    example: true,
+    required: false,
+    default: true,
+  })
+  @IsOptional()
+  @IsBoolean()
+  isTicked?: boolean;
+}

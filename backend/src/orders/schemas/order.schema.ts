@@ -55,7 +55,7 @@ export class ShippingAddress {
 export class PaymentInfo {
   @Prop({
     required: true,
-    enum: ['credit_card', 'paypal', 'gift_card', 'loyalty_points'],
+    enum: ['cod', 'vnpay', 'paypal', 'gift_card', 'loyalty_points'],
   })
   method: string;
 

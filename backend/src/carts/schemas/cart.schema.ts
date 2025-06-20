@@ -10,6 +10,12 @@ export class CartItem {
 
   @Prop({ required: true, min: 1, default: 1 })
   quantity: number;
+
+  @Prop({ required: true, min: 0 })
+  priceAtAdd: number; // Giá tại thời điểm thêm vào giỏ
+
+  @Prop({ type: Boolean, default: true })
+  isTicked: boolean;
 }
 
 @Schema({ timestamps: true })
@@ -34,6 +40,12 @@ export class Cart {
 
   @Prop({ type: Number, min: 0, default: 0 })
   loyaltyPointsToUse: number;
+
+  @Prop({ type: Number, default: 0 })
+  subtotal: number; // Tổng giá trước khuyến mãi
+
+  @Prop({ type: Number, default: 0 })
+  discount: number; // Tổng giảm giá
 }
 
 export const CartSchema = SchemaFactory.createForClass(Cart);

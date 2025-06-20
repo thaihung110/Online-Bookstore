@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -11,8 +11,10 @@ import {
   IconButton,
   Link,
   useTheme,
+  CircularProgress,
+  Collapse,
 } from "@mui/material";
-import { Link as RouterLink } from "react-router-dom";
+import { Link as RouterLink, useNavigate } from "react-router-dom";
 import TextField from "../common/TextField";
 import Button from "../common/Button";
 import { useAuthStore } from "../../store/authStore";
@@ -24,6 +26,7 @@ import LocalLibraryIcon from "@mui/icons-material/LocalLibrary";
 
 const LoginForm: React.FC = () => {
   const theme = useTheme();
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -33,8 +36,24 @@ const LoginForm: React.FC = () => {
     password: "",
   });
   const [showPassword, setShowPassword] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
 
-  const { login, isLoading, error, clearError } = useAuthStore();
+  const { login, isLoading, error, clearError, isAuthenticated } =
+    useAuthStore();
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate("/");
+    }
+  }, [isAuthenticated, navigate]);
+
+  // Clear API error when component unmounts
+  useEffect(() => {
+    return () => {
+      clearError();
+    };
+  }, [clearError]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -44,15 +63,12 @@ const LoginForm: React.FC = () => {
       [name]: value,
     }));
 
-    // Clear error on input change
-    if (formErrors[name as keyof typeof formErrors]) {
-      setFormErrors((prev) => ({
-        ...prev,
-        [name]: "",
-      }));
-    }
-
-    // Clear API error on input change
+    // Clear errors on input change
+    setFormErrors((prev) => ({
+      ...prev,
+      [name]: "",
+    }));
+    setApiError(null);
     if (error) clearError();
   };
 
@@ -60,16 +76,21 @@ const LoginForm: React.FC = () => {
     let valid = true;
     const newErrors = { ...formErrors };
 
+    // Email validation
     if (!formData.email) {
-      newErrors.email = "Email is required";
+      newErrors.email = "Email là bắt buộc";
       valid = false;
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = "Email is invalid";
+      newErrors.email = "Email không hợp lệ";
       valid = false;
     }
 
+    // Password validation
     if (!formData.password) {
-      newErrors.password = "Password is required";
+      newErrors.password = "Mật khẩu là bắt buộc";
+      valid = false;
+    } else if (formData.password.length < 6) {
+      newErrors.password = "Mật khẩu phải có ít nhất 6 ký tự";
       valid = false;
     }
 
@@ -79,12 +100,14 @@ const LoginForm: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setApiError(null);
 
     if (validateForm()) {
       try {
         await login(formData.email, formData.password);
-      } catch (error) {
-        console.error("Login error:", error);
+      } catch (err: any) {
+        console.error("Login error:", err);
+        setApiError(err.message || "Đã xảy ra lỗi trong quá trình đăng nhập");
       }
     }
   };
@@ -145,11 +168,18 @@ const LoginForm: React.FC = () => {
         </Box>
 
         <CardContent sx={{ p: 3 }}>
-          {error && (
-            <Alert severity="error" sx={{ mb: 3 }}>
-              {error}
+          <Collapse in={!!(error || apiError)}>
+            <Alert
+              severity="error"
+              sx={{ mb: 3 }}
+              onClose={() => {
+                clearError();
+                setApiError(null);
+              }}
+            >
+              {error || apiError}
             </Alert>
-          )}
+          </Collapse>
 
           <Box component="form" onSubmit={handleSubmit} noValidate>
             <TextField
@@ -163,6 +193,7 @@ const LoginForm: React.FC = () => {
               required
               fullWidth
               variant="outlined"
+              disabled={isLoading}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
@@ -184,6 +215,7 @@ const LoginForm: React.FC = () => {
               required
               fullWidth
               variant="outlined"
+              disabled={isLoading}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
@@ -196,6 +228,7 @@ const LoginForm: React.FC = () => {
                       aria-label="toggle password visibility"
                       onClick={handleClickShowPassword}
                       edge="end"
+                      disabled={isLoading}
                     >
                       {showPassword ? <VisibilityOff /> : <Visibility />}
                     </IconButton>
@@ -230,9 +263,24 @@ const LoginForm: React.FC = () => {
                 "&:hover": {
                   backgroundColor: theme.palette.secondary.dark,
                 },
+                position: "relative",
               }}
             >
-              {isLoading ? "Signing in..." : "Sign In"}
+              {isLoading ? (
+                <>
+                  <CircularProgress
+                    size={24}
+                    sx={{
+                      position: "absolute",
+                      left: "50%",
+                      marginLeft: "-12px",
+                    }}
+                  />
+                  <span style={{ visibility: "hidden" }}>Sign In</span>
+                </>
+              ) : (
+                "Sign In"
+              )}
             </Button>
 
             <Divider sx={{ my: 2 }}>
@@ -248,7 +296,8 @@ const LoginForm: React.FC = () => {
                   component={RouterLink}
                   to="/register"
                   underline="hover"
-                  fontWeight="medium"
+                  color="primary"
+                  sx={{ fontWeight: 500 }}
                 >
                   Sign up
                 </Link>

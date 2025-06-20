@@ -10,7 +10,6 @@ import {
   FormControl,
   InputLabel,
   Select,
-  Slider,
   Paper,
   InputAdornment,
   IconButton,
@@ -21,16 +20,22 @@ import {
   CircularProgress,
   Alert,
   AlertTitle,
+  Chip,
+  Stack,
+  useTheme,
+  Fade,
 } from "@mui/material";
-import { useTheme } from "@mui/material/styles";
-import SearchIcon from "@mui/icons-material/Search";
-import FilterListIcon from "@mui/icons-material/FilterList";
-import CloseIcon from "@mui/icons-material/Close";
+import { useSearchParams } from "react-router-dom";
 
 import BookCard from "../components/books/BookCard";
 import MainLayout from "../components/layouts/MainLayout";
+import FilterPanel from "../components/books/FilterPanel";
 import { useBookStore } from "../store/bookStore";
 import { BookQuery } from "../api/books";
+import SearchIcon from "@mui/icons-material/Search";
+import FilterListIcon from "@mui/icons-material/FilterList";
+import CloseIcon from "@mui/icons-material/Close";
+import ClearIcon from "@mui/icons-material/Clear";
 
 const sortOptions = [
   { value: "title:asc", label: "Title (A-Z)" },
@@ -40,57 +45,112 @@ const sortOptions = [
   { value: "rating:desc", label: "Highest Rated" },
 ];
 
-const categories = [
-  "All Categories",
-  "Fiction",
-  "Non-Fiction",
-  "Science Fiction",
-  "Fantasy",
-  "Mystery",
-  "Romance",
-  "Thriller",
-  "Biography",
-  "History",
-  "Business",
-  "Self-Help",
-  "Children",
-];
-
 const BooksPage: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+  const isTablet = useMediaQuery(theme.breakpoints.down("lg"));
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const {
     books,
     totalBooks,
-    currentPage,
     limit,
     isLoading,
     error,
     filters,
+    genres,
     fetchBooks,
     setFilters,
     resetFilters,
     setPage,
+    loadGenres,
   } = useBookStore();
 
   const [searchTerm, setSearchTerm] = useState("");
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, 100]);
   const [categoryFilter, setCategoryFilter] = useState("All Categories");
   const [sort, setSort] = useState("title:asc");
   const [drawerOpen, setDrawerOpen] = useState(false);
 
+  // Tải danh sách thể loại khi component được render
+  useEffect(() => {
+    loadGenres();
+  }, [loadGenres]);
+
   // Calculate total pages
   const totalPages = Math.ceil(totalBooks / limit);
 
-  // Effect to fetch books on component mount
+  // Parse filters from URL
+  const parseFiltersFromUrl = () => {
+    const params: Record<string, string> = {};
+    searchParams.forEach((value, key) => {
+      params[key] = value;
+    });
+    const urlFilters: Partial<BookQuery> = {};
+    if (params.search) urlFilters.search = params.search;
+    if (params.author) urlFilters.author = params.author;
+    if (params.page) urlFilters.page = Number(params.page);
+    if (params.genres) urlFilters.genres = params.genres.split(",");
+    if (params.minPrice) urlFilters.minPrice = Number(params.minPrice);
+    if (params.maxPrice) urlFilters.maxPrice = Number(params.maxPrice);
+    if (params.inStock) urlFilters.inStock = params.inStock === "true";
+    if (params.onSale) urlFilters.onSale = params.onSale === "true";
+    if (params.sortBy) urlFilters.sortBy = params.sortBy;
+    if (params.sortOrder)
+      urlFilters.sortOrder = params.sortOrder as "asc" | "desc";
+    return urlFilters;
+  };
+
+  // Initialize filters from URL on component mount
   useEffect(() => {
-    fetchBooks();
-  }, [fetchBooks]);
+    const urlFilters = parseFiltersFromUrl();
+    if (Object.keys(urlFilters).length > 0) {
+      setFilters(urlFilters);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run on mount
+
+  // Update URL when filters change
+  const updateUrlParams = (newFilters: Partial<BookQuery>) => {
+    const updatedFilters = { ...filters, ...newFilters };
+    console.log("BooksPage: Updating URL with filters:", updatedFilters);
+    const newParams = new URLSearchParams();
+
+    // Only add parameters with values to URL
+    if (updatedFilters.search) newParams.set("search", updatedFilters.search);
+    if (updatedFilters.author) newParams.set("author", updatedFilters.author);
+    if (updatedFilters.page && updatedFilters.page > 1)
+      newParams.set("page", updatedFilters.page.toString());
+    if (updatedFilters.genres && updatedFilters.genres.length > 0) {
+      console.log(
+        "BooksPage: Setting genres URL param:",
+        updatedFilters.genres.join(",")
+      );
+      newParams.set("genres", updatedFilters.genres.join(","));
+    }
+    if (updatedFilters.minPrice)
+      newParams.set("minPrice", updatedFilters.minPrice.toString());
+    if (updatedFilters.maxPrice)
+      newParams.set("maxPrice", updatedFilters.maxPrice.toString());
+    if (updatedFilters.inStock)
+      newParams.set("inStock", updatedFilters.inStock.toString());
+    if (updatedFilters.onSale)
+      newParams.set("onSale", updatedFilters.onSale.toString());
+    if (updatedFilters.sortBy) newParams.set("sortBy", updatedFilters.sortBy);
+    if (updatedFilters.sortOrder)
+      newParams.set("sortOrder", updatedFilters.sortOrder);
+
+    console.log(
+      "BooksPage: Final URL parameters:",
+      Object.fromEntries(newParams.entries())
+    );
+    setSearchParams(newParams);
+  };
 
   // Handle search submit
   const handleSearch = () => {
-    setFilters({ searchTerm, page: 1 });
+    const newFilters = { search: searchTerm, page: 1 };
+    setFilters(newFilters);
+    updateUrlParams(newFilters);
   };
 
   // Handle search on Enter key
@@ -107,11 +167,15 @@ const BooksPage: React.FC = () => {
 
     // Parse sort option
     const [sortBy, sortOrder] = value.split(":");
-    setFilters({
+    const sortFilters = {
       sortBy,
       sortOrder: sortOrder as "asc" | "desc",
       page: 1,
-    });
+    };
+
+    // Update filters and URL
+    setFilters(sortFilters);
+    updateUrlParams({ ...filters, ...sortFilters });
   };
 
   // Handle category filter change
@@ -122,23 +186,40 @@ const BooksPage: React.FC = () => {
     setCategoryFilter(category);
 
     setFilters({
-      category: category === "All Categories" ? undefined : category,
+      genres: category === "All Categories" ? undefined : [category],
       page: 1,
     });
   };
 
-  // Handle price range change
-  const handlePriceChange = (_event: Event, newValue: number | number[]) => {
-    setPriceRange(newValue as [number, number]);
-  };
+  // Handle filter change from FilterPanel
+  const handleFilterChange = (newFilters: Partial<BookQuery>) => {
+    console.log("BooksPage: Filter changed:", newFilters);
+    console.log("BooksPage: Current filters before update:", filters);
 
-  // Apply price filter when slider interaction ends
-  const handlePriceChangeCommitted = () => {
-    setFilters({
-      minPrice: priceRange[0],
-      maxPrice: priceRange[1],
-      page: 1,
+    // Add specific logging for genres filter
+    if (newFilters.genres) {
+      console.log("BooksPage: Genres filter received:", newFilters.genres);
+      console.log(
+        "BooksPage: Genres filter type:",
+        typeof newFilters.genres,
+        Array.isArray(newFilters.genres)
+      );
+      if (Array.isArray(newFilters.genres)) {
+        newFilters.genres.forEach((genre, index) => {
+          console.log(`BooksPage: Received genre[${index}] = "${genre}"`);
+        });
+      }
+    }
+
+    setFilters(newFilters);
+    console.log("BooksPage: Updated filters in store:", {
+      ...filters,
+      ...newFilters,
     });
+
+    // Make sure all filters are properly updated in the URL
+    // This ensures genres are correctly passed to the backend
+    updateUrlParams({ ...filters, ...newFilters });
   };
 
   // Handle pagination change
@@ -146,273 +227,361 @@ const BooksPage: React.FC = () => {
     _event: React.ChangeEvent<unknown>,
     page: number
   ) => {
-    setPage(page);
-
-    // Scroll to top when page changes
+    const newFilters = { ...filters, page };
+    setFilters({ page }); // Only update page in store
+    updateUrlParams(newFilters); // Update URL with all filters including new page
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  // Handle reset filters
+  // Reset all filters
   const handleResetFilters = () => {
+    // Reset local state
     setSearchTerm("");
-    setPriceRange([0, 100]);
     setCategoryFilter("All Categories");
     setSort("title:asc");
+
+    // Reset store filters
     resetFilters();
-    setDrawerOpen(false);
+
+    // Clear URL parameters
+    setSearchParams({});
   };
 
-  // Handle apply filters (for mobile)
+  // Apply current filters (for mobile)
   const handleApplyFilters = () => {
-    const [sortBy, sortOrder] = sort.split(":");
-
-    const newFilters: BookQuery = {
-      searchTerm,
-      minPrice: priceRange[0],
-      maxPrice: priceRange[1],
-      category:
-        categoryFilter === "All Categories" ? undefined : categoryFilter,
-      sortBy,
-      sortOrder: sortOrder as "asc" | "desc",
-      page: 1,
-    };
-
-    setFilters(newFilters);
     setDrawerOpen(false);
   };
 
-  // Filter panel component
-  const filterPanel = (
-    <Box sx={{ p: 3, width: isMobile ? "auto" : 250 }}>
-      {isMobile && (
-        <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2 }}>
-          <Typography variant="h6">Filters</Typography>
-          <IconButton onClick={() => setDrawerOpen(false)}>
-            <CloseIcon />
-          </IconButton>
-        </Box>
-      )}
+  // Generate list of active filters for display
+  const getActiveFilters = () => {
+    const activeFilters = [];
 
-      <Typography variant="subtitle1" sx={{ mb: 2 }}>
-        Categories
-      </Typography>
-      <FormControl fullWidth margin="normal" size="small">
-        <InputLabel id="category-select-label">Category</InputLabel>
-        <Select
-          labelId="category-select-label"
-          id="category-select"
-          value={categoryFilter}
-          label="Category"
-          onChange={handleCategoryChange as any}
-        >
-          {categories.map((category) => (
-            <MenuItem key={category} value={category}>
-              {category}
-            </MenuItem>
-          ))}
-        </Select>
-      </FormControl>
+    if (filters.search) {
+      activeFilters.push({
+        label: `Search: ${filters.search}`,
+        value: "search",
+      });
+    }
 
-      <Typography variant="subtitle1" sx={{ mt: 3, mb: 2 }}>
-        Price Range
-      </Typography>
-      <Box sx={{ px: 1 }}>
-        <Slider
-          value={priceRange}
-          onChange={handlePriceChange}
-          onChangeCommitted={handlePriceChangeCommitted}
-          valueLabelDisplay="auto"
-          min={0}
-          max={100}
-          disableSwap
-        />
-        <Box sx={{ display: "flex", justifyContent: "space-between", mt: 1 }}>
-          <Typography variant="body2">${priceRange[0]}</Typography>
-          <Typography variant="body2">${priceRange[1]}</Typography>
-        </Box>
-      </Box>
+    if (filters.author) {
+      activeFilters.push({
+        label: `Author: ${filters.author}`,
+        value: "author",
+      });
+    }
 
-      <Divider sx={{ my: 3 }} />
+    if (filters.genres && filters.genres.length > 0) {
+      filters.genres.forEach((genre) => {
+        activeFilters.push({
+          label: `Genre: ${genre}`,
+          value: `genre:${genre}`,
+        });
+      });
+    }
 
-      <Typography variant="subtitle1" sx={{ mb: 2 }}>
-        Sort By
-      </Typography>
-      <FormControl fullWidth margin="normal" size="small">
-        <InputLabel id="sort-select-label">Sort By</InputLabel>
-        <Select
-          labelId="sort-select-label"
-          id="sort-select"
-          value={sort}
-          label="Sort By"
-          onChange={handleSortChange as any}
-        >
-          {sortOptions.map((option) => (
-            <MenuItem key={option.value} value={option.value}>
-              {option.label}
-            </MenuItem>
-          ))}
-        </Select>
-      </FormControl>
+    if (filters.minPrice !== undefined) {
+      activeFilters.push({
+        label: `Min Price: $${filters.minPrice}`,
+        value: "minPrice",
+      });
+    }
 
-      {isMobile && (
-        <Box sx={{ mt: 4, display: "flex", gap: 2 }}>
-          <Button variant="outlined" onClick={handleResetFilters} fullWidth>
-            Reset
-          </Button>
-          <Button variant="contained" onClick={handleApplyFilters} fullWidth>
-            Apply
-          </Button>
-        </Box>
-      )}
+    if (filters.maxPrice !== undefined) {
+      activeFilters.push({
+        label: `Max Price: $${filters.maxPrice}`,
+        value: "maxPrice",
+      });
+    }
 
-      {!isMobile && (
-        <Button
-          variant="outlined"
-          onClick={handleResetFilters}
-          sx={{ mt: 3 }}
-          fullWidth
-        >
-          Reset Filters
-        </Button>
-      )}
-    </Box>
-  );
+    if (filters.inStock) {
+      activeFilters.push({
+        label: "In Stock Only",
+        value: "inStock",
+      });
+    }
+
+    if (filters.onSale) {
+      activeFilters.push({
+        label: "On Sale",
+        value: "onSale",
+      });
+    }
+
+    return activeFilters;
+  };
+
+  // Handle removing a filter
+  const handleRemoveFilter = (filterValue: string) => {
+    let newFilters: Partial<BookQuery> = { ...filters };
+
+    if (filterValue === "search") {
+      setSearchTerm("");
+      newFilters.search = undefined;
+    } else if (filterValue === "author") {
+      newFilters.author = undefined;
+    } else if (filterValue === "minPrice") {
+      newFilters.minPrice = undefined;
+    } else if (filterValue === "maxPrice") {
+      newFilters.maxPrice = undefined;
+    } else if (filterValue === "inStock") {
+      newFilters.inStock = undefined;
+    } else if (filterValue === "onSale") {
+      newFilters.onSale = undefined;
+    } else if (filterValue.startsWith("genre:")) {
+      const genreToRemove = filterValue.split(":")[1];
+      if (filters.genres) {
+        newFilters.genres = filters.genres.filter(
+          (genre) => genre !== genreToRemove
+        );
+        if (newFilters.genres.length === 0) {
+          newFilters.genres = undefined;
+        }
+      }
+    }
+
+    // Apply the updated filters
+    setFilters(newFilters);
+    // Ensure URL is updated with genre changes
+    updateUrlParams(newFilters);
+  };
+
+  // Clear all filters
+  const handleClearAllFilters = () => {
+    handleResetFilters();
+  };
+
+  // Toggle mobile filter drawer
+  const toggleDrawer = (open: boolean) => {
+    setDrawerOpen(open);
+  };
+
+  // Active filters list
+  const activeFilters = getActiveFilters();
 
   return (
     <MainLayout>
-      <Container maxWidth="xl" sx={{ mt: 4, mb: 8 }}>
-        {/* Header and search */}
+      <Container maxWidth={false} sx={{ py: 4 }}>
         <Box sx={{ mb: 4 }}>
-          <Typography variant="h4" component="h1" gutterBottom>
+          <Typography
+            variant="h4"
+            component="h1"
+            fontWeight="bold"
+            gutterBottom
+          >
             Book Catalog
           </Typography>
-          <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
-            <TextField
-              label="Search books"
-              variant="outlined"
-              size="small"
-              fullWidth
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              onKeyDown={handleSearchKeyDown}
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton edge="end" onClick={handleSearch}>
-                      <SearchIcon />
-                    </IconButton>
-                  </InputAdornment>
-                ),
-              }}
-            />
-            {isMobile && (
-              <Button
-                startIcon={<FilterListIcon />}
-                variant="outlined"
-                onClick={() => setDrawerOpen(true)}
-              >
-                Filters
-              </Button>
-            )}
-          </Box>
+          <Typography variant="body1" color="text.secondary">
+            Browse our collection of books. Use filters to find exactly what
+            you're looking for.
+          </Typography>
         </Box>
 
+        {/* Mobile Filter Toggle Button */}
+        {isMobile && (
+          <Button
+            variant="outlined"
+            startIcon={<FilterListIcon />}
+            onClick={() => toggleDrawer(true)}
+            sx={{ mb: 2, width: "100%" }}
+          >
+            Filter Books
+          </Button>
+        )}
+
+        {/* Mobile Filter Drawer */}
+        <Drawer
+          anchor="left"
+          open={drawerOpen}
+          onClose={() => toggleDrawer(false)}
+          sx={{
+            "& .MuiDrawer-paper": {
+              width: "80%",
+              maxWidth: "350px",
+              boxSizing: "border-box",
+            },
+          }}
+        >
+          <FilterPanel
+            filters={filters}
+            onFilterChange={handleFilterChange}
+            onApplyFilters={handleApplyFilters}
+            onResetFilters={handleResetFilters}
+            isMobile={true}
+          />
+        </Drawer>
+
         <Grid container spacing={3}>
-          {/* Filters - Desktop */}
+          {/* Filter Panel - Desktop */}
           {!isMobile && (
-            <Grid size={{ xs: 12, md: 3, lg: 2 }}>
-              <Paper variant="outlined" sx={{ position: "sticky", top: 24 }}>
-                {filterPanel}
+            <Grid
+              size={{ xs: 12, md: 3 }}
+              sx={{ display: { xs: "none", md: "block" } }}
+            >
+              <Paper
+                elevation={2}
+                sx={{
+                  height: "100%",
+                  position: "sticky",
+                  top: "80px",
+                  overflow: "hidden",
+                }}
+              >
+                <FilterPanel
+                  filters={filters}
+                  onFilterChange={handleFilterChange}
+                  onApplyFilters={() => {}}
+                  onResetFilters={handleResetFilters}
+                  isMobile={false}
+                />
               </Paper>
             </Grid>
           )}
+          {/* Main Content Area */}
+          <Grid size={{ xs: 12, md: 9 }}>
+            {/* Top bar with search, sort and filter count */}
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: { xs: "column", sm: "row" },
+                justifyContent: "space-between",
+                alignItems: { xs: "stretch", sm: "center" },
+                mb: 3,
+                gap: 2,
+              }}
+            >
+              <TextField
+                placeholder="Search books..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                onKeyDown={handleSearchKeyDown}
+                sx={{ flexGrow: 1, maxWidth: { sm: "300px" } }}
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton onClick={handleSearch} edge="end">
+                        <SearchIcon />
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
+                size="small"
+              />
 
-          {/* Books grid */}
-          <Grid
-            size={{ xs: 12, md: !isMobile ? 9 : 12, lg: !isMobile ? 10 : 12 }}
-          >
-            {isLoading ? (
+              <Box sx={{ display: "flex", gap: 2 }}>
+                <FormControl
+                  size="small"
+                  sx={{ minWidth: 120, maxWidth: "100%" }}
+                >
+                  <InputLabel id="sort-label">Sort By</InputLabel>
+                  <Select
+                    labelId="sort-label"
+                    value={sort}
+                    label="Sort By"
+                    onChange={handleSortChange as any}
+                  >
+                    {sortOptions.map((option) => (
+                      <MenuItem key={option.value} value={option.value}>
+                        {option.label}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Box>
+            </Box>
+
+            {/* Active Filter Chips */}
+            {activeFilters.length > 0 && (
+              <Box sx={{ mb: 3 }}>
+                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                  {activeFilters.map((filter) => (
+                    <Chip
+                      key={filter.value}
+                      label={filter.label}
+                      onDelete={() => handleRemoveFilter(filter.value)}
+                      size="medium"
+                      sx={{ mb: 1 }}
+                    />
+                  ))}
+                  <Chip
+                    label="Clear All"
+                    onClick={handleClearAllFilters}
+                    deleteIcon={<ClearIcon />}
+                    onDelete={handleClearAllFilters}
+                    variant="outlined"
+                    color="error"
+                    size="medium"
+                    sx={{ mb: 1 }}
+                  />
+                </Stack>
+              </Box>
+            )}
+
+            {/* Results count and loading/error states */}
+            <Box sx={{ mb: 3 }}>
+              {isLoading ? (
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    minHeight: "100px",
+                  }}
+                >
+                  <CircularProgress />
+                </Box>
+              ) : error ? (
+                <Alert severity="error" sx={{ mb: 2 }}>
+                  <AlertTitle>Error</AlertTitle>
+                  There was an error loading the books. Please try again.
+                </Alert>
+              ) : books.length === 0 ? (
+                <Alert severity="info">
+                  <AlertTitle>No books found</AlertTitle>
+                  Try adjusting your filters to see more results.
+                </Alert>
+              ) : (
+                <Typography variant="body2" color="text.secondary">
+                  Showing {books.length} of {totalBooks} books
+                </Typography>
+              )}
+            </Box>
+
+            {/* Book Grid */}
+            <Grid container spacing={3}>
+              {books.map((book) => (
+                <Grid
+                  key={book.id}
+                  size={{ xs: 12, sm: 6, md: 4, lg: 3, xl: 2.4 }}
+                  sx={{ display: "flex" }}
+                >
+                  <BookCard book={book} />
+                </Grid>
+              ))}
+            </Grid>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
               <Box
                 sx={{
                   display: "flex",
                   justifyContent: "center",
-                  alignItems: "center",
-                  minHeight: "40vh",
+                  mt: 4,
+                  mb: 2,
                 }}
               >
-                <CircularProgress size={60} />
+                <Pagination
+                  count={totalPages}
+                  page={filters.page || 1}
+                  onChange={handlePageChange}
+                  color="primary"
+                  showFirstButton
+                  showLastButton
+                />
               </Box>
-            ) : error ? (
-              <Alert severity="error" sx={{ mt: 2 }}>
-                <AlertTitle>Error</AlertTitle>
-                {error} - Please try refreshing the page or adjusting your
-                filters.
-              </Alert>
-            ) : books.length === 0 ? (
-              <Box sx={{ textAlign: "center", mt: 4 }}>
-                <Typography variant="h6" gutterBottom>
-                  No Books Found
-                </Typography>
-                <Typography color="text.secondary" paragraph>
-                  We couldn't find any books matching your current filters. Try
-                  adjusting your search or filters.
-                </Typography>
-                <Button variant="outlined" onClick={handleResetFilters}>
-                  Reset All Filters
-                </Button>
-              </Box>
-            ) : (
-              <>
-                <Box
-                  sx={{
-                    mb: 2,
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                  }}
-                >
-                  <Typography variant="body2" color="textSecondary">
-                    Showing {books.length} of {totalBooks} books
-                  </Typography>
-                </Box>
-
-                <Grid container spacing={3}>
-                  {books.map((book) => (
-                    <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }} key={book.id}>
-                      <BookCard book={book} />
-                    </Grid>
-                  ))}
-                </Grid>
-
-                {totalPages > 1 && (
-                  <Box
-                    sx={{ mt: 4, display: "flex", justifyContent: "center" }}
-                  >
-                    <Pagination
-                      count={totalPages}
-                      page={currentPage}
-                      onChange={handlePageChange}
-                      color="primary"
-                      size={isMobile ? "small" : "medium"}
-                      showFirstButton
-                      showLastButton
-                    />
-                  </Box>
-                )}
-              </>
             )}
           </Grid>
         </Grid>
       </Container>
-
-      {/* Mobile filter drawer */}
-      <Drawer
-        anchor="right"
-        open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-      >
-        {filterPanel}
-      </Drawer>
     </MainLayout>
   );
 };

@@ -8,12 +8,11 @@ import {
   Put,
   Query,
   UseGuards,
-  ParseUUIDPipe,
-  ParseIntPipe,
 } from '@nestjs/common';
 import { BooksService } from './books.service';
 import { CreateBookDto } from './dto/create-book.dto';
 import { UpdateBookDto } from './dto/update-book.dto';
+import { QueryBookDto } from './dto/query-book.dto';
 import {
   ApiTags,
   ApiOperation,
@@ -36,7 +35,8 @@ export class BooksController {
   @ApiOperation({ summary: 'Create a new book' })
   @ApiResponse({
     status: 201,
-    description: 'The book has been successfully created.',
+    description:
+      'The book has been successfully created. All prices are in USD.',
     type: Book,
   })
   @ApiResponse({ status: 400, description: 'Bad Request.' })
@@ -45,8 +45,23 @@ export class BooksController {
     return this.booksService.create(createBookDto);
   }
 
+  @Get('genres')
+  @ApiOperation({ summary: 'Get all unique book genres' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of all genres.',
+    type: [String],
+  })
+  async getAllGenres() {
+    return this.booksService.getAllGenres();
+  }
+
   @Get('featured')
-  @ApiOperation({ summary: 'Get featured books' })
+  @ApiOperation({
+    summary: 'Get featured books (books with highest discount rates)',
+    description:
+      'Returns books with the highest discount rates that are currently in stock. All prices are in USD.',
+  })
   @ApiQuery({
     name: 'limit',
     required: false,
@@ -56,7 +71,7 @@ export class BooksController {
   })
   @ApiResponse({
     status: 200,
-    description: 'List of featured books.',
+    description: 'List of featured books sorted by discount rate.',
     type: [Book],
   })
   async getFeatured(@Query('limit') limit?: string) {
@@ -75,61 +90,64 @@ export class BooksController {
 
   @Get()
   @ApiOperation({
-    summary: 'Get all books with optional filtering and pagination',
+    summary: 'Get all books with advanced filtering, searching and sorting',
+    description:
+      'All prices in request and response are in USD (converted from VND using rate 1 USD = 25000 VND)',
   })
-  @ApiQuery({ name: 'genre', required: false, description: 'Filter by genre' })
-  @ApiQuery({
-    name: 'author',
-    required: false,
-    description: 'Filter by author (case-insensitive search)',
+  @ApiResponse({
+    status: 200,
+    description: 'List of books with prices in USD.',
+    type: [Book],
   })
-  @ApiQuery({
-    name: 'page',
-    required: false,
-    description: 'Page number for pagination',
-    type: Number,
-    example: 1,
-  })
-  @ApiQuery({
-    name: 'limit',
-    required: false,
-    description: 'Number of items per page',
-    type: Number,
-    example: 10,
-  })
-  @ApiResponse({ status: 200, description: 'List of books.', type: [Book] })
-  findAll(
-    @Query()
-    query: {
-      genre?: string;
-      author?: string;
-      page?: string;
-      limit?: string;
-    },
-  ) {
-    return this.booksService.findAll(query);
+  findAll(@Query() queryDto: QueryBookDto) {
+    console.log(
+      'BooksController: Received query params:',
+      JSON.stringify(queryDto),
+    );
+
+    if (queryDto.genres) {
+      console.log(
+        'BooksController: Received genres filter:',
+        Array.isArray(queryDto.genres) ? queryDto.genres : [queryDto.genres],
+      );
+    }
+
+    return this.booksService.findAll(queryDto);
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Get a book by ID' })
+  @ApiOperation({
+    summary: 'Get a book by ID',
+    description: 'Returns book details with prices in USD',
+  })
   @ApiParam({ name: 'id', description: 'The ID of the book', type: String })
-  @ApiResponse({ status: 200, description: 'The found book.', type: Book })
+  @ApiResponse({
+    status: 200,
+    description: 'The found book with prices in USD.',
+    type: Book,
+  })
   @ApiResponse({ status: 404, description: 'Book not found.' })
   findOne(@Param('id') id: string) {
-    // Mongoose IDs are strings, ParseUUIDPipe is for UUIDs.
     return this.booksService.findOne(id);
   }
 
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @Put(':id')
-  @ApiOperation({ summary: 'Update a book by ID' })
+  @ApiOperation({
+    summary: 'Update a book by ID',
+    description: 'Prices should be provided in USD',
+  })
   @ApiParam({
     name: 'id',
     description: 'The ID of the book to update',
     type: String,
   })
-  @ApiResponse({ status: 200, description: 'The updated book.', type: Book })
+  @ApiResponse({
+    status: 200,
+    description: 'The updated book with prices in USD.',
+    type: Book,
+  })
   @ApiResponse({ status: 400, description: 'Bad Request.' })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   @ApiResponse({ status: 404, description: 'Book not found.' })

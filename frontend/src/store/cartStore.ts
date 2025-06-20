@@ -1,145 +1,322 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { Book } from "../api/books";
 import {
   Cart,
   CartItem,
   getCart as apiGetCart,
   addToCart as apiAddToCart,
   removeFromCart as apiRemoveFromCart,
-  updateCartItemQuantity as apiUpdateCartItemQuantity,
+  updateCartItem as apiUpdateCartItem,
+  updateCartItemSelection as apiUpdateCartItemSelection,
   clearCart as apiClearCart,
+  validateCart as apiValidateCart,
+  CartValidationResult,
+  CartValidationIssue,
 } from "../api/cart";
 
 // Use ApiCartItem directly or ensure BookCartItem is compatible
 export type BookCartItem = CartItem;
 
 interface CartState {
-  cart: Cart | null; // Store the whole cart object from API
+  cart: Cart | null;
   isLoading: boolean;
   error: string | null;
+  validationResult: CartValidationResult | null;
+  isValidating: boolean;
 
   // Actions
   loadCart: () => Promise<void>;
-  addItem: (book: Book, quantity?: number) => Promise<void>;
+  addItem: (bookId: string, quantity: number, isTicked?: boolean) => Promise<void>;
+  updateItemQuantity: (bookId: string, quantity: number) => Promise<void>;
+  updateItemSelection: (bookId: string, isTicked: boolean) => Promise<void>;
+  updateItem: (bookId: string, updates: { quantity?: number; isTicked?: boolean }) => Promise<void>;
   removeItem: (bookId: string) => Promise<void>;
-  updateItemQuantity: (bookId: string, quantity: number) => Promise<void>; // Renamed for clarity
   clearCart: () => Promise<void>;
+  validateCart: () => Promise<void>;
+  setError: (error: string | null) => void;
+  // Getters
   isInCart: (bookId: string) => boolean;
-  clearError: () => void;
-  // Derived values (getters)
-  getTotalItems: () => number;
+  getCartItems: () => CartItem[];
+  getSelectedItems: () => CartItem[];
   getTotalPrice: () => number;
-  getCartItems: () => BookCartItem[];
+  getSelectedTotalPrice: () => number;
+  getTotalQuantity: () => number;
+  getTotalItems: () => number;
+  getValidationIssues: () => CartValidationIssue[];
+  hasValidationIssues: () => boolean;
 }
 
 export const useCartStore = create<CartState>()(
   persist(
-    (set, get) => ({
+    (set: any, get: any) => ({
       cart: null,
       isLoading: false,
       error: null,
+      validationResult: null,
+      isValidating: false,
 
       loadCart: async () => {
         try {
           set({ isLoading: true, error: null });
-          const cartData = await apiGetCart();
-          set({ cart: cartData, isLoading: false });
-        } catch (err) {
-          const errorMsg =
-            err instanceof Error ? err.message : "Failed to load cart";
-          set({ error: errorMsg, isLoading: false, cart: null }); // Clear cart on load error
-          console.error("loadCart error:", errorMsg);
+          const cart = await apiGetCart();
+          set({ cart, isLoading: false });
+        } catch (error: any) {
+          set({
+            error:
+              error instanceof Error ? error.message : "Failed to load cart",
+            isLoading: false,
+          });
         }
       },
 
-      addItem: async (book: Book, quantity: number = 1) => {
+      addItem: async (bookId: string, quantity: number, isTicked: boolean = true) => {
+        try {
+          console.log('[Cart Store] Adding item with bookId:', bookId);
+          set({ isLoading: true, error: null });
+
+          // Note: bookId here should be the MongoDB _id, but we need to ensure
+          // the calling code passes the correct _id instead of the frontend id
+          const updatedCart = await apiAddToCart({ bookId, quantity, isTicked });
+          set({ cart: updatedCart, isLoading: false });
+        } catch (error: any) {
+          console.error('[Cart Store] Failed to add item:', error);
+          set({
+            error:
+              error instanceof Error
+                ? error.message
+                : "Failed to add item to cart",
+            isLoading: false,
+          });
+        }
+      },
+
+      updateItemQuantity: async (bookId: string, quantity: number) => {
+        try {
+          console.log("[Cart Store] updateItemQuantity called with bookId:", bookId, "quantity:", quantity);
+          set({ isLoading: true, error: null });
+
+          // Note: For cart operations, we need to use the MongoDB _id
+          // But the bookId passed here might be the frontend id, so we need to find the correct _id
+          const cart = get().cart;
+          let actualBookId = bookId;
+
+          if (cart) {
+            const item = cart.items.find((item: any) => item.book.id === bookId);
+            if (item && item.book._id) {
+              actualBookId = item.book._id;
+              console.log("[Cart Store] Found MongoDB _id for update:", actualBookId);
+            }
+          }
+
+          const updatedCart = await apiUpdateCartItem({
+            bookId: actualBookId,
+            quantity,
+          });
+          console.log("[Cart Store] API returned updated cart:", updatedCart);
+
+          set({ cart: updatedCart, isLoading: false });
+          console.log("[Cart Store] State updated successfully");
+        } catch (error: any) {
+          console.error("[Cart Store] Error updating item quantity:", error);
+          set({
+            error:
+              error instanceof Error
+                ? error.message
+                : "Failed to update item quantity",
+            isLoading: false,
+          });
+        }
+      },
+
+      updateItemSelection: async (bookId: string, isTicked: boolean) => {
         try {
           set({ isLoading: true, error: null });
-          const cartData = await apiAddToCart({ bookId: book.id, quantity });
-          set({ cart: cartData, isLoading: false });
-        } catch (err) {
-          const errorMsg =
-            err instanceof Error ? err.message : "Failed to add item to cart";
-          set({ error: errorMsg, isLoading: false });
-          console.error("addItem error:", errorMsg);
+
+          // Find the MongoDB _id for the book
+          const cart = get().cart;
+          let actualBookId = bookId;
+
+          if (cart) {
+            const item = cart.items.find((item: any) => item.book.id === bookId);
+            if (item && item.book._id) {
+              actualBookId = item.book._id;
+              console.log("[Cart Store] Found MongoDB _id for selection update:", actualBookId);
+            }
+          }
+
+          const updatedCart = await apiUpdateCartItemSelection(actualBookId, isTicked);
+          set({ cart: updatedCart, isLoading: false });
+        } catch (error: any) {
+          set({
+            error:
+              error instanceof Error
+                ? error.message
+                : "Failed to update item selection",
+            isLoading: false,
+          });
+        }
+      },
+
+      updateItem: async (bookId: string, updates: { quantity?: number; isTicked?: boolean }) => {
+        try {
+          set({ isLoading: true, error: null });
+
+          // Find the MongoDB _id for the book
+          const cart = get().cart;
+          let actualBookId = bookId;
+
+          if (cart) {
+            const item = cart.items.find((item: any) => item.book.id === bookId);
+            if (item && item.book._id) {
+              actualBookId = item.book._id;
+              console.log("[Cart Store] Found MongoDB _id for item update:", actualBookId);
+            }
+          }
+
+          const updatedCart = await apiUpdateCartItem({
+            bookId: actualBookId,
+            ...updates,
+          });
+          set({ cart: updatedCart, isLoading: false });
+        } catch (error: any) {
+          set({
+            error:
+              error instanceof Error
+                ? error.message
+                : "Failed to update item",
+            isLoading: false,
+          });
         }
       },
 
       removeItem: async (bookId: string) => {
         try {
           set({ isLoading: true, error: null });
-          const cartData = await apiRemoveFromCart(bookId);
-          set({ cart: cartData, isLoading: false });
-        } catch (err) {
-          const errorMsg =
-            err instanceof Error
-              ? err.message
-              : "Failed to remove item from cart";
-          set({ error: errorMsg, isLoading: false });
-          console.error("removeItem error:", errorMsg);
-        }
-      },
 
-      updateItemQuantity: async (bookId: string, quantity: number) => {
-        if (quantity < 1) {
-          // Option 1: Remove item if quantity is less than 1
-          // return get().removeItem(bookId);
-          // Option 2: Set a minimum quantity (e.g., 1) - current API placeholder might not support this well
-          // For now, let the API handle invalid quantities if any, or ensure UI prevents < 1.
-          // We can also add a specific error message here.
-          console.warn(
-            "updateItemQuantity: quantity cannot be less than 1. API will handle this."
-          );
-        }
-        try {
-          set({ isLoading: true, error: null });
-          const cartData = await apiUpdateCartItemQuantity({
-            bookId,
-            quantity,
+          // Find the MongoDB _id for the book
+          const cart = get().cart;
+          let actualBookId = bookId;
+
+          if (cart) {
+            const item = cart.items.find((item: any) => item.book.id === bookId);
+            if (item && item.book._id) {
+              actualBookId = item.book._id;
+              console.log("[Cart Store] Found MongoDB _id for item removal:", actualBookId);
+            }
+          }
+
+          const updatedCart = await apiRemoveFromCart(actualBookId);
+          set({ cart: updatedCart, isLoading: false });
+        } catch (error: any) {
+          set({
+            error:
+              error instanceof Error ? error.message : "Failed to remove item",
+            isLoading: false,
           });
-          set({ cart: cartData, isLoading: false });
-        } catch (err) {
-          const errorMsg =
-            err instanceof Error
-              ? err.message
-              : "Failed to update item quantity";
-          set({ error: errorMsg, isLoading: false });
-          console.error("updateItemQuantity error:", errorMsg);
         }
       },
 
       clearCart: async () => {
         try {
           set({ isLoading: true, error: null });
-          const cartData = await apiClearCart();
-          set({ cart: cartData, isLoading: false });
-        } catch (err) {
-          const errorMsg =
-            err instanceof Error ? err.message : "Failed to clear cart";
-          set({ error: errorMsg, isLoading: false });
-          console.error("clearCart error:", errorMsg);
+          const emptyCart = await apiClearCart();
+          set({ cart: emptyCart, isLoading: false, validationResult: null });
+        } catch (error: any) {
+          set({
+            error:
+              error instanceof Error ? error.message : "Failed to clear cart",
+            isLoading: false,
+          });
         }
       },
 
+      validateCart: async () => {
+        try {
+          set({ isValidating: true, error: null });
+          const validationResult = await apiValidateCart();
+          set({ validationResult, isValidating: false });
+        } catch (error: any) {
+          set({
+            error:
+              error instanceof Error ? error.message : "Failed to validate cart",
+            isValidating: false,
+          });
+        }
+      },
+
+      setError: (error: string | null) => set({ error }),
+
+      // Getters
       isInCart: (bookId: string) => {
-        return (
-          get().cart?.items.some((item) => item.book.id === bookId) || false
+        const cart = get().cart;
+        if (!cart) return false;
+        return cart.items.some((item: CartItem) => item.book.id === bookId);
+      },
+
+      getCartItems: () => {
+        const cart = get().cart;
+        const items = cart ? cart.items : [];
+        console.log('[Cart Store] getCartItems called, returning:', items);
+        console.log('[Cart Store] Cart object:', cart);
+        return items;
+      },
+
+      getSelectedItems: () => {
+        const cart = get().cart;
+        if (!cart) return [];
+        return cart.items.filter((item: CartItem) => item.isTicked);
+      },
+
+      getTotalPrice: () => {
+        const cart = get().cart;
+        if (!cart) return 0;
+        return cart.items.reduce(
+          (sum: number, item: CartItem) =>
+            sum + item.priceAtAdd * item.quantity,
+          0
         );
       },
 
-      clearError: () => set({ error: null }),
+      getSelectedTotalPrice: () => {
+        const cart = get().cart;
+        if (!cart) return 0;
+        return cart.items
+          .filter((item: CartItem) => item.isTicked)
+          .reduce(
+            (sum: number, item: CartItem) =>
+              sum + item.priceAtAdd * item.quantity,
+            0
+          );
+      },
 
-      // Derived values (getters)
-      getTotalItems: () => get().cart?.totalItems || 0,
-      getTotalPrice: () => get().cart?.totalPrice || 0,
-      getCartItems: () => get().cart?.items || [],
+      getTotalQuantity: () => {
+        const cart = get().cart;
+        if (!cart) return 0;
+        return cart.items.reduce(
+          (sum: number, item: CartItem) => sum + item.quantity,
+          0
+        );
+      },
+
+      getTotalItems: () => {
+        const cart = get().cart;
+        if (!cart) return 0;
+        return cart.items.length;
+      },
+
+      getValidationIssues: () => {
+        const validationResult = get().validationResult;
+        return validationResult ? validationResult.issues : [];
+      },
+
+      hasValidationIssues: () => {
+        const validationResult = get().validationResult;
+        return validationResult ? !validationResult.isValid : false;
+      },
     }),
     {
-      name: "cart-storage", // Persist the whole cart object from API
-      // We might not need to persist isLoading and error states,
-      // but cart itself is good to persist for faster UI on reload before fetch.
-      partialize: (state) => ({ cart: state.cart }),
-    }
+      name: "cart-storage",
+      partialize: (state: CartState) => ({ cart: state.cart }),
+    } as any
   )
 );

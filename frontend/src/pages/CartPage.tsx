@@ -1,8 +1,7 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Container,
   Typography,
-  Grid,
   Box,
   Paper,
   Button,
@@ -13,6 +12,7 @@ import {
   Card,
   Alert,
   CircularProgress,
+  Checkbox,
 } from "@mui/material";
 import { Link as RouterLink } from "react-router-dom";
 import AddIcon from "@mui/icons-material/Add";
@@ -24,40 +24,126 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import MainLayout from "../components/layouts/MainLayout";
 import { useCartStore } from "../store/cartStore";
 import { CartItem } from "../api/cart";
+import { vndToUsd } from "../utils/currency";
+import CartValidationAlert from "../components/cart/CartValidationAlert";
+import { calculateOrderTotal } from "../utils/price-calculator";
 
-const CartItemRow: React.FC<{ item: CartItem }> = ({ item }) => {
-  const { updateItemQuantity, removeItem, isLoading } = useCartStore();
+const CartItemRow: React.FC<{
+  item: CartItem;
+}> = ({ item }) => {
+  const { updateItemQuantity, updateItemSelection, removeItem, isLoading } = useCartStore();
+
+  // Lấy id đúng cho book (sau khi transform, chỉ có id)
+  const bookId = item.book.id;
+
+  // State tạm cho số lượng nhập vào (kiểu string để cho phép rỗng)
+  const [inputQty, setInputQty] = useState<string>(item.quantity.toString());
+
+  // Khi số lượng trong store thay đổi (do update từ backend), đồng bộ lại input
+  React.useEffect(() => {
+    console.log("CartItemRow: item.quantity changed to:", item.quantity, "for book:", bookId);
+    console.log("CartItemRow: updating inputQty to:", item.quantity.toString());
+    setInputQty(item.quantity.toString());
+  }, [item.quantity, bookId]);
+
+  // Debug: Log when component re-renders
+  console.log("CartItemRow render - bookId:", bookId, "quantity:", item.quantity, "inputQty:", inputQty);
 
   const handleUpdateQuantity = (qty: number) => {
-    updateItemQuantity(item.book.id, qty);
+    if (qty > 0 && qty <= (item.book.stock || 0)) {
+      updateItemQuantity(bookId, qty);
+    }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    // Cho phép rỗng để user dùng backspace
+    if (/^\d*$/.test(val)) {
+      setInputQty(val);
+    }
+  };
+
+  const handleInputBlur = () => {
+    const qty = parseInt(inputQty, 10);
+    // Nếu input rỗng hoặc không hợp lệ, reset về số lượng cũ
+    if (!inputQty || isNaN(qty) || qty < 1 || qty > (item.book.stock || 0)) {
+      setInputQty(item.quantity.toString());
+      return;
+    }
+    if (qty !== item.quantity) {
+      handleUpdateQuantity(qty);
+    }
+  };
+
+  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      const val = (e.target as HTMLInputElement).value;
+      const qty = parseInt(val, 10);
+      if (!val || isNaN(qty) || qty < 1 || qty > (item.book.stock || 0)) {
+        setInputQty(item.quantity.toString());
+        return;
+      }
+      if (qty !== item.quantity) {
+        handleUpdateQuantity(qty);
+      }
+    }
   };
 
   const handleIncrement = () => {
-    updateItemQuantity(item.book.id, item.quantity + 1);
+    console.log("CartItemRow: handleIncrement clicked");
+    console.log("CartItemRow: bookId:", bookId);
+    console.log("CartItemRow: current quantity:", item.quantity);
+    console.log("CartItemRow: stock:", item.book.stock);
+    console.log("CartItemRow: can increment?", item.quantity < (item.book.stock || 0));
+
+    if (item.quantity < (item.book.stock || 0)) {
+      console.log("CartItemRow: calling updateItemQuantity with:", bookId, item.quantity + 1);
+      updateItemQuantity(bookId, item.quantity + 1);
+    } else {
+      console.log("CartItemRow: cannot increment - at max stock");
+    }
   };
 
   const handleDecrement = () => {
     if (item.quantity > 1) {
-      updateItemQuantity(item.book.id, item.quantity - 1);
+      updateItemQuantity(bookId, item.quantity - 1);
     }
   };
 
   const handleRemove = () => {
-    removeItem(item.book.id);
+    console.log("CartItemRow remove bookId:", bookId);
+    removeItem(bookId);
+  };
+
+  const handleSelectionChange = (checked: boolean) => {
+    console.log("CartItemRow selection change bookId:", bookId, "checked:", checked);
+    updateItemSelection(bookId, checked);
   };
 
   // Placeholder image if no cover is available
-  const coverImage =
-    item.book.coverImage || "https://via.placeholder.com/100x150?text=No+Image";
+  const coverImage = item.book.coverImage || "/placeholder-book.jpg";
+
+  // Chuyển đổi giá sang USD
+  const priceUsd = vndToUsd(item.priceAtAdd);
+  const itemTotal = vndToUsd(item.priceAtAdd * item.quantity);
 
   return (
     <Paper sx={{ p: 2, mb: 2, display: "flex", width: "100%" }}>
+      <Checkbox
+        checked={item.isTicked}
+        onChange={(e) => handleSelectionChange(e.target.checked)}
+        sx={{ mr: 1, alignSelf: "flex-start" }}
+        disabled={isLoading}
+      />
       <Box sx={{ width: 80, height: 120, mr: 2, flexShrink: 0 }}>
         <CardMedia
           component="img"
           image={coverImage}
           alt={item.book.title}
           sx={{ width: "100%", height: "100%", objectFit: "contain" }}
+          onError={(e) => {
+            e.currentTarget.src = "/placeholder-book.jpg";
+          }}
         />
       </Box>
 
@@ -87,21 +173,19 @@ const CartItemRow: React.FC<{ item: CartItem }> = ({ item }) => {
           </Typography>
         </Box>
 
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            mt: 1,
-          }}
-        >
-          <Typography
-            variant="subtitle1"
-            color="primary.main"
-            fontWeight="bold"
-          >
-            ${(item.book.price * item.quantity).toFixed(2)}
-          </Typography>
+        <Box sx={{ display: "flex", justifyContent: "space-between", mt: 1 }}>
+          <Box>
+            <Typography variant="body2" color="text.secondary">
+              Price: ${priceUsd.toFixed(2)}
+            </Typography>
+            <Typography
+              variant="subtitle1"
+              color="primary.main"
+              fontWeight="bold"
+            >
+              Total: ${itemTotal.toFixed(2)}
+            </Typography>
+          </Box>
 
           <Box sx={{ display: "flex", alignItems: "center" }}>
             <IconButton
@@ -124,16 +208,15 @@ const CartItemRow: React.FC<{ item: CartItem }> = ({ item }) => {
 
             <TextField
               size="small"
-              value={item.quantity}
-              onChange={(e) => {
-                const qty = parseInt(e.target.value, 10);
-                if (!isNaN(qty) && qty > 0) {
-                  handleUpdateQuantity(qty);
-                }
-              }}
+              value={inputQty}
+              onChange={handleInputChange}
+              onBlur={handleInputBlur}
+              onKeyDown={handleInputKeyDown}
+              type="text"
               InputProps={{
                 inputProps: {
                   min: 1,
+                  max: item.book.stock || 1,
                   style: { textAlign: "center", width: "30px" },
                 },
               }}
@@ -145,7 +228,7 @@ const CartItemRow: React.FC<{ item: CartItem }> = ({ item }) => {
             <IconButton
               size="small"
               onClick={handleIncrement}
-              disabled={isLoading}
+              disabled={item.quantity >= (item.book.stock || 0) || isLoading}
             >
               <AddIcon />
             </IconButton>
@@ -158,28 +241,73 @@ const CartItemRow: React.FC<{ item: CartItem }> = ({ item }) => {
 
 const CartPage: React.FC = () => {
   const {
-    getCartItems,
-    getTotalItems,
-    getTotalPrice,
-    clearCart,
+    cart,
     isLoading,
     error,
     loadCart,
+    clearCart,
+    updateItemSelection,
+    getSelectedItems,
+    validateCart,
+    getValidationIssues,
+    hasValidationIssues,
+    isValidating
   } = useCartStore();
 
-  const items = getCartItems();
-  const totalItems = getTotalItems();
-  const totalPrice = getTotalPrice();
+  // Handle Buy Now functionality by updating backend state
+  React.useEffect(() => {
+    const handleBuyNow = async () => {
+      const buyNowId = localStorage.getItem("cart-buynow-id");
+      if (buyNowId && cart?.items) {
+        try {
+          // Update all items to be unselected first, then select only the buy now item
+          for (const item of cart.items) {
+            const id = item.book.id;
+            const shouldBeSelected = id === buyNowId;
+            if (item.isTicked !== shouldBeSelected) {
+              await updateItemSelection(id, shouldBeSelected);
+            }
+          }
+          localStorage.removeItem("cart-buynow-id");
+        } catch (error) {
+          console.error("Error handling buy now selection:", error);
+        }
+      }
+    };
 
-  // Fixed shipping cost
-  const shippingCost = totalPrice > 0 && totalPrice <= 50 ? 5.99 : 0;
-  // Tax calculation (e.g., 8%)
-  const taxRate = 0.08;
-  const taxAmount = totalPrice * taxRate;
-  // Total with shipping and tax
-  const orderTotal = totalPrice + shippingCost + taxAmount;
+    if (cart?.items && !isLoading) {
+      handleBuyNow();
+    }
+  }, [cart?.items, isLoading, updateItemSelection]);
 
-  if (isLoading && items.length === 0) {
+  // Validate cart when it loads or changes
+  React.useEffect(() => {
+    if (cart?.items && cart.items.length > 0 && !isLoading) {
+      validateCart();
+    }
+  }, [cart?.items, validateCart, isLoading]);
+
+  // Get selected items from backend state
+  const selectedCartItems = getSelectedItems();
+  const validationIssues = getValidationIssues();
+
+  // Use universal price calculator - SINGLE SOURCE OF TRUTH
+  const cartItems = selectedCartItems.map(item => ({
+    quantity: item.quantity,
+    priceAtAdd: vndToUsd(item.priceAtAdd), // Convert to USD if needed
+  }));
+
+  const calculation = calculateOrderTotal(cartItems);
+
+  // Extract values for display
+  const subtotal = calculation.subtotal;
+  const shippingCost = calculation.shippingCost;
+  const taxAmount = calculation.taxAmount;
+  const discount = calculation.discount;
+  const orderTotal = calculation.total;
+  const totalItems = calculation.totalItems;
+
+  if (isLoading && !cart?.items.length) {
     return (
       <MainLayout>
         <Container
@@ -215,7 +343,7 @@ const CartPage: React.FC = () => {
     );
   }
 
-  if (items.length === 0) {
+  if (!cart?.items.length) {
     return (
       <MainLayout>
         <Container maxWidth="lg" sx={{ my: 4 }}>
@@ -254,9 +382,14 @@ const CartPage: React.FC = () => {
           Shopping Cart ({totalItems} {totalItems === 1 ? "item" : "items"})
         </Typography>
 
-        <Grid container spacing={3}>
+        <Box display="flex" flexDirection={{ xs: "column", md: "row" }}>
           {/* Cart Items */}
-          <Grid size={{ xs: 12, md: 8 }}>
+          <Box
+            flex={2}
+            minWidth={0}
+            mr={{ md: 3, xs: 0 }}
+            mb={{ xs: 3, md: 0 }}
+          >
             <Button
               component={RouterLink}
               to="/books"
@@ -265,6 +398,21 @@ const CartPage: React.FC = () => {
             >
               Continue Shopping
             </Button>
+
+            {/* Cart Validation Alert */}
+            <CartValidationAlert
+              issues={validationIssues}
+              onRefresh={() => validateCart()}
+              onFixIssues={() => {
+                // Auto-fix issues by updating quantities to available stock
+                validationIssues.forEach((issue) => {
+                  if (issue.type === "stock" && issue.currentStock !== undefined) {
+                    // This would need to be implemented to auto-fix quantities
+                    console.log("Auto-fixing stock issue for book:", issue.bookId);
+                  }
+                });
+              }}
+            />
 
             <Box sx={{ position: "relative" }}>
               {isLoading && (
@@ -285,9 +433,18 @@ const CartPage: React.FC = () => {
                   <CircularProgress />
                 </Box>
               )}
-              {items.map((item) => (
-                <CartItemRow key={item._id || item.book.id} item={item} />
-              ))}
+              {cart?.items.map((item, index) => {
+                const id = item.book.id;
+                // Use a more unique key that includes the item's position and book ID
+                const uniqueKey = `${id}-${index}-${item.quantity}-${item.isTicked}`;
+                console.log("CartPage: Rendering item with key:", uniqueKey, "bookId:", id, "isTicked:", item.isTicked);
+                return (
+                  <CartItemRow
+                    key={uniqueKey}
+                    item={item}
+                  />
+                );
+              })}
             </Box>
 
             <Box
@@ -298,15 +455,15 @@ const CartPage: React.FC = () => {
                 color="error"
                 startIcon={<DeleteIcon />}
                 onClick={clearCart}
-                disabled={isLoading || items.length === 0}
+                disabled={isLoading || !cart?.items.length}
               >
                 Clear Cart
               </Button>
             </Box>
-          </Grid>
+          </Box>
 
           {/* Order Summary */}
-          <Grid size={{ xs: 12, md: 4 }}>
+          <Box flex={1} minWidth={0}>
             <Card sx={{ p: 3, position: "sticky", top: 80 }}>
               <Typography variant="h6" gutterBottom>
                 Order Summary
@@ -318,10 +475,25 @@ const CartPage: React.FC = () => {
                 sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}
               >
                 <Typography variant="body1">Subtotal</Typography>
-                <Typography variant="body1">
-                  ${totalPrice.toFixed(2)}
-                </Typography>
+                <Typography variant="body1">${subtotal.toFixed(2)}</Typography>
               </Box>
+
+              {discount > 0 && (
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    mb: 1,
+                  }}
+                >
+                  <Typography variant="body1" color="success.main">
+                    Discount
+                  </Typography>
+                  <Typography variant="body1" color="success.main">
+                    -${discount.toFixed(2)}
+                  </Typography>
+                </Box>
+              )}
 
               <Box
                 sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}
@@ -354,13 +526,21 @@ const CartPage: React.FC = () => {
                 fullWidth
                 component={RouterLink}
                 to="/checkout"
-                disabled={isLoading || items.length === 0}
+                disabled={
+                  isLoading ||
+                  isValidating ||
+                  !cart?.items.length ||
+                  selectedCartItems.length === 0 ||
+                  (hasValidationIssues() && validationIssues.some(issue =>
+                    issue.type === 'stock' || issue.type === 'unavailable'
+                  ))
+                }
               >
                 Proceed to Checkout
               </Button>
             </Card>
-          </Grid>
-        </Grid>
+          </Box>
+        </Box>
       </Container>
     </MainLayout>
   );

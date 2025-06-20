@@ -57,7 +57,10 @@ export class UsersService {
 
   async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
     // Check if the user exists
-    await this.findById(id);
+    const user = await this.userModel.findById(id);
+    if (!user) {
+      throw new NotFoundException(`User with ID ${id} not found`);
+    }
 
     // If email is being updated, check it's not in use
     if (updateUserDto.email) {
@@ -75,16 +78,16 @@ export class UsersService {
       }
     }
 
-    const updatedUser = await this.userModel
-      .findByIdAndUpdate(id, updateUserDto, { new: true })
-      .select('-password')
-      .exec();
+    // Cập nhật các trường cho phép
+    if (updateUserDto.username) user.username = updateUserDto.username;
+    if (updateUserDto.email) user.email = updateUserDto.email;
+    if (updateUserDto.role) user.role = updateUserDto.role;
+    // Nếu có password, cập nhật trực tiếp (plain text)
+    if (updateUserDto.password) user.password = updateUserDto.password;
 
-    if (!updatedUser) {
-      throw new NotFoundException(`User with ID ${id} not found`);
-    }
-
-    return updatedUser;
+    await user.save();
+    user.password = undefined;
+    return user;
   }
 
   async delete(id: string): Promise<void> {
@@ -92,38 +95,6 @@ export class UsersService {
     if (result.deletedCount === 0) {
       throw new NotFoundException(`User with ID ${id} not found`);
     }
-  }
-
-  async addToWishlist(userId: string, bookId: string): Promise<User> {
-    const user = await this.userModel.findById(userId);
-    if (!user) {
-      throw new NotFoundException(`User with ID ${userId} not found`);
-    }
-
-    const bookObjectId = new Types.ObjectId(bookId);
-    if (
-      !user.wishlist.some((id) => id.toString() === bookObjectId.toString())
-    ) {
-      user.wishlist.push(bookObjectId as any);
-      await user.save();
-    }
-
-    return this.findById(userId);
-  }
-
-  async removeFromWishlist(userId: string, bookId: string): Promise<User> {
-    const user = await this.userModel.findById(userId);
-    if (!user) {
-      throw new NotFoundException(`User with ID ${userId} not found`);
-    }
-
-    const bookObjectId = new Types.ObjectId(bookId);
-    user.wishlist = user.wishlist.filter(
-      (id) => id.toString() !== bookObjectId.toString(),
-    );
-    await user.save();
-
-    return this.findById(userId);
   }
 
   async addLoyaltyPoints(userId: string, points: number): Promise<User> {

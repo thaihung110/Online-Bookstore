@@ -29,7 +29,7 @@ import BookIcon from "@mui/icons-material/Book";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import LogoutIcon from "@mui/icons-material/Logout";
 import SearchIcon from "@mui/icons-material/Search";
-import FavoriteIcon from "@mui/icons-material/Favorite";
+
 import LoginIcon from "@mui/icons-material/Login";
 import PersonAddIcon from "@mui/icons-material/PersonAdd";
 
@@ -42,8 +42,7 @@ const NavigationBar: React.FC = () => {
   const navigate = useNavigate();
 
   const { isAuthenticated, user, logout } = useAuthStore();
-  const cartStore = useCartStore();
-  const totalItems = cartStore.getTotalItems();
+  const totalItems = useCartStore((state) => state.getTotalItems());
 
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -121,17 +120,7 @@ const NavigationBar: React.FC = () => {
         <ListItemText>Profile</ListItemText>
       </MenuItem>
 
-      <MenuItem
-        onClick={() => {
-          navigate("/wishlist");
-          handleMenuClose();
-        }}
-      >
-        <ListItemIcon>
-          <FavoriteIcon fontSize="small" />
-        </ListItemIcon>
-        <ListItemText>Wishlist</ListItemText>
-      </MenuItem>
+
 
       <Divider />
 
@@ -233,16 +222,7 @@ const NavigationBar: React.FC = () => {
                 <ListItemText primary="Profile" />
               </ListItemButton>
 
-              <ListItemButton
-                component={RouterLink}
-                to="/wishlist"
-                onClick={handleMobileMenuToggle}
-              >
-                <ListItemIcon>
-                  <FavoriteIcon />
-                </ListItemIcon>
-                <ListItemText primary="Wishlist" />
-              </ListItemButton>
+
 
               <ListItemButton
                 onClick={() => {

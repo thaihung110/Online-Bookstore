@@ -6,6 +6,7 @@ import { OrdersService } from './orders.service';
 import { UsersModule } from '../users';
 import { BooksModule } from '../books';
 import { CartsModule } from '../carts'; // CartsService is used to clear cart
+import { UploadModule } from '../upload/upload.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { CartsModule } from '../carts'; // CartsService is used to clear cart
     UsersModule, // For UsersService dependency
     BooksModule, // For BooksService dependency
     CartsModule, // For CartsService dependency (clearing cart)
+    UploadModule, // For UploadService dependency (image processing)
   ],
   controllers: [OrdersController],
   providers: [OrdersService],
