@@ -18,8 +18,15 @@ export class CreateBookDto extends CreateProductDto {
   constructor() {
     super();
   }
+    @ApiProperty({
+        description: 'The type of product',
+        example: 'BOOK',
+        default: ProductType.BOOK,
+    })
+    @IsOptional()
+    productType: ProductType = ProductType.BOOK;
 
-
+      
     @ApiProperty({
         description: 'The title of the book',
         example: 'The Great Gatsby',

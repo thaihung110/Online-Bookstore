@@ -8,10 +8,12 @@ import { Product, ProductSchema } from '../products/schemas/product.schema';
     MongooseModule.forFeature([
       {
         name: Product.name, 
-        schema: ProductSchema,
-        discriminators: [
-          { name: DVD.name, schema: DVDSchema }
-        ]
+        schema: ProductSchema
+      },
+      {
+        name: DVD.name, 
+        schema: DVDSchema,
+        collection: 'AN_test'
       }
     ])  ],
   providers: [],

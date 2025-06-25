@@ -10,9 +10,9 @@ import {
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export enum ProductType {
-  BOOK = 'book',
-  DVD = 'dvd',
-  CD = 'cd',
+  BOOK = 'BOOK',
+  DVD = 'DVD',
+  CD = 'CD',
 }
 
 export class CreateProductDto {

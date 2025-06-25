@@ -6,6 +6,11 @@ export type DVDDocument = DVD & ProductDocument;
 
 @Schema()  // No need to specify collection - it will use the parent schema's collection
 export class DVD extends Product {
+    constructor() {
+        super();
+        this.productType = 'DVD'; // Set the productType to 'dvd'
+    }
+
     @Prop({type: String,  required: true })
     disctype: string;
 

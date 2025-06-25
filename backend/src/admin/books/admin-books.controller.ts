@@ -119,7 +119,7 @@ export class AdminBooksController {
     return this.adminBooksService.findById(id);
   }
 
-  @Post('userId')
+  @Post(':userId')
   @ApiOperation({ summary: 'Create a new book' })
   @ApiParam({ name: 'userId', description: 'User ID of the admin creating the book' })
   @ApiResponse({

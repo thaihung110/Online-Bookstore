@@ -5,12 +5,11 @@ export type ProductDocument = Product & Document;
 
 @Schema({ 
   timestamps: true, 
-  discriminatorKey: 'productType',
   collection: 'AN_test'
 })
 export class Product {
-  // @Prop({ required: true, enum: ['product', 'book', 'cd', 'dvd'], default: 'product' })
-  // productType: string;
+  @Prop({ required: true, enum: ['product', 'BOOK', 'CD', 'DVD'], default: 'product' })
+  productType: string;
   
   @Prop({ required: true, trim: true, index: true })
   title: string;

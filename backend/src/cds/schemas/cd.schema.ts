@@ -6,6 +6,11 @@ export type CDDocument = CD & ProductDocument;
 
 @Schema()  // No need to specify collection - it will use the parent schema's collection
 export class CD extends Product {
+  constructor(){
+    super();
+    this.productType = 'CD'; // Set the productType to 'cd'
+  }
+
   @Prop({ required: true, trim: true, index: true })
   artist: string;
 

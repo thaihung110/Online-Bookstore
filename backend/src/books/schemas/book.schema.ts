@@ -1,11 +1,17 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Schema as MongooseSchema } from 'mongoose';
+import { Collection, Document, Schema as MongooseSchema } from 'mongoose';
 import { Product, ProductDocument } from '../../products/schemas/product.schema';
 
 export type BookDocument = Book & Document;
 
-@Schema()
+@Schema({collection: 'AN_test'}) // Specify the collection name and enable timestamps
 export class Book extends Product {
+  constructor() {
+    super();
+    this.productType = 'BOOK'; // Set the productType to 'book'
+  }
+
+
   @Prop({ required: true, trim: true, index: true })
   title: string;
 

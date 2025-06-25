@@ -38,10 +38,12 @@ import { BooksModule } from '../../books/books.module'; // Assuming you have a B
     MongooseModule.forFeature([
       { 
         name: Product.name, 
-        schema: ProductSchema,
-        discriminators: [
-          { name: Book.name, schema: BookSchema }
-        ]
+        schema: ProductSchema
+      },
+      {
+        name: Book.name, 
+        schema: BookSchema,
+        collection: 'AN_test' // Specify the collection name if needed
       }
     ]),
     UploadModule,

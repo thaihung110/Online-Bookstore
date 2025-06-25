@@ -15,10 +15,12 @@ import { ProductActivityLogService } from '../activity-log/activity-log.service'
     MongooseModule.forFeature([
       { 
         name: Product.name, 
-        schema: ProductSchema,
-        discriminators: [
-          { name: DVD.name, schema: DVDSchema }
-        ]
+        schema: ProductSchema
+      },
+      {
+        name: DVD.name, 
+        schema: DVDSchema,
+        collection: 'AN_test',
       }
     ]),
     UploadModule,

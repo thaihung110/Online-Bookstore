@@ -36,9 +36,11 @@ import { Product, ProductSchema } from '../products/schemas/product.schema';
       {
         name: Product.name, 
         schema: ProductSchema,
-        discriminators: [
-          { name: Book.name, schema: BookSchema }
-        ]
+      },
+      {
+        name: Book.name, 
+        schema: BookSchema,
+        collection: 'AN_test' // Specify the collection name if needed
       }
     ]),
     UploadModule

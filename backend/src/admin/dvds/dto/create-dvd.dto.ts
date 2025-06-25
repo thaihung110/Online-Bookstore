@@ -3,6 +3,7 @@ import {
   IsNotEmpty,
   IsDateString,
   IsNumber,
+  IsOptional
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { CreateProductDto, ProductType } from '../../products/dto/create-product.dto';
@@ -12,6 +13,15 @@ export class CreateDVDDto extends CreateProductDto {
     super();
   }
 
+//   set productType to 'DVD'
+// optional va gia tri default là DVD
+    @ApiProperty({
+        description: 'The type of product',
+        example: 'DVD',
+        default: ProductType.DVD,
+    })
+    @IsOptional()
+    productType: ProductType = ProductType.DVD;
 
     @ApiProperty({
         description: 'The type of DVD (e.g., Blu-ray, DVD)',

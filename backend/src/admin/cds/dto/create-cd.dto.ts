@@ -2,6 +2,7 @@ import {
   IsString,
   IsNotEmpty,
   IsDateString,
+  IsOptional
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { CreateProductDto, ProductType } from '../../products/dto/create-product.dto';
@@ -12,6 +13,14 @@ export class CreateCDDto extends CreateProductDto {
     // Use the enum to ensure type safety
     // this.productType = ProductType.CD;
   }
+
+    @ApiProperty({
+        description: 'The type of product',
+        example: 'CD',
+        default: ProductType.DVD,
+    })
+    @IsOptional()
+  productType: ProductType = ProductType.CD;
 
   @ApiProperty({
     description: 'The artist of the CD',
