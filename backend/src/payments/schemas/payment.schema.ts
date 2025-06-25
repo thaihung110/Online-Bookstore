@@ -5,9 +5,8 @@ import { ApiProperty } from '@nestjs/swagger';
 export type PaymentDocument = Payment & Document;
 
 export enum PaymentMethod {
-  COD = 'COD',
+  CASH = 'CASH',
   VNPAY = 'VNPAY',
-  BANK_TRANSFER = 'BANK_TRANSFER',
 }
 
 export enum PaymentStatus {

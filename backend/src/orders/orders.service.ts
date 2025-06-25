@@ -30,7 +30,10 @@ export class OrdersService {
     createOrderDto: CreateOrderDto,
   ): Promise<OrderDocument> {
     console.log('[Orders Service] Creating order for user:', userId);
-    console.log('[Orders Service] Order DTO:', JSON.stringify(createOrderDto, null, 2));
+    console.log(
+      '[Orders Service] Order DTO:',
+      JSON.stringify(createOrderDto, null, 2),
+    );
     console.log('[Orders Service] Order items:', createOrderDto.items);
 
     await this.usersService.findById(userId); // Ensure user exists
@@ -44,8 +47,14 @@ export class OrdersService {
 
       let book: BookDocument;
       try {
-        book = (await this.booksService.findOne(itemDto.bookId)) as BookDocument;
-        console.log('[Orders Service] Successfully found book:', book._id, book.title);
+        book = (await this.booksService.findOne(
+          itemDto.bookId,
+        )) as BookDocument;
+        console.log(
+          '[Orders Service] Successfully found book:',
+          book._id,
+          book.title,
+        );
       } catch (error) {
         console.error('[Orders Service] Error in booksService.findOne:', error);
         throw error;
@@ -62,7 +71,10 @@ export class OrdersService {
       }
       // Use the original MongoDB _id, not the processed book.id
       const bookObjectId = new Types.ObjectId(itemDto.bookId);
-      console.log('[Orders Service] Using book ObjectId:', bookObjectId.toString());
+      console.log(
+        '[Orders Service] Using book ObjectId:',
+        bookObjectId.toString(),
+      );
 
       processedOrderItems.push({
         book: bookObjectId as any, // Use original MongoDB _id
@@ -80,10 +92,17 @@ export class OrdersService {
 
     // Prepare cart items for universal calculation
     const cartItems: Array<{ quantity: number; priceAtAdd: number }> = [];
+    let totalItemDiscount = 0;
+
     for (const item of processedOrderItems) {
+      // Calculate individual item discount
+      const itemDiscount =
+        (item.price * item.quantity * (item.discount || 0)) / 100;
+      totalItemDiscount += itemDiscount;
+
       cartItems.push({
         quantity: item.quantity,
-        priceAtAdd: item.price * (1 - (item.discount || 0) / 100), // Apply discount
+        priceAtAdd: item.price, // Use original price for subtotal calculation
       });
     }
 
@@ -96,32 +115,52 @@ export class OrdersService {
     console.log('- Total items:', calculation.totalItems);
     console.log('- Shipping cost:', calculation.shippingCost);
     console.log('- Tax amount:', calculation.taxAmount);
-    console.log('- Order discount:', calculation.discount);
     console.log('- Final total:', calculation.total);
 
+    // Determine initial status based on payment method
+    let initialStatus: string;
+    let isPaid = false;
+    let paidAt: Date | null = null;
+    let receivedAt: Date | null = null;
+    let pendingExpiry: Date | null = null;
+
+    if (createOrderDto.paymentInfo.method === 'cash') {
+      // CASH orders are immediately RECEIVED
+      initialStatus = 'RECEIVED';
+      isPaid = true;
+      paidAt = new Date();
+      receivedAt = new Date();
+    } else {
+      // VNPAY orders start as PENDING
+      initialStatus = 'PENDING';
+      isPaid = false;
+      paidAt = null;
+      // Set expiry time to 24 hours from now
+      pendingExpiry = new Date();
+      pendingExpiry.setHours(pendingExpiry.getHours() + 24);
+    }
+
     const newOrder = new this.orderModel({
-      user: new Types.ObjectId(userId) as any, // Cast to any for schema compatibility
+      user: new Types.ObjectId(userId) as any,
       items: processedOrderItems,
       shippingAddress: createOrderDto.shippingAddress,
       paymentInfo: {
-        ...createOrderDto.paymentInfo,
-        isPaid: createOrderDto.paymentInfo.method === 'mock', // Mock payments are considered paid instantly
-        paidAt:
-          createOrderDto.paymentInfo.method === 'mock' ? new Date() : null,
-        transactionId:
-          createOrderDto.paymentInfo.method === 'mock'
-            ? `mock_${new Types.ObjectId().toHexString()}`
-            : createOrderDto.paymentInfo.transactionId,
+        method: createOrderDto.paymentInfo.method,
+        isPaid,
+        paidAt,
+        paymentId: createOrderDto.paymentInfo.paymentId,
       },
       subtotal: calculation.subtotal,
       tax: calculation.taxAmount,
       shippingCost: calculation.shippingCost,
-      discount: calculation.discount,
+      discount: 0,
       total: calculation.total,
-      status: 'pending', // Initial status
+      status: initialStatus,
+      receivedAt,
+      pendingExpiry,
       isGift: createOrderDto.isGift,
       giftMessage: createOrderDto.giftMessage,
-      // loyaltyPointsEarned: 0, // Calculate later
+      loyaltyPointsEarned: 0,
     });
 
     try {
@@ -132,7 +171,10 @@ export class OrdersService {
         const item = processedOrderItems[i];
         const originalBookId = createOrderDto.items[i].bookId; // Use original book ID
 
-        console.log('[Orders Service] Updating stock for book ID:', originalBookId);
+        console.log(
+          '[Orders Service] Updating stock for book ID:',
+          originalBookId,
+        );
 
         const bookToUpdate = (await this.booksService.findOne(
           originalBookId,
@@ -142,7 +184,12 @@ export class OrdersService {
           stock: newStock,
         });
 
-        console.log('[Orders Service] Updated stock for book:', originalBookId, 'new stock:', newStock);
+        console.log(
+          '[Orders Service] Updated stock for book:',
+          originalBookId,
+          'new stock:',
+          newStock,
+        );
       }
 
       // Clear the user's cart after successful order creation
@@ -203,29 +250,182 @@ export class OrdersService {
       await Promise.all(
         order.items.map(async (item: any) => {
           if (item.book && item.book.coverImage) {
-            item.book.coverImage = await this.uploadService.processImageUrl(item.book.coverImage);
+            item.book.coverImage = await this.uploadService.processImageUrl(
+              item.book.coverImage,
+            );
           }
-        })
+        }),
       );
     }
 
     return order;
   }
 
-  // Admin/System method to update order status (simplified)
-  async updateOrderStatus(
+  // Method to handle payment completion from payment gateway
+  async handlePaymentCompleted(
     orderId: string,
-    status: string,
+    paymentId: string,
   ): Promise<OrderDocument> {
     const order = await this.orderModel.findById(new Types.ObjectId(orderId));
     if (!order) {
       throw new NotFoundException(`Order with ID "${orderId}" not found.`);
     }
-    // Add validation for allowed status transitions later
-    order.status = status;
-    if (status === 'delivered') order.deliveredAt = new Date();
-    if (status === 'cancelled') order.cancelledAt = new Date();
-    if (status === 'refunded') order.refundedAt = new Date();
-    return order.save();
+
+    if (order.status !== 'PENDING') {
+      throw new BadRequestException(
+        `Order ${orderId} is not in PENDING status`,
+      );
+    }
+
+    // Update order to RECEIVED when payment is completed
+    order.status = 'RECEIVED';
+    order.paymentInfo.isPaid = true;
+    order.paymentInfo.paidAt = new Date();
+    order.paymentInfo.paymentId = paymentId;
+    order.receivedAt = new Date();
+    order.pendingExpiry = null; // Clear expiry
+
+    return await order.save();
+  }
+
+  // Method to auto-cancel expired PENDING orders
+  async cancelExpiredOrders(): Promise<number> {
+    const now = new Date();
+    const expiredOrders = await this.orderModel.find({
+      status: 'PENDING',
+      pendingExpiry: { $lte: now },
+    });
+
+    let canceledCount = 0;
+    for (const order of expiredOrders) {
+      await this.cancelOrder(
+        order._id.toString(),
+        'Auto-canceled after 24 hours',
+      );
+      canceledCount++;
+    }
+
+    return canceledCount;
+  }
+
+  // Method to cancel an order
+  async cancelOrder(orderId: string, reason: string): Promise<OrderDocument> {
+    const order = await this.orderModel.findById(new Types.ObjectId(orderId));
+    if (!order) {
+      throw new NotFoundException(`Order with ID "${orderId}" not found.`);
+    }
+
+    if (!['PENDING', 'RECEIVED'].includes(order.status)) {
+      throw new BadRequestException(
+        `Cannot cancel order with status ${order.status}`,
+      );
+    }
+
+    // Restore stock for canceled orders
+    for (const item of order.items) {
+      const book = await this.booksService.findOne(item.book.toString());
+      if (book) {
+        await this.booksService.update(item.book.toString(), {
+          stock: book.stock + item.quantity,
+        });
+      }
+    }
+
+    order.status = 'CANCELED';
+    order.cancelledAt = new Date();
+    order.notes.push(`Canceled: ${reason}`);
+
+    return await order.save();
+  }
+
+  // Admin method to update order status with proper flow validation
+  async updateOrderStatus(
+    orderId: string,
+    newStatus: string,
+    adminId?: string,
+  ): Promise<OrderDocument> {
+    const order = await this.orderModel.findById(new Types.ObjectId(orderId));
+    if (!order) {
+      throw new NotFoundException(`Order with ID "${orderId}" not found.`);
+    }
+
+    // Validate status transitions
+    const allowedTransitions = {
+      RECEIVED: ['CONFIRMED', 'CANCELED'],
+      CONFIRMED: ['PREPARED', 'CANCELED'],
+      PREPARED: ['SHIPPED', 'CANCELED'],
+      SHIPPED: ['DELIVERED'],
+      DELIVERED: ['REFUNDED'],
+    };
+
+    const currentStatus = order.status;
+    if (!allowedTransitions[currentStatus]?.includes(newStatus)) {
+      throw new BadRequestException(
+        `Invalid status transition from ${currentStatus} to ${newStatus}`,
+      );
+    }
+
+    // Update status and timestamps
+    order.status = newStatus;
+    const now = new Date();
+
+    switch (newStatus) {
+      case 'CONFIRMED':
+        order.confirmedAt = now;
+        break;
+      case 'PREPARED':
+        order.preparedAt = now;
+        break;
+      case 'SHIPPED':
+        order.shippedAt = now;
+        break;
+      case 'DELIVERED':
+        order.deliveredAt = now;
+        break;
+      case 'REFUNDED':
+        order.refundedAt = now;
+        break;
+      case 'CANCELED':
+        order.cancelledAt = now;
+        // Restore stock for canceled orders
+        for (const item of order.items) {
+          const book = await this.booksService.findOne(item.book.toString());
+          if (book) {
+            await this.booksService.update(item.book.toString(), {
+              stock: book.stock + item.quantity,
+            });
+          }
+        }
+        break;
+    }
+
+    if (adminId) {
+      order.notes.push(
+        `Status updated to ${newStatus} by admin ${adminId} at ${now.toISOString()}`,
+      );
+    }
+
+    return await order.save();
+  }
+
+  // Method to get orders by status
+  async findOrdersByStatus(status: string): Promise<OrderDocument[]> {
+    return this.orderModel.find({ status }).sort({ createdAt: -1 }).exec();
+  }
+
+  // Method to get pending orders that will expire soon
+  async findOrdersExpiringSoon(
+    hoursAhead: number = 2,
+  ): Promise<OrderDocument[]> {
+    const futureTime = new Date();
+    futureTime.setHours(futureTime.getHours() + hoursAhead);
+
+    return this.orderModel
+      .find({
+        status: 'PENDING',
+        pendingExpiry: { $lte: futureTime, $gt: new Date() },
+      })
+      .sort({ pendingExpiry: 1 })
+      .exec();
   }
 }

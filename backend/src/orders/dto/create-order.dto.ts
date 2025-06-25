@@ -75,25 +75,27 @@ class ShippingAddressDto {
 }
 
 enum PaymentMethod {
-  COD = 'cod',
-  VNPAY = 'vnpay',
-  PAYPAL = 'paypal',
-  GIFT_CARD = 'gift_card', // For future use
-  LOYALTY_POINTS = 'loyalty_points', // For future use
-  MOCK = 'mock', // For initial implementation
+  CASH = 'cash', // Renamed from COD to match new schema
+  VNPAY = 'vnpay', // Covers MOMO, ZALOPAY in your use case
 }
 
 class PaymentInfoDto {
   @ApiProperty({
     description: 'Payment method used',
     enum: PaymentMethod,
-    example: PaymentMethod.COD,
+    example: PaymentMethod.CASH,
   })
   @IsEnum(PaymentMethod)
   @IsNotEmpty()
   method: PaymentMethod;
 
-  // transactionId will be set by the backend for mock payments or by the payment gateway
+  @ApiPropertyOptional({
+    description: 'Payment ID reference to payments collection',
+  })
+  @IsOptional()
+  @IsString()
+  paymentId?: string;
+
   @ApiPropertyOptional({ description: 'Transaction ID from payment gateway' })
   @IsOptional()
   @IsString()

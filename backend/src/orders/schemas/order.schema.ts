@@ -51,31 +51,29 @@ export class ShippingAddress {
   phoneNumber: string;
 }
 
-// Payment information schema
+// Payment information schema - chỉ vnpay và cash
 export class PaymentInfo {
   @Prop({
     required: true,
-    enum: ['cod', 'vnpay', 'paypal', 'gift_card', 'loyalty_points'],
+    enum: ['vnpay', 'cash'], // Chỉ 2 phương thức thanh toán
   })
   method: string;
 
   @Prop()
-  transactionId: string;
+  paymentId: string; // Reference to payments collection
 
   @Prop({ default: false })
   isPaid: boolean;
 
   @Prop()
   paidAt: Date;
-
-  @Prop()
-  giftCardCode: string;
-
-  @Prop({ min: 0, default: 0 })
-  loyaltyPointsUsed: number;
 }
 
-@Schema({ timestamps: true })
+@Schema({
+  timestamps: true,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true },
+})
 export class Order {
   @Prop({
     type: MongooseSchema.Types.ObjectId,
@@ -84,6 +82,12 @@ export class Order {
     index: true,
   })
   user: MongooseSchema.Types.ObjectId;
+
+  @Prop({
+    unique: true,
+    sparse: true,
+  })
+  orderNumber: string; // Human-readable order number
 
   @Prop({ type: [OrderItem], required: true })
   items: OrderItem[];
@@ -112,20 +116,34 @@ export class Order {
   @Prop({
     required: true,
     enum: [
-      'pending',
-      'processing',
-      'shipped',
-      'delivered',
-      'cancelled',
-      'refunded',
+      'RECEIVED', // Đã thanh toán hoặc COD
+      'PENDING', // Chưa thanh toán (vnpay/momo/zalopay)
+      'CANCELED', // Tự động hủy sau 24h hoặc admin hủy
+      'CONFIRMED', // Admin xác nhận
+      'PREPARED', // Admin chuẩn bị hàng
+      'SHIPPED', // Admin giao hàng
+      'DELIVERED', // Đã giao thành công
+      'REFUNDED', // Đã hoàn tiền
     ],
-    default: 'pending',
+    default: 'PENDING',
     index: true,
   })
   status: string;
 
   @Prop()
   trackingNumber: string;
+
+  @Prop()
+  receivedAt: Date;
+
+  @Prop()
+  confirmedAt: Date;
+
+  @Prop()
+  preparedAt: Date;
+
+  @Prop()
+  shippedAt: Date;
 
   @Prop()
   deliveredAt: Date;
@@ -135,6 +153,9 @@ export class Order {
 
   @Prop()
   refundedAt: Date;
+
+  @Prop()
+  pendingExpiry: Date; // Thời gian hết hạn cho PENDING orders (24h)
 
   @Prop({ default: false })
   isGift: boolean;
@@ -147,6 +168,53 @@ export class Order {
 
   @Prop({ type: [String], default: [] })
   notes: string[];
+
+  // Virtual fields
+  id: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export const OrderSchema = SchemaFactory.createForClass(Order);
+
+// Virtual field for ID
+OrderSchema.virtual('id').get(function () {
+  return this._id.toHexString();
+});
+
+// Ensure virtual fields are included in JSON
+OrderSchema.set('toJSON', {
+  virtuals: true,
+  transform: (doc, ret) => {
+    ret.id = ret._id;
+    delete ret._id;
+    delete ret.__v;
+    return ret;
+  },
+});
+
+// Pre-save middleware to generate order number
+OrderSchema.pre('save', async function (next) {
+  if (this.isNew && !this.orderNumber) {
+    const year = new Date().getFullYear();
+    const month = String(new Date().getMonth() + 1).padStart(2, '0');
+    const count = await (this.constructor as any).countDocuments({
+      createdAt: {
+        $gte: new Date(year, new Date().getMonth(), 1),
+        $lt: new Date(year, new Date().getMonth() + 1, 1),
+      },
+    });
+    this.orderNumber = `ORD-${year}${month}-${String(count + 1).padStart(4, '0')}`;
+  }
+  next();
+});
+
+// Indexes for performance
+OrderSchema.index({ user: 1, createdAt: -1 });
+OrderSchema.index({ status: 1, createdAt: -1 });
+OrderSchema.index({ orderNumber: 1 }, { unique: true, sparse: true });
+OrderSchema.index({ 'paymentInfo.paymentId': 1 });
+OrderSchema.index({ trackingNumber: 1 });
+OrderSchema.index({ isGift: 1 });
+OrderSchema.index({ 'paymentInfo.method': 1 });
+OrderSchema.index({ total: -1 });

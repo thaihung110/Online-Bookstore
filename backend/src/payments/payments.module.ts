@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigModule } from '@nestjs/config';
 
@@ -17,6 +17,7 @@ import { Transaction, TransactionSchema } from './schemas/transaction.schema';
 import { PaymentLog, PaymentLogSchema } from './schemas/payment-log.schema';
 
 import { PaymentLoggingService } from './services/payment-logging.service';
+import { OrdersModule } from '../orders/orders.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { PaymentLoggingService } from './services/payment-logging.service';
       { name: Transaction.name, schema: TransactionSchema },
       { name: PaymentLog.name, schema: PaymentLogSchema },
     ]),
+    forwardRef(() => OrdersModule),
   ],
   controllers: [PaymentsController],
   providers: [

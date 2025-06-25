@@ -4,6 +4,7 @@ import {
   BadRequestException,
   Inject,
   Logger,
+  forwardRef,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -28,6 +29,7 @@ import {
   PaymentLogType,
 } from './services/payment-logging.service';
 import { VNPayIpnResponse } from './interfaces/vnpay-response.interface';
+import { OrdersService } from '../orders/orders.service';
 
 @Injectable()
 export class PaymentsService {
@@ -40,6 +42,8 @@ export class PaymentsService {
     @Inject('VnpayService')
     private readonly vnpayService: IVnpayService,
     private readonly paymentLoggingService: PaymentLoggingService,
+    @Inject(forwardRef(() => OrdersService))
+    private readonly ordersService: OrdersService,
   ) {}
 
   private validatePaymentAmount(actualAmount: number, expectedAmount: number) {
@@ -154,17 +158,34 @@ export class PaymentsService {
   // Tạo thanh toán mới
   async createPayment(createPaymentDto: CreatePaymentDto, ipAddr: string) {
     try {
+      // Lấy thông tin order để tính amount chính xác
+      const order = await this.ordersService.findOrderById(
+        createPaymentDto.orderId,
+      );
+
+      // Chuyển đổi từ USD sang VND (×25000) và làm tròn
+      const amountInVND = Math.round(order.total * 25000);
+
+      this.logger.log(`=== Payment Amount Conversion ===`);
+      this.logger.log(`Order ID: ${createPaymentDto.orderId}`);
+      this.logger.log(`Order Total (USD): ${order.total}`);
+      this.logger.log(`Payment Amount (VND): ${amountInVND}`);
+      this.logger.log(`Conversion Rate: 25000 VND/USD`);
+      this.logger.log(`================================`);
+
       this.paymentLoggingService.logPaymentFlow(
         PaymentLogType.PAYMENT_CREATED,
         {
           orderId: createPaymentDto.orderId,
-          amount: createPaymentDto.amount,
+          amount: amountInVND,
+          originalOrderTotal: order.total,
           requestData: createPaymentDto,
         },
       );
 
       const payment = new this.paymentModel({
         ...createPaymentDto,
+        amount: amountInVND, // Sử dụng amount được tính từ order
         status: PaymentStatus.PENDING,
         metadata: createPaymentDto.metadata || {},
       });
@@ -235,7 +256,7 @@ export class PaymentsService {
       return { redirectUrl: paymentUrl, success: true };
     }
 
-    if (payment.paymentMethod === PaymentMethod.COD) {
+    if (payment.paymentMethod === PaymentMethod.CASH) {
       await this.updatePaymentStatus(
         payment._id.toString(),
         PaymentStatus.PENDING,
@@ -285,6 +306,7 @@ export class PaymentsService {
         throw new NotFoundException('Không tìm thấy thanh toán');
       }
 
+      // VNPay library automatically multiplies amount by 100, so we need to check accordingly
       if (Number(query.vnp_Amount) !== payment.amount * 100) {
         this.paymentLoggingService.logPaymentFlow(
           PaymentLogType.PAYMENT_ERROR,
@@ -302,6 +324,24 @@ export class PaymentsService {
       }
 
       await this.updatePaymentWithResponse(payment, query, 'callback');
+
+      // Update order status to RECEIVED when payment is successful
+      try {
+        await this.ordersService.handlePaymentCompleted(
+          payment.orderId,
+          payment._id.toString(),
+        );
+        this.logger.log(
+          `Order ${payment.orderId} status updated to RECEIVED after successful payment`,
+        );
+      } catch (error) {
+        this.logger.error(
+          `Failed to update order status for payment ${payment._id}: ${error.message}`,
+          error.stack,
+        );
+        // Don't throw error here as payment was successful
+      }
+
       return payment;
     } catch (error) {
       this.paymentLoggingService.logPaymentFlow(PaymentLogType.PAYMENT_ERROR, {
@@ -457,6 +497,7 @@ export class PaymentsService {
         };
       }
 
+      // VNPay library automatically multiplies amount by 100, so we need to check accordingly
       if (Number(query.vnp_Amount) !== payment.amount * 100) {
         return {
           RspCode: '04',
@@ -472,6 +513,23 @@ export class PaymentsService {
       }
 
       await this.updatePaymentWithResponse(payment, query, 'ipn');
+
+      // Update order status to RECEIVED when payment is successful
+      try {
+        await this.ordersService.handlePaymentCompleted(
+          payment.orderId,
+          payment._id.toString(),
+        );
+        this.logger.log(
+          `Order ${payment.orderId} status updated to RECEIVED after successful IPN payment`,
+        );
+      } catch (error) {
+        this.logger.error(
+          `Failed to update order status for IPN payment ${payment._id}: ${error.message}`,
+          error.stack,
+        );
+        // Don't return error here as payment was successful
+      }
 
       return {
         RspCode: '00',

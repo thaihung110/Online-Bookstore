@@ -4,6 +4,7 @@ import {
   VNPay,
   HashAlgorithm,
   VnpLocale,
+  VnpCurrCode,
   ProductCode,
   dateFormat,
 } from 'vnpay';
@@ -92,8 +93,12 @@ export class VnpayService implements IVnpayService {
       tomorrow.setDate(tomorrow.getDate() + 1);
 
       const requestData = {
+        // Required parameters (must be in correct order for signature)
+        vnp_Version: '2.1.0',
+        vnp_Command: 'pay',
+        vnp_TmnCode: this.configService.get<string>('VNPAY_TMN_CODE'),
         vnp_Amount: this.formatAmount(payment.amount),
-        vnp_IpAddr: ipAddr,
+        vnp_CurrCode: VnpCurrCode.VND,
         vnp_TxnRef: payment._id.toString(),
         vnp_OrderInfo:
           payment.description || `Thanh toan don hang ${payment.orderId}`,
@@ -102,6 +107,7 @@ export class VnpayService implements IVnpayService {
             ? 'other'
             : payment.metadata?.vnpayInfo?.orderType || ProductCode.Other,
         vnp_ReturnUrl: this.configService.get<string>('VNPAY_RETURN_URL'),
+        vnp_IpAddr: ipAddr,
         vnp_Locale: VnpLocale.VN,
         vnp_CreateDate: dateFormat(new Date()),
         vnp_ExpireDate: dateFormat(tomorrow),

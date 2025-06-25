@@ -33,12 +33,13 @@ export class CreatePaymentDto {
 
   @ApiProperty({
     example: 100000,
-    description: 'Số tiền thanh toán (VND)',
+    description: 'Số tiền thanh toán (VND) - Tự động tính từ order',
+    required: false,
   })
-  @IsNotEmpty()
+  @IsOptional()
   @IsNumber()
   @Min(1000) // Minimum 1,000 VND
-  amount: number;
+  amount?: number;
 
   @ApiProperty({
     enum: PaymentMethod,
