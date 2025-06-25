@@ -14,6 +14,7 @@ import { VnpayService } from './vnpay.service';
 import { Payment, PaymentSchema } from './schemas/payment.schema';
 // @ts-ignore
 import { Transaction, TransactionSchema } from './schemas/transaction.schema';
+import { PaymentLog, PaymentLogSchema } from './schemas/payment-log.schema';
 
 import { PaymentLoggingService } from './services/payment-logging.service';
 
@@ -23,6 +24,7 @@ import { PaymentLoggingService } from './services/payment-logging.service';
     MongooseModule.forFeature([
       { name: Payment.name, schema: PaymentSchema },
       { name: Transaction.name, schema: TransactionSchema },
+      { name: PaymentLog.name, schema: PaymentLogSchema },
     ]),
   ],
   controllers: [PaymentsController],
@@ -34,6 +36,6 @@ import { PaymentLoggingService } from './services/payment-logging.service';
       useClass: VnpayService,
     },
   ],
-  exports: [PaymentsService],
+  exports: [PaymentsService, PaymentLoggingService, 'VnpayService'],
 })
 export class PaymentsModule {}

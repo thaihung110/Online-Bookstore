@@ -13,7 +13,13 @@ import {
   PaymentStatus,
   PaymentMethod,
 } from './schemas/payment.schema';
-import { Transaction, TransactionDocument } from './schemas/transaction.schema';
+import {
+  Transaction,
+  TransactionDocument,
+  TransactionType,
+  TransactionStatus,
+  PaymentGateway,
+} from './schemas/transaction.schema';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { IVnpayService } from './interfaces/vnpay-service.interface';
 import { VNPayCallbackDTO } from './dto/vnpay-callback.dto';
@@ -49,9 +55,10 @@ export class PaymentsService {
     paymentId: string,
     transactionId: string,
     amount: number,
-    type: string,
-    status: string,
-    metadata?: any,
+    type: TransactionType,
+    status: TransactionStatus,
+    gateway: PaymentGateway = PaymentGateway.VNPAY,
+    gatewayResponse?: any,
   ) {
     try {
       this.logger.log(
@@ -63,7 +70,8 @@ export class PaymentsService {
         amount,
         type,
         status,
-        metadata,
+        gateway,
+        gatewayResponse,
       );
     } catch (error) {
       this.logger.error(
@@ -85,6 +93,14 @@ export class PaymentsService {
       payment.completedAt = new Date();
       payment.bankCode = response.vnp_BankCode;
       payment.responseCode = response.vnp_ResponseCode;
+      payment.bankTransactionNo = response.vnp_BankTranNo;
+      payment.cardType = response.vnp_CardType;
+
+      // Parse VNPay payment date if available
+      if (response.vnp_PayDate) {
+        payment.paymentDate = this.parseVNPayDate(response.vnp_PayDate);
+      }
+
       payment.metadata = {
         ...payment.metadata,
         [`vnpay${source}Response`]: response,
@@ -99,8 +115,9 @@ export class PaymentsService {
         payment._id.toString(),
         response.vnp_TransactionNo,
         payment.amount,
-        'PAYMENT',
-        'SUCCESS',
+        TransactionType.PAYMENT,
+        TransactionStatus.SUCCESS,
+        PaymentGateway.VNPAY,
         response,
       );
     } catch (error) {
@@ -109,6 +126,23 @@ export class PaymentsService {
         error.stack,
       );
       throw error;
+    }
+  }
+
+  private parseVNPayDate(vnpPayDate: string): Date {
+    try {
+      // VNPay date format: YYYYMMDDHHmmss
+      const year = parseInt(vnpPayDate.substring(0, 4));
+      const month = parseInt(vnpPayDate.substring(4, 6)) - 1; // Month is 0-indexed
+      const day = parseInt(vnpPayDate.substring(6, 8));
+      const hour = parseInt(vnpPayDate.substring(8, 10));
+      const minute = parseInt(vnpPayDate.substring(10, 12));
+      const second = parseInt(vnpPayDate.substring(12, 14));
+
+      return new Date(year, month, day, hour, minute, second);
+    } catch (error) {
+      this.logger.warn(`Failed to parse VNPay date: ${vnpPayDate}`);
+      return new Date();
     }
   }
 
@@ -128,11 +162,15 @@ export class PaymentsService {
           requestData: createPaymentDto,
         },
       );
+
       const payment = new this.paymentModel({
         ...createPaymentDto,
         status: PaymentStatus.PENDING,
+        metadata: createPaymentDto.metadata || {},
       });
+
       const savedPayment = await payment.save();
+
       if (savedPayment.paymentMethod === PaymentMethod.VNPAY) {
         const paymentUrl = await this.vnpayService.createPaymentUrl(
           savedPayment,
@@ -143,6 +181,7 @@ export class PaymentsService {
           redirectUrl: paymentUrl,
         };
       }
+
       return {
         payment: savedPayment,
       };
@@ -305,8 +344,9 @@ export class PaymentsService {
     paymentId: string,
     transactionId: string,
     amount: number,
-    type: string,
-    status: string,
+    type: TransactionType,
+    status: TransactionStatus,
+    gateway: PaymentGateway = PaymentGateway.VNPAY,
     gatewayResponse?: any,
   ): Promise<Transaction> {
     const transaction = new this.transactionModel({
@@ -315,50 +355,47 @@ export class PaymentsService {
       amount,
       type,
       status,
-      gatewayResponse: gatewayResponse || {},
+      gateway,
+      gatewayResponse,
     });
-
     return transaction.save();
   }
 
   // Lấy danh sách giao dịch của một thanh toán
   async getTransactions(paymentId: string): Promise<Transaction[]> {
-    return this.transactionModel
-      .find({ paymentId })
-      .sort({ createdAt: -1 })
-      .exec();
+    return this.transactionModel.find({ paymentId }).exec();
   }
 
   // Xử lý hoàn tiền
   async refundPayment(payment: PaymentDocument): Promise<{ success: boolean }> {
     try {
+      if (payment.status !== PaymentStatus.COMPLETED) {
+        throw new BadRequestException(
+          'Chỉ có thể hoàn tiền cho thanh toán đã hoàn thành',
+        );
+      }
+
       this.paymentLoggingService.logPaymentFlow(PaymentLogType.REFUND_REQUEST, {
         paymentId: payment._id.toString(),
         orderId: payment.orderId,
         amount: payment.amount,
       });
 
-      if (payment.status !== PaymentStatus.COMPLETED) {
-        throw new BadRequestException(
-          'Chỉ có thể hoàn tiền cho các thanh toán đã hoàn thành',
-        );
-      }
-
       if (payment.paymentMethod === PaymentMethod.VNPAY) {
-        const result = await this.vnpayService.refund(payment);
-        if (result.success) {
-          const updatedPayment = await this.updatePaymentStatus(
-            payment._id.toString(),
-            PaymentStatus.REFUNDED,
-          );
+        const refundResult = await this.vnpayService.refund(payment);
 
-          await this.createTransaction(
+        if (refundResult.success) {
+          payment.status = PaymentStatus.REFUNDED;
+          payment.refundedAt = new Date();
+          await payment.save();
+
+          await this.logAndCreateTransaction(
             payment._id.toString(),
-            `REF${payment.transactionId}`,
+            `REFUND_${payment.transactionId}`,
             payment.amount,
-            'REFUND',
-            'SUCCESS',
-            result,
+            TransactionType.REFUND,
+            TransactionStatus.SUCCESS,
+            PaymentGateway.VNPAY,
           );
 
           this.paymentLoggingService.logPaymentFlow(
@@ -366,37 +403,29 @@ export class PaymentsService {
             {
               paymentId: payment._id.toString(),
               orderId: payment.orderId,
-              responseData: result,
+              success: true,
             },
           );
-
-          return result;
         }
-        return result;
+
+        return refundResult;
       }
 
-      if (payment.paymentMethod === PaymentMethod.COD) {
-        await this.updatePaymentStatus(
-          payment._id.toString(),
-          PaymentStatus.REFUNDED,
-        );
+      // For other payment methods, just mark as refunded
+      payment.status = PaymentStatus.REFUNDED;
+      payment.refundedAt = new Date();
+      await payment.save();
 
-        // Tạo transaction record cho hoàn tiền COD
-        await this.createTransaction(
-          payment._id.toString(),
-          `REF${Date.now()}`,
-          payment.amount,
-          'REFUND',
-          'SUCCESS',
-          { method: 'COD' },
-        );
-
-        return { success: true };
-      }
-
-      throw new BadRequestException(
-        `Không hỗ trợ hoàn tiền cho phương thức ${payment.paymentMethod}`,
+      await this.logAndCreateTransaction(
+        payment._id.toString(),
+        `REFUND_${Date.now()}`,
+        payment.amount,
+        TransactionType.REFUND,
+        TransactionStatus.SUCCESS,
+        PaymentGateway.BANK,
       );
+
+      return { success: true };
     } catch (error) {
       this.paymentLoggingService.logPaymentFlow(PaymentLogType.PAYMENT_ERROR, {
         paymentId: payment._id.toString(),

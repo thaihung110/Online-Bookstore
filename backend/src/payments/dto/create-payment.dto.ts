@@ -23,46 +23,72 @@ export class VNPayDetailsDto {
 
 // DTO chung cho việc tạo thanh toán
 export class CreatePaymentDto {
-  @ApiProperty({ example: '123', description: 'ID của đơn hàng' })
+  @ApiProperty({
+    example: 'ORD001',
+    description: 'Mã đơn hàng duy nhất',
+  })
   @IsNotEmpty()
   @IsString()
   orderId: string;
 
-  @ApiProperty({ enum: PaymentMethod, description: 'Phương thức thanh toán' })
+  @ApiProperty({
+    example: 100000,
+    description: 'Số tiền thanh toán (VND)',
+  })
+  @IsNotEmpty()
+  @IsNumber()
+  @Min(1000) // Minimum 1,000 VND
+  amount: number;
+
+  @ApiProperty({
+    enum: PaymentMethod,
+    description: 'Phương thức thanh toán',
+    example: PaymentMethod.VNPAY,
+  })
   @IsNotEmpty()
   @IsEnum(PaymentMethod)
   paymentMethod: PaymentMethod;
 
-  @ApiProperty({ example: 100000, description: 'Số tiền thanh toán' })
-  @IsNotEmpty()
-  @IsNumber()
-  @Min(0)
-  amount: number;
-
-  @ApiProperty({ description: 'Họ và tên người nhận' })
-  @IsNotEmpty()
+  @ApiProperty({
+    description: 'Mô tả thanh toán',
+    required: false,
+    example: 'Thanh toán đơn hàng #ORD001',
+  })
+  @IsOptional()
   @IsString()
-  fullName: string;
+  description?: string;
 
-  @ApiProperty({ description: 'Thành phố/Tỉnh' })
-  @IsNotEmpty()
-  @IsString()
-  city: string;
+  @ApiProperty({
+    description: 'Dữ liệu bổ sung (thông tin khách hàng, shipping, etc.)',
+    required: false,
+    example: {
+      customerInfo: {
+        fullName: 'Nguyen Van A',
+        phone: '0901234567',
+        email: 'test@example.com',
+      },
+      shippingInfo: {
+        address: '123 ABC Street',
+        city: 'Ho Chi Minh',
+        district: 'District 1',
+      },
+      vnpayInfo: {
+        bankCode: 'NCB',
+        orderType: 'billpayment',
+      },
+    },
+  })
+  @IsOptional()
+  metadata?: Record<string, any>;
 
-  @ApiProperty({ description: 'Địa chỉ cụ thể' })
-  @IsNotEmpty()
-  @IsString()
-  address: string;
-
-  @ApiProperty({ description: 'Số điện thoại' })
-  @IsNotEmpty()
-  @IsString()
-  phone: string;
-
-  @ApiProperty({ description: 'Chi tiết thanh toán cho VNPAY' })
+  @ApiProperty({
+    description: 'Chi tiết thanh toán cho VNPAY',
+    required: false,
+  })
   @ValidateIf((o) => o.paymentMethod === 'VNPAY')
   @ValidateNested()
   @Type(() => VNPayDetailsDto)
   @IsObject()
+  @IsOptional()
   vnpayDetails?: VNPayDetailsDto;
 }

@@ -46,20 +46,22 @@ export class VnpayService implements IVnpayService {
     const config: VNPayConfig = {
       tmnCode: this.configService.get<string>('VNPAY_TMN_CODE'),
       secureSecret: this.configService.get<string>('VNPAY_HASH_SECRET'),
-      vnpayHost: this.configService.get<string>('VNPAY_HOST'),
+      vnpayHost:
+        this.configService.get<string>('VNPAY_URL') ||
+        'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html',
       testMode: this.configService.get<boolean>('VNPAY_TEST_MODE') ?? true,
       hashAlgorithm: HashAlgorithm.SHA512,
       enableLog: this.configService.get<boolean>('VNPAY_ENABLE_LOG') ?? true,
       endpoints: {
-        paymentEndpoint: this.configService.get<string>(
-          'VNPAY_PAYMENT_ENDPOINT',
-        ),
-        queryDrRefundEndpoint: this.configService.get<string>(
-          'VNPAY_QUERY_DR_ENDPOINT',
-        ),
-        getBankListEndpoint: this.configService.get<string>(
-          'VNPAY_BANK_LIST_ENDPOINT',
-        ),
+        paymentEndpoint:
+          this.configService.get<string>('VNPAY_PAYMENT_ENDPOINT') ||
+          '/paymentv2/vpcpay.html',
+        queryDrRefundEndpoint:
+          this.configService.get<string>('VNPAY_QUERY_DR_ENDPOINT') ||
+          '/merchant_webapi/api/transaction',
+        getBankListEndpoint:
+          this.configService.get<string>('VNPAY_BANK_LIST_ENDPOINT') ||
+          '/merchant_webapi/api/transaction',
       },
     };
 
@@ -93,13 +95,35 @@ export class VnpayService implements IVnpayService {
         vnp_Amount: this.formatAmount(payment.amount),
         vnp_IpAddr: ipAddr,
         vnp_TxnRef: payment._id.toString(),
-        vnp_OrderInfo: `Thanh toan don hang ${payment.orderId}`,
-        vnp_OrderType: ProductCode.Other,
+        vnp_OrderInfo:
+          payment.description || `Thanh toan don hang ${payment.orderId}`,
+        vnp_OrderType:
+          payment.metadata?.vnpayInfo?.bankCode === 'INTCARD'
+            ? 'other'
+            : payment.metadata?.vnpayInfo?.orderType || ProductCode.Other,
         vnp_ReturnUrl: this.configService.get<string>('VNPAY_RETURN_URL'),
         vnp_Locale: VnpLocale.VN,
         vnp_CreateDate: dateFormat(new Date()),
         vnp_ExpireDate: dateFormat(tomorrow),
+        // Add bank code if specified in metadata
+        ...(payment.metadata?.vnpayInfo?.bankCode && {
+          vnp_BankCode: payment.metadata.vnpayInfo.bankCode,
+        }),
       };
+
+      // Debug logging for international cards
+      this.logger.log('=== VNPay Payment URL Creation ===');
+      this.logger.log(`Payment ID: ${payment._id.toString()}`);
+      this.logger.log(`Order ID: ${payment.orderId}`);
+      this.logger.log(`Amount Original: ${payment.amount} VND`);
+      this.logger.log(`Amount Formatted: ${requestData.vnp_Amount}`);
+      this.logger.log(
+        `Bank Code: ${payment.metadata?.vnpayInfo?.bankCode || 'Not specified'}`,
+      );
+      this.logger.log(
+        `Order Type: ${payment.metadata?.vnpayInfo?.orderType || 'Not specified'}`,
+      );
+      this.logger.log(`Request Data:`, JSON.stringify(requestData, null, 2));
 
       this.paymentLoggingService.logPaymentFlow(PaymentLogType.VNPAY_REQUEST, {
         paymentId: payment._id.toString(),
@@ -109,6 +133,9 @@ export class VnpayService implements IVnpayService {
       });
 
       const paymentUrl = this.vnpay.buildPaymentUrl(requestData);
+
+      this.logger.log(`Generated Payment URL: ${paymentUrl}`);
+      this.logger.log('================================');
 
       this.paymentLoggingService.logPaymentFlow(PaymentLogType.VNPAY_RESPONSE, {
         paymentId: payment._id.toString(),
@@ -142,7 +169,8 @@ export class VnpayService implements IVnpayService {
   }
 
   private formatAmount(amount: number): number {
-    // Convert to smallest currency unit (VND doesn't have decimal points)
+    // VNPay library automatically multiplies by 100, so we don't need to do it manually
+    // Just return the original amount in VND
     return Math.round(amount);
   }
 
