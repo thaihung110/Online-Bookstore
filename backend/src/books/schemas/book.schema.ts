@@ -4,7 +4,7 @@ import { Product, ProductDocument } from '../../products/schemas/product.schema'
 
 export type BookDocument = Book & Document;
 
-@Schema({collection: 'AN_test'}) // Specify the collection name and enable timestamps
+@Schema({collection: 'products'}) // Specify the collection name and enable timestamps
 export class Book extends Product {
   constructor() {
     super();

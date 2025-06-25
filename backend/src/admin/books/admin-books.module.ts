@@ -43,7 +43,7 @@ import { BooksModule } from '../../books/books.module'; // Assuming you have a B
       {
         name: Book.name, 
         schema: BookSchema,
-        collection: 'AN_test' // Specify the collection name if needed
+        collection: 'products' // Specify the collection name if needed
       }
     ]),
     UploadModule,

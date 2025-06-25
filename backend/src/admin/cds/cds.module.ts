@@ -20,7 +20,7 @@ import { ProductActivityLogService } from '../activity-log/activity-log.service'
       {
         name: CD.name, 
         schema: CDSchema,
-        collection: 'AN_test' // Specify the collection name if needed
+        collection: 'products' // Specify the collection name if needed
       }
     ]),
     UploadModule,

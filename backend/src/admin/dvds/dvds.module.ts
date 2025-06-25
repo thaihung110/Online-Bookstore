@@ -20,7 +20,7 @@ import { ProductActivityLogService } from '../activity-log/activity-log.service'
       {
         name: DVD.name, 
         schema: DVDSchema,
-        collection: 'AN_test',
+        collection: 'products',
       }
     ]),
     UploadModule,

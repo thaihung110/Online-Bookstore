@@ -40,7 +40,7 @@ import { Product, ProductSchema } from '../products/schemas/product.schema';
       {
         name: Book.name, 
         schema: BookSchema,
-        collection: 'AN_test' // Specify the collection name if needed
+        collection: 'products' // Specify the collection name if needed
       }
     ]),
     UploadModule

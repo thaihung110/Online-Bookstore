@@ -13,7 +13,7 @@ import { Product, ProductSchema } from '../products/schemas/product.schema';
       {
         name: CD.name, 
         schema: CDSchema,
-        collection: 'AN_test'
+        collection: 'products'
       }
     ])  ],
   providers: [],

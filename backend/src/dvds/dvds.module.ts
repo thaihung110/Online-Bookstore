@@ -13,7 +13,7 @@ import { Product, ProductSchema } from '../products/schemas/product.schema';
       {
         name: DVD.name, 
         schema: DVDSchema,
-        collection: 'AN_test'
+        collection: 'products'
       }
     ])  ],
   providers: [],

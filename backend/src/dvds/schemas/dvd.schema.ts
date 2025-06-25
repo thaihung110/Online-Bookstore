@@ -4,7 +4,7 @@ import { Product, ProductDocument } from '../../products/schemas/product.schema'
 
 export type DVDDocument = DVD & ProductDocument;
 
-@Schema()  // No need to specify collection - it will use the parent schema's collection
+@Schema({collection: 'products'})  // No need to specify collection - it will use the parent schema's collection
 export class DVD extends Product {
     constructor() {
         super();
