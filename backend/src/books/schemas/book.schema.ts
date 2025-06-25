@@ -1,10 +1,11 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Schema as MongooseSchema } from 'mongoose';
+import { Product, ProductDocument } from '../../products/schemas/product.schema';
 
 export type BookDocument = Book & Document;
 
-@Schema({ timestamps: true })
-export class Book {
+@Schema()
+export class Book extends Product {
   @Prop({ required: true, trim: true, index: true })
   title: string;
 

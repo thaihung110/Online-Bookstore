@@ -7,6 +7,8 @@ import { CD, CDSchema } from '../../cds/schemas/cd.schema';
 import { Product, ProductSchema } from '../../products/schemas/product.schema';
 import { UploadModule } from '../../upload/upload.module';
 import { UploadService } from '../../upload/upload.service';
+import { ActivityLogsModule } from '../activity-log/activity-log.module';;
+import { ProductActivityLogService } from '../activity-log/activity-log.service';
 
 @Module({
   imports: [
@@ -20,19 +22,21 @@ import { UploadService } from '../../upload/upload.service';
       }
     ]),
     UploadModule,
-    ConfigModule
+    ConfigModule,
+    ActivityLogsModule
   ],
   controllers: [CdsController],
   providers: [
     {
       provide: AdminCDsService,
-      useFactory: (cdModel, configService, uploadService) => {
-        return new AdminCDsService(cdModel, configService, uploadService);
+      useFactory: (cdModel, configService, uploadService,productActivityLogService) => {
+        return new AdminCDsService(cdModel, configService, uploadService,productActivityLogService);
       },
       inject: [
         getModelToken(CD.name),
         ConfigService,
-        UploadService
+        UploadService,
+        ProductActivityLogService
       ]
     }
   ]

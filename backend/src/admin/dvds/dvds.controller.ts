@@ -58,16 +58,55 @@ export class DvdsController {
     );
   }
 
-  @Post()
+  @Post(':userId')
   @ApiOperation({ summary: 'Create a new DVD' })
+  @ApiParam({ name: 'userId', description: 'ID of the user creating the DVD', type: String })
   @ApiResponse({
     status: 201,
     description: 'DVD created successfully',
     type: DVD,
   })
   @ApiResponse({ status: 400, description: 'Bad request' })
-  async create(@Body() createDVDDto: CreateDVDDto): Promise<DVD> {
-    return this.adminDVDsService.create(createDVDDto);
+  async create(@Param('userId') userId: string,@Body() createDVDDto: CreateDVDDto): Promise<DVD> {
+    return this.adminDVDsService.create(userId, createDVDDto);
     // return;
   }
+
+
+
+  // find details of a DVD
+  @Get(':id')
+  @ApiOperation({ summary: 'Get DVD details by ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'DVD details retrieved successfully',
+    type: DVD,
+  })
+  @ApiParam({ name: 'id', description: 'DVD ID', type: String })
+  async findOne(@Param('id') id: string): Promise<DVD> {
+    return this.adminDVDsService.findById(id);
+  }
+
+
+
+  // viet ham goi update DVD
+  @Put(':userId/:id')
+
+  @ApiOperation({ summary: 'Update a DVD by ID' })
+  @ApiParam({ name: 'id', description: 'DVD ID', type: String })
+  @ApiParam({ name: 'userId', description: 'ID of the user updating the DVD', type: String })
+  @ApiResponse({
+    status: 200,
+    description: 'DVD updated successfully',
+    type: DVD,
+  })
+  @ApiResponse({ status: 404, description: 'DVD not found' })
+  async update(
+    @Param('id') id: string,
+    @Param('userId') userId: string, // Assuming userId is needed for logging or auditing
+    @Body() updateDVDDto: CreateDVDDto, // Assuming CreateDVDDto is used for updates as well
+  ): Promise<DVD> {
+    return this.adminDVDsService.update(userId, id, updateDVDDto);
+  }
+
 }

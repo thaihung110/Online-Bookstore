@@ -41,6 +41,9 @@ export class CdsController {
     private readonly uploadService: UploadService,
   ) {}
 
+
+
+  
   @Post('upload-presigned-url')
   @ApiOperation({ summary: 'Generate presigned URL for CD image upload' })
   @ApiResponse({
@@ -58,15 +61,107 @@ export class CdsController {
     );
   }
 
-  @Post()
+  @Post(':userId')
   @ApiOperation({ summary: 'Create a new CD' })
+  @ApiParam({ name: 'userId', description: 'User ID of the admin creating the CD', type: String })
   @ApiResponse({
     status: 201,
     description: 'CD created successfully',
     type: CD,
   })
   @ApiResponse({ status: 400, description: 'Bad request' })
-  async create(@Body() createCDDto: CreateCDDto): Promise<CD> {
-    return this.adminCDsService.create(createCDDto);
+  async create(@Param('userId') userId: string,@Body() createCDDto: CreateCDDto): Promise<CD> {
+    return this.adminCDsService.create(userId,createCDDto);
   }
+
+
+  // find details of a CD
+  @Get(':id')
+  @ApiOperation({ summary: 'Get a CD by ID' })
+  @ApiParam({ name: 'id', description: 'CD ID', type: String })
+  @ApiResponse({
+    status: 200,
+    description: 'CD retrieved successfully',
+    type: CD,
+  })
+  @ApiResponse({ status: 404, description: 'CD not found' })
+  async findById(@Param('id') id: string): Promise<CD> {
+    return this.adminCDsService.findById(id);
+  }
+
+
+  // viet ham goi update CD
+  @Put(':userId/:id')
+  @ApiOperation({ summary: 'Update a CD by ID' })
+  @ApiParam({ name: 'userId', description: 'User ID of the admin updating the CD', type: String })
+  @ApiParam({ name: 'id', description: 'CD ID', type: String })
+  @ApiResponse({
+    status: 200,
+    description: 'CD updated successfully',
+    type: CD,
+  })
+  @ApiResponse({ status: 404, description: 'CD not found' })
+  async update(
+    @Param('userId') userId: string,
+    @Param('id') id: string,
+    @Body() updateCDDto: UpdateCDDto,
+  ): Promise<CD> {
+    return this.adminCDsService.update(userId, id, updateCDDto);
+  }
+
+
+  // findAll CDs with optional filters
+  @Get()
+  @ApiOperation({ summary: 'Get all CDs with optional filters' })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number for pagination' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Number of items per page' })
+  @ApiQuery({ name: 'search', required: false, type: String, description: 'Search term for CD title or artist' })
+  @ApiQuery({ name: 'artist', required: false, type: String, description: 'Filter by artist' })
+  @ApiQuery({ name: 'albumTitle', required: false, type: String, description: 'Filter by album title' })
+  @ApiQuery({ name: 'releasedDateStart', required: false, type: Date, description: 'Filter by start date of release' })
+  @ApiQuery({ name: 'releasedDateEnd', required: false, type: Date, description: 'Filter by end date of release' })
+  @ApiQuery({ name: 'minPrice', required: false, type: Number, description: 'Minimum price filter' })
+  @ApiQuery({ name: 'maxPrice', required: false, type: Number, description: 'Maximum price filter' })
+  @ApiQuery({ name: 'inStock', required: false, type: Boolean, description: 'Filter by stock availability' })
+  @ApiQuery({ name: 'sortBy', required: false, type: String, description: 'Field to sort by', enum: ['createdAt', 'updatedAt', 'title', 'price'] })
+  @ApiQuery({ name: 'sortOrder', required: false, type: String, description: 'Sort order', enum: ['asc', 'desc'] })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns all CDs with pagination and filters',
+    type: CD,
+    isArray: true,
+  })
+  async findAll(
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
+    @Query('search') search?: string,
+    @Query('artist') artist?: string,
+    @Query('albumTitle') albumTitle?: string,
+    @Query('releasedDateStart') releasedDateStart?: Date,
+    @Query('releasedDateEnd') releasedDateEnd?: Date,
+    @Query('minPrice') minPrice?: number,
+    @Query('maxPrice') maxPrice?: number,
+    @Query('inStock') inStock?: boolean,
+    @Query('sortBy') sortBy: string = 'createdAt',
+    @Query('sortOrder') sortOrder: 'asc' | 'desc' = 'desc',
+  ) {
+    return this.adminCDsService.findAllCD({
+      page,
+      limit,
+      search,
+      artist,
+      albumTitle,
+      releasedDateStart,
+      releasedDateEnd,
+      minPrice,
+      maxPrice,
+      inStock,
+      sortBy,
+      sortOrder,
+    });
+  }
+
+
+
+
 }

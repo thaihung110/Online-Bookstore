@@ -34,6 +34,10 @@ export class Product {
     // updateAt
     @Prop({ type: Date, default: Date.now, required: true })
     updatedAt: Date;
+
+    // isAvailable
+  @Prop({ type: Boolean, default: true })
+  isAvailable: boolean;
 }
 
 export const ProductSchema = SchemaFactory.createForClass(Product);

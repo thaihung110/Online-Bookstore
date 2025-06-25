@@ -7,6 +7,8 @@ import { DVD, DVDSchema } from '../../dvds/schemas/dvd.schema';
 import { Product, ProductSchema } from '../../products/schemas/product.schema';
 import { UploadModule } from '../../upload/upload.module';
 import { UploadService } from '../../upload/upload.service';
+import { ActivityLogsModule } from '../activity-log/activity-log.module';
+import { ProductActivityLogService } from '../activity-log/activity-log.service';
 
 @Module({
   imports: [
@@ -20,19 +22,21 @@ import { UploadService } from '../../upload/upload.service';
       }
     ]),
     UploadModule,
-    ConfigModule
+    ConfigModule,
+    ActivityLogsModule
   ],
   controllers: [DvdsController],
   providers: [
     {
       provide: AdminDVDsService,
-      useFactory: (dvdModel, configService, uploadService) => {
-        return new AdminDVDsService(dvdModel, configService, uploadService);
+      useFactory: (dvdModel, configService, uploadService,productActivityLogService) => {
+        return new AdminDVDsService(dvdModel, configService, uploadService,productActivityLogService);
       },
       inject: [
         getModelToken(DVD.name),
         ConfigService,
-        UploadService
+        UploadService,
+        ProductActivityLogService
       ]
     }
   ]

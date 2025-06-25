@@ -6,6 +6,8 @@ import { AdminProductsService } from './products.service';
 import { Product, ProductSchema } from '../../products/schemas/product.schema';
 import { UploadModule } from '../../upload/upload.module';
 import { UploadService } from '../../upload/upload.service';
+import { ActivityLogsModule } from '../activity-log/activity-log.module';
+import { ProductActivityLogService } from '../activity-log/activity-log.service';
 
 @Module({
   imports: [
@@ -13,18 +15,21 @@ import { UploadService } from '../../upload/upload.service';
       { name: Product.name, schema: ProductSchema }
     ]),
     UploadModule,
-    ConfigModule
+    ConfigModule,
+    ActivityLogsModule // Uncomment if you need activity logs
+
   ],
   controllers: [ProductsController],  providers: [
     {
       provide: AdminProductsService,
-      useFactory: (productModel, configService, uploadService) => {
-        return new AdminProductsService(productModel, configService, uploadService);
+      useFactory: (productModel, configService, uploadService, productActivityLogService) => {
+        return new AdminProductsService(productModel, configService, uploadService, productActivityLogService);
       },
       inject: [
         getModelToken(Product.name),
         ConfigService,
-        UploadService
+        UploadService,
+        ProductActivityLogService // Sửa: inject class thay vì string
       ]
     }
   ],
