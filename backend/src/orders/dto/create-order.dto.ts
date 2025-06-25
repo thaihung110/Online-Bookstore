@@ -75,8 +75,8 @@ class ShippingAddressDto {
 }
 
 enum PaymentMethod {
-  CASH = 'cash', // Renamed from COD to match new schema
-  VNPAY = 'vnpay', // Covers MOMO, ZALOPAY in your use case
+  CASH = 'COD', // Updated to match MongoDB validation
+  VNPAY = 'VNPAY', // Updated to match MongoDB validation
 }
 
 class PaymentInfoDto {
@@ -113,6 +113,34 @@ export class CreateOrderDto {
   @Type(() => OrderItemDto)
   items: OrderItemDto[];
 
+  @ApiProperty({
+    description: 'Shipping address for the order',
+    type: ShippingAddressDto,
+  })
+  @ValidateNested()
+  @Type(() => ShippingAddressDto)
+  shippingAddress: ShippingAddressDto;
+
+  @ApiProperty({
+    description: 'Payment information for the order',
+    type: PaymentInfoDto,
+  })
+  @ValidateNested()
+  @Type(() => PaymentInfoDto)
+  paymentInfo: PaymentInfoDto;
+
+  @ApiPropertyOptional({ description: 'Is this order a gift?', default: false })
+  @IsOptional()
+  @IsBoolean()
+  isGift?: boolean;
+
+  @ApiPropertyOptional({ description: 'Gift message if the order is a gift' })
+  @IsOptional()
+  @IsString()
+  giftMessage?: string;
+}
+
+export class CreateOrderFromCartDto {
   @ApiProperty({
     description: 'Shipping address for the order',
     type: ShippingAddressDto,

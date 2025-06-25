@@ -12,7 +12,7 @@ import {
   // For Mongo ObjectIds, no specific pipe is needed for validation by default unless custom regex is used.
 } from '@nestjs/common';
 import { OrdersService } from './orders.service';
-import { CreateOrderDto } from './dto/create-order.dto';
+import { CreateOrderDto, CreateOrderFromCartDto } from './dto/create-order.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import {
   ApiTags,
@@ -47,6 +47,30 @@ export class OrdersController {
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   async createOrder(@Request() req, @Body() createOrderDto: CreateOrderDto) {
     return this.ordersService.createOrder(req.user.id, createOrderDto);
+  }
+
+  @Post('from-cart')
+  @ApiOperation({ summary: 'Create a new order from user cart' })
+  @ApiBody({ type: CreateOrderFromCartDto })
+  @ApiResponse({
+    status: 201,
+    description: 'Order created successfully from cart.',
+    type: Order,
+  })
+  @ApiResponse({
+    status: 400,
+    description:
+      'Bad Request (e.g., cart empty, no items selected, insufficient stock).',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  async createOrderFromCart(
+    @Request() req,
+    @Body() createOrderFromCartDto: CreateOrderFromCartDto,
+  ) {
+    return this.ordersService.createOrderFromCart(
+      req.user.id,
+      createOrderFromCartDto,
+    );
   }
 
   @Get()

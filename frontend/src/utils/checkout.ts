@@ -58,7 +58,15 @@ export const processCheckoutPayment = async (
     const payment = await createPayment();
     console.log("Payment created:", payment);
 
-    // Xử lý thanh toán
+    // COD payments are automatically completed when created, no need to process
+    if (paymentMethod === "COD") {
+      console.log(
+        "[DEBUG] COD payment - already completed, skipping processPayment"
+      );
+      return { success: true };
+    }
+
+    // Xử lý thanh toán (chỉ cho VNPAY)
     if (!payment || !payment.id) {
       throw new Error("Không lấy được payment id để xử lý thanh toán");
     }
@@ -66,16 +74,17 @@ export const processCheckoutPayment = async (
     const result = await processPayment(payment.id);
     console.log("Payment processed:", result);
 
-    // Nếu là VNPay, trả về URL để chuyển hướng
+    // Nếu là VNPay, mở trang thanh toán VNPay trong tab mới
     if (paymentMethod === "VNPAY" && result.redirectUrl) {
-      window.open(result.redirectUrl, "_blank", "noopener");
+      // Mở VNPay trong tab mới
+      window.open(result.redirectUrl, "_blank", "noopener,noreferrer");
       return {
         success: true,
         redirectUrl: result.redirectUrl,
       };
     }
 
-    // Nếu là COD hoặc thanh toán thành công
+    // Nếu thanh toán thành công
     if (result.success) {
       return { success: true };
     }

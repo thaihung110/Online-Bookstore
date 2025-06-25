@@ -46,10 +46,11 @@ const transformBookData = (bookData: any): Book => {
 const transformCartData = (cartData: any): Cart => {
   return {
     ...cartData,
-    items: cartData.items?.map((item: any) => ({
-      ...item,
-      book: transformBookData(item.book),
-    })) || [],
+    items:
+      cartData.items?.map((item: any) => ({
+        ...item,
+        book: transformBookData(item.book),
+      })) || [],
   };
 };
 
@@ -68,7 +69,10 @@ export interface Cart {
   user: string; // User ID associated with the cart
   items: CartItem[];
   subtotal: number;
+  shippingCost: number;
+  taxAmount: number;
   discount: number;
+  total: number;
   appliedCouponCode?: string;
   appliedGiftCardCode?: string;
   loyaltyPointsToUse?: number;
@@ -107,7 +111,10 @@ export const getCart = async (): Promise<Cart> => {
       user: "",
       items: [],
       subtotal: 0,
+      shippingCost: 0,
+      taxAmount: 0,
       discount: 0,
+      total: 0,
     };
   }
 };
@@ -147,10 +154,15 @@ export const updateCartItem = async (
 ): Promise<Cart> => {
   try {
     const updatePayload: { quantity?: number; isTicked?: boolean } = {};
-    if (itemData.quantity !== undefined) updatePayload.quantity = itemData.quantity;
-    if (itemData.isTicked !== undefined) updatePayload.isTicked = itemData.isTicked;
+    if (itemData.quantity !== undefined)
+      updatePayload.quantity = itemData.quantity;
+    if (itemData.isTicked !== undefined)
+      updatePayload.isTicked = itemData.isTicked;
 
-    const response = await api.patch(`/carts/items/${itemData.bookId}`, updatePayload);
+    const response = await api.patch(
+      `/carts/items/${itemData.bookId}`,
+      updatePayload
+    );
     return transformCartData(response.data);
   } catch (error) {
     console.error("Error updating cart item:", error);
@@ -162,9 +174,10 @@ export const updateCartItem = async (
  * Updates the quantity of an item in the cart.
  * @deprecated Use updateCartItem instead for better flexibility
  */
-export const updateCartItemQuantity = async (
-  itemData: { bookId: string; quantity: number }
-): Promise<Cart> => {
+export const updateCartItemQuantity = async (itemData: {
+  bookId: string;
+  quantity: number;
+}): Promise<Cart> => {
   return updateCartItem(itemData);
 };
 
@@ -194,7 +207,7 @@ export const clearCart = async (): Promise<Cart> => {
 // Interface for cart validation results
 export interface CartValidationIssue {
   bookId: string;
-  type: 'stock' | 'price' | 'unavailable';
+  type: "stock" | "price" | "unavailable";
   message: string;
   currentStock?: number;
   requestedQuantity?: number;

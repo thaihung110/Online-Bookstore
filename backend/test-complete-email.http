@@ -1,0 +1,59 @@
+### Test Complete Email Template with Refund Button
+
+POST http://localhost:3001/api/email/test-payment-success
+Content-Type: application/json
+
+{
+  "order": {
+    "_id": "674b1234567890abcdef1234",
+    "orderNumber": "ORD-001234",
+    "status": "RECEIVED",
+    "total": 141.09,
+    "subtotal": 141.09,
+    "tax": 0,
+    "shippingCost": 0,
+    "discount": 0,
+    "createdAt": "2024-12-05T10:30:00.000Z",
+    "receivedAt": "2024-12-05T10:35:00.000Z",
+    "items": [
+      {
+        "title": "Effective Java (3rd Edition)",
+        "author": "Joshua Bloch",
+        "price": 45.99,
+        "quantity": 2,
+        "discount": 10
+      },
+      {
+        "title": "Clean Code: A Handbook of Agile Software Craftsmanship",
+        "author": "Robert C. Martin",
+        "price": 39.99,
+        "quantity": 1,
+        "discount": 0
+      },
+      {
+        "title": "Design Patterns: Elements of Reusable Object-Oriented Software",
+        "author": "Gang of Four",
+        "price": 49.12,
+        "quantity": 1,
+        "discount": 5
+      }
+    ],
+    "shippingAddress": {
+      "fullName": "Nguyễn Văn Thành",
+      "phone": "0123456789",
+      "address": "123 Đường ABC, Phường XYZ",
+      "city": "Hà Nội"
+    }
+  },
+  "payment": {
+    "id": "pay_1234567890abcdef",
+    "transactionId": "15037891",
+    "status": "RECEIVED",
+    "amount": 3527250,
+    "bankCode": "NCB",
+    "completedAt": "2024-12-05T10:35:00.000Z"
+  }
+}
+
+### Test Email Connection
+GET http://localhost:3001/api/email/test-connection 

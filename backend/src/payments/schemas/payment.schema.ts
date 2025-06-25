@@ -5,7 +5,7 @@ import { ApiProperty } from '@nestjs/swagger';
 export type PaymentDocument = Payment & Document;
 
 export enum PaymentMethod {
-  CASH = 'CASH',
+  CASH = 'COD', // Changed to match MongoDB validation
   VNPAY = 'VNPAY',
 }
 

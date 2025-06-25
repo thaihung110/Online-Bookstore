@@ -1,0 +1,413 @@
+<html>
+  <head>
+    <meta charset='utf-8' />
+    <meta name='viewport' content='width=device-width, initial-scale=1.0' />
+    <title>Thanh toán thành công</title>
+    <style>
+      .btn-refund {
+        background: linear-gradient(45deg, #dc3545, #c82333);
+        color: white;
+        padding: 14px 28px;
+        text-decoration: none;
+        border-radius: 8px;
+        display: inline-block;
+        margin: 10px;
+        font-weight: bold;
+        box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3);
+        transition: all 0.3s ease;
+        border: none;
+        cursor: pointer;
+        font-size: 16px;
+        font-family: Arial, sans-serif;
+      }
+      .btn-refund:hover {
+        background: linear-gradient(45deg, #c82333, #bd2130);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 12px rgba(220, 53, 69, 0.4);
+      }
+      .btn-view {
+        background: linear-gradient(45deg, #007bff, #0056b3);
+        color: white;
+        padding: 14px 28px;
+        text-decoration: none;
+        border-radius: 8px;
+        display: inline-block;
+        margin: 10px;
+        font-weight: bold;
+        box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
+        transition: all 0.3s ease;
+      }
+      .btn-view:hover {
+        background: linear-gradient(45deg, #0056b3, #004085);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 12px rgba(0, 123, 255, 0.4);
+      }
+      .product-item {
+        background: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 6px;
+        padding: 15px;
+        margin: 10px 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .product-info {
+        flex: 1;
+      }
+      .product-price {
+        text-align: right;
+        font-weight: bold;
+        color: #28a745;
+      }
+      .transaction-info {
+        background: #e3f2fd;
+        border: 1px solid #bbdefb;
+        border-radius: 8px;
+        padding: 20px;
+        margin: 20px 0;
+      }
+      .summary-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 15px 0;
+      }
+      .summary-table th,
+      .summary-table td {
+        padding: 12px;
+        text-align: left;
+        border-bottom: 1px solid #ddd;
+      }
+      .summary-table th {
+        background: #f8f9fa;
+        font-weight: bold;
+        color: #495057;
+      }
+      .total-row {
+        background: #28a745;
+        color: white;
+        font-weight: bold;
+        font-size: 18px;
+      }
+    </style>
+  </head>
+  <body
+    style='font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 700px; margin: 0 auto; padding: 20px; background-color: #f4f4f4;'
+  >
+
+    <!-- Header -->
+    <div
+      style='text-align: center; margin-bottom: 30px; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);'
+    >
+      <h1 style='color: #28a745; margin: 0; font-size: 32px;'>✅ Thanh toán
+        thành công!</h1>
+      <p style='margin: 10px 0 0 0; color: #666; font-size: 16px;'>Cảm ơn bạn đã
+        mua sắm tại Online Bookstore</p>
+    </div>
+
+    <!-- Order Summary -->
+    <div
+      style='background: white; border-radius: 12px; padding: 30px; margin: 20px 0; box-shadow: 0 4px 12px rgba(0,0,0,0.1);'
+    >
+      <h2
+        style='color: #333; margin-top: 0; border-bottom: 3px solid #28a745; padding-bottom: 15px; font-size: 24px;'
+      >
+        📋 Thông tin đơn hàng
+      </h2>
+
+      <div
+        style='background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;'
+      >
+        <p style='margin: 0 0 10px 0; font-size: 18px;'>Chào bạn,</p>
+        <p style='margin: 0; font-size: 16px;'>
+          Đơn hàng
+          <strong style='color: #007bff;'>#{{order.orderNumber}}</strong>
+          đã được thanh toán thành công qua VNPay.
+          <br />Thời gian:
+          <strong>{{order.createdAt}}</strong>
+        </p>
+      </div>
+
+      <table class='summary-table'>
+        <tr>
+          <th>Mã đơn hàng</th>
+          <td><strong
+              style='color: #007bff;'
+            >{{order.orderNumber}}</strong></td>
+        </tr>
+        <tr>
+          <th>Trạng thái đơn hàng</th>
+          <td>
+            <span
+              style='background: #28a745; color: white; padding: 6px 12px; border-radius: 20px; font-size: 14px;'
+            >
+              {{order.status}}
+            </span>
+          </td>
+        </tr>
+        <tr>
+          <th>Phương thức thanh toán</th>
+          <td><strong>VNPay</strong></td>
+        </tr>
+        <tr>
+          <th>Thời gian đặt hàng</th>
+          <td>{{order.createdAt}}</td>
+        </tr>
+        {{#if order.receivedAt}}
+          <tr>
+            <th>Thời gian thanh toán</th>
+            <td>{{order.receivedAt}}</td>
+          </tr>
+        {{/if}}
+      </table>
+    </div>
+
+    <!-- Product Details -->
+    {{#if order.items}}
+      <div
+        style='background: white; border-radius: 12px; padding: 30px; margin: 20px 0; box-shadow: 0 4px 12px rgba(0,0,0,0.1);'
+      >
+        <h2
+          style='color: #333; margin-top: 0; border-bottom: 3px solid #007bff; padding-bottom: 15px; font-size: 24px;'
+        >
+          📚 Chi tiết sản phẩm
+        </h2>
+
+        {{#each order.items}}
+          <div class='product-item'>
+            <div class='product-info'>
+              <h4 style='margin: 0 0 8px 0; color: #333; font-size: 18px;'>📖
+                {{this.title}}</h4>
+              {{#if this.author}}
+                <p
+                  style='margin: 0 0 8px 0; color: #666; font-style: italic;'
+                >Tác giả: {{this.author}}</p>
+              {{/if}}
+              <div style='color: #666; font-size: 14px;'>
+                <span
+                  style='background: #e9ecef; padding: 4px 8px; border-radius: 4px; margin-right: 10px;'
+                >
+                  Số lượng:
+                  <strong>{{this.quantity}}</strong>
+                </span>
+                <span
+                  style='background: #fff3cd; padding: 4px 8px; border-radius: 4px;'
+                >
+                  Đơn giá:
+                  <strong>{{formatCurrency this.price}} VNĐ</strong>
+                </span>
+                {{#if this.discount}}
+                  <span
+                    style='background: #d4edda; padding: 4px 8px; border-radius: 4px; margin-left: 10px;'
+                  >
+                    Giảm giá:
+                    <strong>{{this.discount}}%</strong>
+                  </span>
+                {{/if}}
+              </div>
+            </div>
+            <div class='product-price'>
+              <div style='font-size: 18px; color: #28a745;'>
+                {{formatCurrency (multiply this.price this.quantity)}}
+                VNĐ
+              </div>
+            </div>
+          </div>
+        {{/each}}
+
+        <!-- Order Totals -->
+        <div
+          style='border-top: 2px solid #eee; margin-top: 20px; padding-top: 20px;'
+        >
+          <table style='width: 100%; font-size: 16px;'>
+            <tr>
+              <td style='padding: 8px 0; text-align: right;'><strong>Tạm tính:</strong></td>
+              <td
+                style='padding: 8px 0; text-align: right; width: 150px;'
+              >{{formatCurrency order.subtotal}} VNĐ</td>
+            </tr>
+            {{#if order.tax}}
+              <tr>
+                <td style='padding: 8px 0; text-align: right;'><strong
+                  >Thuế:</strong></td>
+                <td style='padding: 8px 0; text-align: right;'>{{formatCurrency
+                    order.tax
+                  }}
+                  VNĐ</td>
+              </tr>
+            {{/if}}
+            {{#if order.shippingCost}}
+              <tr>
+                <td style='padding: 8px 0; text-align: right;'><strong>Phí vận
+                    chuyển:</strong></td>
+                <td style='padding: 8px 0; text-align: right;'>{{formatCurrency
+                    order.shippingCost
+                  }}
+                  VNĐ</td>
+              </tr>
+            {{/if}}
+            {{#if order.discount}}
+              <tr>
+                <td
+                  style='padding: 8px 0; text-align: right; color: #dc3545;'
+                ><strong>Giảm giá:</strong></td>
+                <td
+                  style='padding: 8px 0; text-align: right; color: #dc3545;'
+                >-{{formatCurrency order.discount}} VNĐ</td>
+              </tr>
+            {{/if}}
+            <tr style='border-top: 2px solid #28a745;'>
+              <td
+                style='padding: 15px 0; text-align: right; font-size: 20px; font-weight: bold; color: #28a745;'
+              >TỔNG CỘNG:</td>
+              <td
+                style='padding: 15px 0; text-align: right; font-size: 24px; font-weight: bold; color: #28a745;'
+              >
+                {{formatCurrency order.total}}
+                VNĐ
+              </td>
+            </tr>
+          </table>
+        </div>
+      </div>
+    {{/if}}
+
+    <!-- Transaction Information -->
+    {{#if payment}}
+      <div
+        style='background: white; border-radius: 12px; padding: 30px; margin: 20px 0; box-shadow: 0 4px 12px rgba(0,0,0,0.1);'
+      >
+        <h2
+          style='color: #333; margin-top: 0; border-bottom: 3px solid #17a2b8; padding-bottom: 15px; font-size: 24px;'
+        >
+          💳 Thông tin giao dịch
+        </h2>
+
+        <div class='transaction-info'>
+          <table class='summary-table'>
+            <tr>
+              <th>Mã thanh toán</th>
+              <td><strong style='color: #007bff;'>{{payment.id}}</strong></td>
+            </tr>
+            {{#if payment.transactionId}}
+              <tr>
+                <th>Mã giao dịch VNPay</th>
+                <td><strong
+                    style='color: #28a745;'
+                  >{{payment.transactionId}}</strong></td>
+              </tr>
+            {{/if}}
+            <tr>
+              <th>Trạng thái thanh toán</th>
+              <td>
+                <span
+                  style='background: #28a745; color: white; padding: 6px 12px; border-radius: 20px; font-size: 14px;'
+                >
+                  {{payment.status}}
+                </span>
+              </td>
+            </tr>
+            <tr>
+              <th>Số tiền đã thanh toán</th>
+              <td><strong
+                  style='color: #28a745; font-size: 18px;'
+                >{{formatCurrency payment.amount}} VNĐ</strong></td>
+            </tr>
+            {{#if payment.bankCode}}
+              <tr>
+                <th>Ngân hàng</th>
+                <td><strong>{{payment.bankCode}}</strong></td>
+              </tr>
+            {{/if}}
+            {{#if payment.completedAt}}
+              <tr>
+                <th>Thời gian hoàn tất</th>
+                <td>{{payment.completedAt}}</td>
+              </tr>
+            {{/if}}
+          </table>
+        </div>
+      </div>
+    {{/if}}
+
+    <!-- Shipping Address -->
+    {{#if order.shippingAddress}}
+      <div
+        style='background: white; border-radius: 12px; padding: 30px; margin: 20px 0; box-shadow: 0 4px 12px rgba(0,0,0,0.1);'
+      >
+        <h2
+          style='color: #333; margin-top: 0; border-bottom: 3px solid #ffc107; padding-bottom: 15px; font-size: 24px;'
+        >
+          🚚 Địa chỉ giao hàng
+        </h2>
+
+        <div
+          style='background: #fff3cd; border: 1px solid #ffeaa7; padding: 20px; border-radius: 8px;'
+        >
+          <p style='margin: 0 0 8px 0; font-size: 16px;'><strong
+            >{{order.shippingAddress.fullName}}</strong></p>
+          <p style='margin: 0 0 8px 0;'>📱 {{order.shippingAddress.phone}}</p>
+          <p style='margin: 0;'>📍
+            {{order.shippingAddress.address}},
+            {{order.shippingAddress.city}}</p>
+        </div>
+      </div>
+    {{/if}}
+
+    <!-- Action Buttons -->
+    <div
+      style='text-align: center; margin: 40px 0; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);'
+    >
+      <h3 style='margin-top: 0; color: #333; font-size: 20px;'>Các thao tác khả
+        dụng</h3>
+
+      <a href='{{orderViewUrl}}' class='btn-view'>
+        👁️ Xem chi tiết đơn hàng
+      </a>
+
+      <!-- Direct Refund Link -->
+      <a
+        href='{{refundApiUrl}}'
+        class='btn-refund'
+        onclick='return confirm("Bạn có chắc chắn muốn yêu cầu hoàn tiền cho đơn hàng này?\n\nSố tiền sẽ hoàn: {{formatCurrency
+          payment.amount
+        }} VNĐ\nThời gian xử lý: 3-5 ngày làm việc")'
+      >
+        💰 Yêu cầu hoàn tiền
+      </a>
+    </div>
+
+    <!-- Important Notes -->
+    <div
+      style='background: #fff3cd; border: 1px solid #ffeaa7; padding: 20px; border-radius: 8px; margin: 25px 0;'
+    >
+      <h4 style='margin: 0 0 15px 0; color: #856404;'>📝 Lưu ý quan trọng:</h4>
+      <ul style='margin: 0; padding-left: 20px; color: #856404;'>
+        <li>Bạn có thể yêu cầu hoàn tiền trong vòng
+          <strong>30 ngày</strong>
+          kể từ ngày thanh toán</li>
+        <li>Quá trình hoàn tiền sẽ được xử lý qua VNPay và có thể mất 3-5 ngày
+          làm việc</li>
+        <li>Vui lòng lưu email này để tiện tra cứu và theo dõi đơn hàng</li>
+        <li>Mọi thắc mắc vui lòng liên hệ bộ phận CSKH: support@bookstore.com</li>
+        <li>Hotline: 1900-1000 (8:00 - 22:00 hàng ngày)</li>
+      </ul>
+    </div>
+
+    <!-- Footer -->
+    <hr style='border: none; border-top: 1px solid #eee; margin: 40px 0;' />
+
+    <div
+      style='text-align: center; color: #888; font-size: 14px; background: white; padding: 20px; border-radius: 8px;'
+    >
+      <p style='margin: 0 0 10px 0; font-weight: bold;'>©
+        {{currentYear}}
+        Online Bookstore</p>
+      <p style='margin: 0;'>🏪 Cửa hàng sách trực tuyến hàng đầu Việt Nam</p>
+      <p style='margin: 10px 0 0 0; font-size: 12px;'>
+        📧 support@bookstore.com | 📱 1900-1000 | 🌐 www.bookstore.com
+      </p>
+    </div>
+
+  </body>
+</html>

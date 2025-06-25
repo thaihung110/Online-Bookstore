@@ -27,25 +27,19 @@ const OrderSummary: React.FC = () => {
     getShippingCost,
   } = useCheckoutStore();
 
-  const getCartItems = useCartStore((state) => state.getCartItems);
-  const getTotalPrice = useCartStore((state) => state.getTotalPrice);
-  const getTotalQuantity = useCartStore((state) => state.getTotalQuantity);
+  const { cart, getSelectedItems } = useCartStore();
 
-  const cartItems = getCartItems();
-  const totalPrice = getTotalPrice();
-  const totalQuantity = getTotalQuantity();
+  const selectedItems = getSelectedItems();
 
-  // Calculate shipping cost
-  const shippingCost = getShippingCost();
-
-  // Chuyển đổi giá từ VND sang USD
-  const VND_TO_USD = 1;
-  const cartItemsUsd = cartItems.map((item) => ({
-    ...item,
-    priceAtAdd: item.priceAtAdd / VND_TO_USD,
-  }));
-  const totalPriceUsd = totalPrice / VND_TO_USD;
-  const shippingCostUsd = shippingCost / VND_TO_USD;
+  // Use cart totals calculated by backend (single source of truth)
+  const subtotal = cart?.subtotal || 0;
+  const shippingCost = cart?.shippingCost || 0;
+  const taxAmount = cart?.taxAmount || 0;
+  const total = cart?.total || 0;
+  const totalQuantity = selectedItems.reduce(
+    (sum, item) => sum + item.quantity,
+    0
+  );
 
   // Hiển thị địa chỉ định dạng đầy đủ
   const formatAddress = (address: any) => {
@@ -146,7 +140,7 @@ const OrderSummary: React.FC = () => {
             </Typography>
 
             <List disablePadding>
-              {cartItemsUsd.map((item: CartItem, idx: number) => (
+              {selectedItems.map((item: CartItem, idx: number) => (
                 <ListItem key={item.book.id + "-" + idx} sx={{ py: 1, px: 0 }}>
                   <Avatar
                     src={item.book.coverImage}
@@ -168,20 +162,29 @@ const OrderSummary: React.FC = () => {
 
               <ListItem sx={{ py: 1, px: 0 }}>
                 <ListItemText primary="Tạm tính" />
-                <Typography variant="body1">
-                  ${totalPriceUsd.toFixed(2)}
-                </Typography>
+                <Typography variant="body1">${subtotal.toFixed(2)}</Typography>
               </ListItem>
 
               <ListItem sx={{ py: 1, px: 0 }}>
                 <ListItemText primary="Phí vận chuyển" />
-                <Typography variant="body1">${shippingCostUsd.toFixed(2)}</Typography>
+                <Typography variant="body1">
+                  ${shippingCost.toFixed(2)}
+                </Typography>
               </ListItem>
+
+              {taxAmount > 0 && (
+                <ListItem sx={{ py: 1, px: 0 }}>
+                  <ListItemText primary="Thuế (8%)" />
+                  <Typography variant="body1">
+                    ${taxAmount.toFixed(2)}
+                  </Typography>
+                </ListItem>
+              )}
 
               <ListItem sx={{ py: 1, px: 0 }}>
                 <ListItemText primary="Tổng cộng" />
                 <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-                  ${(totalPriceUsd + shippingCostUsd).toFixed(2)}
+                  ${total.toFixed(2)}
                 </Typography>
               </ListItem>
             </List>

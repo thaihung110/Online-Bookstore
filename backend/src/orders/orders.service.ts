@@ -7,11 +7,12 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Order, OrderDocument, OrderItem } from './schemas/order.schema';
-import { CreateOrderDto } from './dto/create-order.dto';
+import { CreateOrderDto, CreateOrderFromCartDto } from './dto/create-order.dto';
 import { UsersService } from '../users/users.service';
 import { BooksService } from '../books/books.service';
 import { CartsService } from '../carts/carts.service';
 import { BookDocument } from '../books/schemas/book.schema';
+import { CartItem } from '../carts/schemas/cart.schema';
 import { UploadService } from '../upload/upload.service';
 import { calculateOrderTotal } from '../shared/price-calculator';
 
@@ -124,11 +125,11 @@ export class OrdersService {
     let receivedAt: Date | null = null;
     let pendingExpiry: Date | null = null;
 
-    if (createOrderDto.paymentInfo.method === 'cash') {
-      // CASH orders are immediately RECEIVED
+    if (createOrderDto.paymentInfo.method === 'COD') {
+      // COD orders are immediately RECEIVED but not yet paid (will pay on delivery)
       initialStatus = 'RECEIVED';
-      isPaid = true;
-      paidAt = new Date();
+      isPaid = false; // COD = not paid yet, will pay on delivery
+      paidAt = null; // COD = will have paidAt when actually paid on delivery
       receivedAt = new Date();
     } else {
       // VNPAY orders start as PENDING
@@ -146,9 +147,9 @@ export class OrdersService {
       shippingAddress: createOrderDto.shippingAddress,
       paymentInfo: {
         method: createOrderDto.paymentInfo.method,
-        isPaid,
+        isPaid: Boolean(isPaid), // Ensure boolean type
         paidAt,
-        paymentId: createOrderDto.paymentInfo.paymentId,
+        paymentId: createOrderDto.paymentInfo.paymentId || undefined,
       },
       subtotal: calculation.subtotal,
       tax: calculation.taxAmount,
@@ -158,12 +159,56 @@ export class OrdersService {
       status: initialStatus,
       receivedAt,
       pendingExpiry,
-      isGift: createOrderDto.isGift,
-      giftMessage: createOrderDto.giftMessage,
+      isGift: Boolean(createOrderDto.isGift || false), // Ensure boolean type
+      giftMessage: createOrderDto.giftMessage || undefined,
       loyaltyPointsEarned: 0,
     });
 
     try {
+      console.log('[Orders Service] About to save order with data:');
+      console.log('User ID:', userId);
+      console.log('Payment Method:', createOrderDto.paymentInfo.method);
+      console.log('Initial Status:', initialStatus);
+      console.log('Is Paid:', isPaid);
+      console.log(
+        'Payment Logic Applied:',
+        createOrderDto.paymentInfo.method === 'COD'
+          ? 'COD - Order set to RECEIVED immediately'
+          : 'VNPAY - Order set to PENDING',
+      );
+      console.log(
+        'Payment Info:',
+        JSON.stringify(
+          {
+            method: createOrderDto.paymentInfo.method,
+            isPaid: Boolean(isPaid),
+            paidAt,
+            paymentId: createOrderDto.paymentInfo.paymentId || undefined,
+          },
+          null,
+          2,
+        ),
+      );
+      console.log(
+        'Complete Order Data:',
+        JSON.stringify(
+          {
+            user: new Types.ObjectId(userId),
+            items: processedOrderItems.length,
+            paymentInfo: {
+              method: createOrderDto.paymentInfo.method,
+              isPaid: Boolean(isPaid),
+              paidAt,
+              paymentId: createOrderDto.paymentInfo.paymentId || undefined,
+            },
+            status: initialStatus,
+            total: calculation.total,
+          },
+          null,
+          2,
+        ),
+      );
+
       const savedOrder = await newOrder.save();
 
       // Decrement stock for each book using original book IDs
@@ -198,12 +243,86 @@ export class OrdersService {
       return savedOrder;
     } catch (error) {
       // If order saving or stock update fails, we might need a rollback strategy (transactions)
-      // For now, log and throw generic error
+      // For now, log and throw specific error based on type
       console.error('Error creating order or updating stock: ', error);
+
+      // Handle MongoDB validation errors specifically
+      if (
+        error.name === 'ValidationError' ||
+        error.name === 'MongoServerError'
+      ) {
+        console.error('MongoDB Validation Error Details:');
+        console.error('Error Name:', error.name);
+        console.error('Error Message:', error.message);
+
+        if (error.errors) {
+          console.error('Validation Errors:');
+          for (const field in error.errors) {
+            console.error(`- ${field}: ${error.errors[field].message}`);
+          }
+        }
+
+        if (error.errInfo) {
+          console.error('Error Info:', JSON.stringify(error.errInfo, null, 2));
+        }
+
+        throw new BadRequestException(
+          `Order validation failed: ${error.message}. Please check your order data.`,
+        );
+      }
+
+      // Handle other types of errors
       throw new InternalServerErrorException(
-        'Failed to create order. Please try again.',
+        `Failed to create order: ${error.message}. Please try again.`,
       );
     }
+  }
+
+  async createOrderFromCart(
+    userId: string,
+    createOrderFromCartDto: CreateOrderFromCartDto,
+  ): Promise<OrderDocument> {
+    console.log('[Orders Service] Creating order from cart for user:', userId);
+
+    // Get user's cart
+    const cart = await this.cartsService.getCart(userId);
+
+    if (!cart || !cart.items || cart.items.length === 0) {
+      throw new BadRequestException('Cart is empty. Cannot create order.');
+    }
+
+    // Filter only ticked items for checkout
+    const tickedItems = cart.items.filter((item) => item.isTicked);
+
+    if (tickedItems.length === 0) {
+      throw new BadRequestException(
+        'No items selected for checkout. Please select items to proceed.',
+      );
+    }
+
+    // Convert cart items to order items format
+    const orderItemsDto = tickedItems.map((cartItem) => ({
+      bookId: (cartItem.book as any)._id
+        ? (cartItem.book as any)._id.toString()
+        : cartItem.book.toString(),
+      quantity: cartItem.quantity,
+    }));
+
+    // Create the order DTO with cart items
+    const createOrderDto: CreateOrderDto = {
+      items: orderItemsDto,
+      shippingAddress: createOrderFromCartDto.shippingAddress,
+      paymentInfo: createOrderFromCartDto.paymentInfo,
+      isGift: createOrderFromCartDto.isGift,
+      giftMessage: createOrderFromCartDto.giftMessage,
+    };
+
+    // Use existing createOrder method
+    return this.createOrder(userId, createOrderDto);
+  }
+
+  async findAll(): Promise<OrderDocument[]> {
+    return this.orderModel.find().sort({ createdAt: -1 }).exec();
   }
 
   async findUserOrders(userId: string): Promise<OrderDocument[]> {
@@ -266,166 +385,184 @@ export class OrdersService {
     orderId: string,
     paymentId: string,
   ): Promise<OrderDocument> {
+    console.log(`[ORDERS DEBUG] ===== handlePaymentCompleted START =====`);
+    console.log(`[ORDERS DEBUG] Input orderId: ${orderId}`);
+    console.log(`[ORDERS DEBUG] Input paymentId: ${paymentId}`);
+
     const order = await this.orderModel.findById(new Types.ObjectId(orderId));
     if (!order) {
       throw new NotFoundException(`Order with ID "${orderId}" not found.`);
     }
 
-    if (order.status !== 'PENDING') {
-      throw new BadRequestException(
-        `Order ${orderId} is not in PENDING status`,
+    console.log(`[ORDERS DEBUG] Found order successfully`);
+    console.log(`[ORDERS DEBUG] Order ID: ${order._id.toString()}`);
+    console.log(`[ORDERS DEBUG] Current order status: ${order.status}`);
+    console.log(`[ORDERS DEBUG] Payment method: ${order.paymentInfo.method}`);
+    console.log(
+      `[ORDERS DEBUG] Current payment info:`,
+      JSON.stringify(order.paymentInfo, null, 2),
+    );
+
+    // For COD orders, they're already RECEIVED, just update payment info
+    if (order.paymentInfo.method === 'COD') {
+      console.log(`[ORDERS DEBUG] COD order - updating payment info only`);
+
+      // For COD: isPaid = false, paidAt = null (will be paid on delivery)
+      const codPaymentInfo = {
+        isPaid: false,
+        paidAt: null,
+        paymentId: paymentId,
+      };
+
+      // Ensure order is marked as RECEIVED (should already be)
+      const codStatus = order.status !== 'RECEIVED' ? 'RECEIVED' : order.status;
+      const codReceivedAt =
+        order.status !== 'RECEIVED' ? new Date() : order.receivedAt;
+
+      console.log(
+        `[ORDERS DEBUG] COD payment info to set:`,
+        JSON.stringify(codPaymentInfo, null, 2),
       );
-    }
 
-    // Update order to RECEIVED when payment is completed
-    order.status = 'RECEIVED';
-    order.paymentInfo.isPaid = true;
-    order.paymentInfo.paidAt = new Date();
-    order.paymentInfo.paymentId = paymentId;
-    order.receivedAt = new Date();
-    order.pendingExpiry = null; // Clear expiry
+      try {
+        console.log(
+          `[ORDERS DEBUG] Using direct MongoDB update for COD order...`,
+        );
 
-    return await order.save();
-  }
+        const updateResult = await this.orderModel.updateOne(
+          { _id: new Types.ObjectId(orderId) },
+          {
+            $set: {
+              status: codStatus,
+              'paymentInfo.isPaid': false, // COD = not paid yet
+              'paymentInfo.paidAt': null, // COD = will pay on delivery
+              'paymentInfo.paymentId': paymentId,
+              receivedAt: codReceivedAt,
+              pendingExpiry: null,
+              updatedAt: new Date(),
+            },
+          },
+        );
 
-  // Method to auto-cancel expired PENDING orders
-  async cancelExpiredOrders(): Promise<number> {
-    const now = new Date();
-    const expiredOrders = await this.orderModel.find({
-      status: 'PENDING',
-      pendingExpiry: { $lte: now },
-    });
+        console.log(`[ORDERS DEBUG] COD MongoDB update result:`, updateResult);
 
-    let canceledCount = 0;
-    for (const order of expiredOrders) {
-      await this.cancelOrder(
-        order._id.toString(),
-        'Auto-canceled after 24 hours',
-      );
-      canceledCount++;
-    }
+        // Fetch the updated document
+        const updatedOrder = await this.orderModel.findById(
+          new Types.ObjectId(orderId),
+        );
+        console.log(
+          `[ORDERS DEBUG] ✅ COD order updated with direct MongoDB operation!`,
+        );
 
-    return canceledCount;
-  }
+        // Verify the saved data
+        const freshOrder = await this.orderModel.findById(
+          new Types.ObjectId(orderId),
+        );
+        console.log(`[ORDERS DEBUG] === COD FRESH FETCH FROM DB ===`);
+        console.log(
+          `[ORDERS DEBUG] Fresh COD payment info:`,
+          JSON.stringify(freshOrder.paymentInfo, null, 2),
+        );
+        console.log(`[ORDERS DEBUG] Fresh COD status: ${freshOrder.status}`);
 
-  // Method to cancel an order
-  async cancelOrder(orderId: string, reason: string): Promise<OrderDocument> {
-    const order = await this.orderModel.findById(new Types.ObjectId(orderId));
-    if (!order) {
-      throw new NotFoundException(`Order with ID "${orderId}" not found.`);
-    }
-
-    if (!['PENDING', 'RECEIVED'].includes(order.status)) {
-      throw new BadRequestException(
-        `Cannot cancel order with status ${order.status}`,
-      );
-    }
-
-    // Restore stock for canceled orders
-    for (const item of order.items) {
-      const book = await this.booksService.findOne(item.book.toString());
-      if (book) {
-        await this.booksService.update(item.book.toString(), {
-          stock: book.stock + item.quantity,
-        });
+        return updatedOrder;
+      } catch (saveError) {
+        console.log(`[ORDERS DEBUG] ❌ COD UPDATE ERROR:`, saveError);
+        throw saveError;
       }
     }
 
-    order.status = 'CANCELED';
-    order.cancelledAt = new Date();
-    order.notes.push(`Canceled: ${reason}`);
-
-    return await order.save();
-  }
-
-  // Admin method to update order status with proper flow validation
-  async updateOrderStatus(
-    orderId: string,
-    newStatus: string,
-    adminId?: string,
-  ): Promise<OrderDocument> {
-    const order = await this.orderModel.findById(new Types.ObjectId(orderId));
-    if (!order) {
-      throw new NotFoundException(`Order with ID "${orderId}" not found.`);
-    }
-
-    // Validate status transitions
-    const allowedTransitions = {
-      RECEIVED: ['CONFIRMED', 'CANCELED'],
-      CONFIRMED: ['PREPARED', 'CANCELED'],
-      PREPARED: ['SHIPPED', 'CANCELED'],
-      SHIPPED: ['DELIVERED'],
-      DELIVERED: ['REFUNDED'],
-    };
-
-    const currentStatus = order.status;
-    if (!allowedTransitions[currentStatus]?.includes(newStatus)) {
+    // For VNPAY orders, transition from PENDING to RECEIVED
+    if (order.status !== 'PENDING') {
+      console.log(`[ORDERS DEBUG] ERROR: Order not in PENDING status`);
       throw new BadRequestException(
-        `Invalid status transition from ${currentStatus} to ${newStatus}`,
+        `Order ${orderId} is not in PENDING status (current: ${order.status})`,
       );
     }
 
-    // Update status and timestamps
-    order.status = newStatus;
-    const now = new Date();
+    console.log(
+      `[ORDERS DEBUG] VNPAY order - transitioning from PENDING to RECEIVED`,
+    );
 
-    switch (newStatus) {
-      case 'CONFIRMED':
-        order.confirmedAt = now;
-        break;
-      case 'PREPARED':
-        order.preparedAt = now;
-        break;
-      case 'SHIPPED':
-        order.shippedAt = now;
-        break;
-      case 'DELIVERED':
-        order.deliveredAt = now;
-        break;
-      case 'REFUNDED':
-        order.refundedAt = now;
-        break;
-      case 'CANCELED':
-        order.cancelledAt = now;
-        // Restore stock for canceled orders
-        for (const item of order.items) {
-          const book = await this.booksService.findOne(item.book.toString());
-          if (book) {
-            await this.booksService.update(item.book.toString(), {
-              stock: book.stock + item.quantity,
-            });
-          }
-        }
-        break;
-    }
+    // Update order to RECEIVED when payment is completed
+    const paymentCompletedAt = new Date();
+    console.log(
+      `[ORDERS DEBUG] Payment completed timestamp: ${paymentCompletedAt.toISOString()}`,
+    );
 
-    if (adminId) {
-      order.notes.push(
-        `Status updated to ${newStatus} by admin ${adminId} at ${now.toISOString()}`,
+    // Store original values for comparison
+    const originalIsPaid = order.paymentInfo.isPaid;
+    const originalPaidAt = order.paymentInfo.paidAt;
+    const originalPaymentId = order.paymentInfo.paymentId;
+    const originalStatus = order.status;
+
+    console.log(`[ORDERS DEBUG] === BEFORE SAVE COMPARISON ===`);
+    console.log(`[ORDERS DEBUG] isPaid: ${originalIsPaid} → true`);
+    console.log(
+      `[ORDERS DEBUG] paidAt: ${originalPaidAt} → ${paymentCompletedAt}`,
+    );
+    console.log(
+      `[ORDERS DEBUG] paymentId: ${originalPaymentId} → ${paymentId}`,
+    );
+    console.log(`[ORDERS DEBUG] status: ${originalStatus} → RECEIVED`);
+
+    try {
+      console.log(`[ORDERS DEBUG] Attempting to save order...`);
+
+      // BYPASS MONGOOSE - Use direct MongoDB update to avoid middleware issues
+      console.log(
+        `[ORDERS DEBUG] Using direct MongoDB update to bypass middleware...`,
       );
+
+      const updateResult = await this.orderModel.updateOne(
+        { _id: new Types.ObjectId(orderId) },
+        {
+          $set: {
+            status: 'RECEIVED',
+            'paymentInfo.isPaid': true,
+            'paymentInfo.paidAt': paymentCompletedAt,
+            'paymentInfo.paymentId': paymentId,
+            receivedAt: paymentCompletedAt,
+            pendingExpiry: null,
+            updatedAt: new Date(),
+          },
+        },
+      );
+
+      console.log(`[ORDERS DEBUG] Direct MongoDB update result:`, updateResult);
+
+      // Fetch the updated document
+      const updatedOrder = await this.orderModel.findById(
+        new Types.ObjectId(orderId),
+      );
+      console.log(
+        `[ORDERS DEBUG] ✅ VNPAY order updated with direct MongoDB operation!`,
+      );
+
+      // Verify the saved data
+      const freshOrder = await this.orderModel.findById(
+        new Types.ObjectId(orderId),
+      );
+      console.log(`[ORDERS DEBUG] === FRESH FETCH FROM DB ===`);
+      console.log(
+        `[ORDERS DEBUG] Fresh order payment info:`,
+        JSON.stringify(freshOrder.paymentInfo, null, 2),
+      );
+      console.log(`[ORDERS DEBUG] Fresh order status: ${freshOrder.status}`);
+
+      console.log(`[ORDERS DEBUG] ===== handlePaymentCompleted END =====`);
+      return updatedOrder;
+    } catch (saveError) {
+      console.log(`[ORDERS DEBUG] ❌ UPDATE ERROR:`, saveError);
+      console.log(`[ORDERS DEBUG] Error name: ${saveError.name}`);
+      console.log(`[ORDERS DEBUG] Error message: ${saveError.message}`);
+      if (saveError.errInfo) {
+        console.log(
+          `[ORDERS DEBUG] Error info:`,
+          JSON.stringify(saveError.errInfo, null, 2),
+        );
+      }
+      throw saveError;
     }
-
-    return await order.save();
-  }
-
-  // Method to get orders by status
-  async findOrdersByStatus(status: string): Promise<OrderDocument[]> {
-    return this.orderModel.find({ status }).sort({ createdAt: -1 }).exec();
-  }
-
-  // Method to get pending orders that will expire soon
-  async findOrdersExpiringSoon(
-    hoursAhead: number = 2,
-  ): Promise<OrderDocument[]> {
-    const futureTime = new Date();
-    futureTime.setHours(futureTime.getHours() + hoursAhead);
-
-    return this.orderModel
-      .find({
-        status: 'PENDING',
-        pendingExpiry: { $lte: futureTime, $gt: new Date() },
-      })
-      .sort({ pendingExpiry: 1 })
-      .exec();
   }
 }

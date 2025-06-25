@@ -1,0 +1,93 @@
+### Test Refund API - VNPay Integration
+
+@baseUrl = http://localhost:3001/api
+@orderId = 685bebd9886e4d3ff1b904e3
+@paymentId = 685bee2500c8004cc96ed25d
+
+### 1. Kiểm tra order hiện tại
+GET {{baseUrl}}/orders/{{orderId}}
+Authorization: Bearer YOUR_JWT_TOKEN
+
+### 2. Kiểm tra payment hiện tại
+GET {{baseUrl}}/payments/{{paymentId}}
+
+### 3. Lấy debug tokens cho order
+GET {{baseUrl}}/orders/debug-tokens/{{orderId}}
+
+### 4. Test order view trước khi refund (copy viewToken từ step 3)
+GET {{baseUrl}}/orders/view/VIEW_TOKEN_FROM_STEP_3
+
+### 5. Thực hiện refund request (copy refundToken từ step 3)
+POST {{baseUrl}}/orders/refund/REFUND_TOKEN_FROM_STEP_3
+Content-Type: application/json
+
+{
+  "reason": "Không còn cần sách này nữa. Muốn đổi sang sách khác."
+}
+
+### 6. Kiểm tra payment status sau refund
+GET {{baseUrl}}/payments/{{paymentId}}
+
+### 7. Kiểm tra order status sau refund
+GET {{baseUrl}}/orders/{{orderId}}
+Authorization: Bearer YOUR_JWT_TOKEN
+
+### 8. Test với payment khác (nếu có)
+GET {{baseUrl}}/payments
+
+### 9. Test refund trực tiếp qua PaymentsController (nếu có endpoint)
+POST {{baseUrl}}/payments/{{paymentId}}/refund
+Content-Type: application/json
+
+{
+  "reason": "Test refund qua payments controller"
+}
+
+### 10. Test danh sách transactions của payment
+GET {{baseUrl}}/payments/{{paymentId}}/transactions
+
+### HƯỚNG DẪN TEST REFUND:
+
+### Bước 1: Chuẩn bị
+# - Đảm bảo có order đã thanh toán thành công (status: RECEIVED)
+# - Đảm bảo có payment với status: COMPLETED
+# - Order phải trong vòng 30 ngày (refund window)
+
+### Bước 2: Lấy tokens
+# - Chạy step 3 để lấy viewToken và refundToken
+# - Copy tokens vào step 4 và 5
+
+### Bước 3: Test refund
+# - Chạy step 5 với lý do refund
+# - Kiểm tra response có success: true không
+
+### Bước 4: Verify results
+# - Payment status chuyển thành "REFUNDED"
+# - Order status chuyển thành "REFUNDED"  
+# - Email refund confirmation được gửi
+
+### KẾT QUẢ MONG ĐỢI:
+
+### Response thành công:
+# {
+#   "success": true,
+#   "message": "Refund request processed successfully",
+#   "refundAmount": 3527250,
+#   "orderId": "685bebd9886e4d3ff1b904e3"
+# }
+
+### VNPay refund (sandbox sẽ luôn success):
+# - VNPay sandbox mode: Refund luôn thành công
+# - Production: Cần kiểm tra thực tế với ngân hàng
+
+### Email refund confirmation:
+# - Gửi đến hungvt0110@outlook.com
+# - Subject: "💰 Hoàn tiền thành công - Đơn hàng #ORDER_NUMBER"
+# - Nội dung: Thông tin hoàn tiền, thời gian xử lý, ngân hàng
+
+### DEBUGGING:
+### Nếu refund fail:
+# 1. Kiểm tra payment status (phải là COMPLETED)
+# 2. Kiểm tra order status (không được là REFUNDED, CANCELED)
+# 3. Kiểm tra refund window (trong 30 ngày)
+# 4. Xem server logs để debug VNPay refund response 

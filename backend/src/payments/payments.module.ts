@@ -18,6 +18,7 @@ import { PaymentLog, PaymentLogSchema } from './schemas/payment-log.schema';
 
 import { PaymentLoggingService } from './services/payment-logging.service';
 import { OrdersModule } from '../orders/orders.module';
+import { EmailModule } from '../email/email.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { OrdersModule } from '../orders/orders.module';
       { name: PaymentLog.name, schema: PaymentLogSchema },
     ]),
     forwardRef(() => OrdersModule),
+    EmailModule,
   ],
   controllers: [PaymentsController],
   providers: [

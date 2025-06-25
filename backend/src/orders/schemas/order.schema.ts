@@ -55,7 +55,7 @@ export class ShippingAddress {
 export class PaymentInfo {
   @Prop({
     required: true,
-    enum: ['vnpay', 'cash'], // Chỉ 2 phương thức thanh toán
+    enum: ['VNPAY', 'COD'], // Updated to match MongoDB validation
   })
   method: string;
 
@@ -195,18 +195,72 @@ OrderSchema.set('toJSON', {
 
 // Pre-save middleware to generate order number
 OrderSchema.pre('save', async function (next) {
-  if (this.isNew && !this.orderNumber) {
-    const year = new Date().getFullYear();
-    const month = String(new Date().getMonth() + 1).padStart(2, '0');
-    const count = await (this.constructor as any).countDocuments({
-      createdAt: {
-        $gte: new Date(year, new Date().getMonth(), 1),
-        $lt: new Date(year, new Date().getMonth() + 1, 1),
-      },
-    });
-    this.orderNumber = `ORD-${year}${month}-${String(count + 1).padStart(4, '0')}`;
+  try {
+    if (this.isNew && !this.orderNumber) {
+      const year = new Date().getFullYear();
+      const month = String(new Date().getMonth() + 1).padStart(2, '0');
+      const count = await (this.constructor as any).countDocuments({
+        createdAt: {
+          $gte: new Date(year, new Date().getMonth(), 1),
+          $lt: new Date(year, new Date().getMonth() + 1, 1),
+        },
+      });
+      this.orderNumber = `ORD-${year}${month}-${String(count + 1).padStart(4, '0')}`;
+    }
+
+    // Ensure all required fields are properly set for validation
+    if (!this.status) {
+      this.status = 'PENDING';
+    }
+
+    // Ensure paymentInfo is properly structured
+    if (this.paymentInfo) {
+      // Only validate method - do NOT touch isPaid or paidAt fields
+      if (
+        !this.paymentInfo.method ||
+        !['VNPAY', 'COD'].includes(this.paymentInfo.method)
+      ) {
+        throw new Error('Payment method must be either "VNPAY" or "COD"');
+      }
+    }
+
+    // Ensure numeric fields are properly set
+    if (typeof this.subtotal !== 'number' || this.subtotal < 0) {
+      this.subtotal = 0;
+    }
+    if (typeof this.tax !== 'number' || this.tax < 0) {
+      this.tax = 0;
+    }
+    if (typeof this.shippingCost !== 'number' || this.shippingCost < 0) {
+      this.shippingCost = 0;
+    }
+    if (typeof this.discount !== 'number' || this.discount < 0) {
+      this.discount = 0;
+    }
+    if (typeof this.total !== 'number' || this.total < 0) {
+      this.total = 0;
+    }
+    if (
+      typeof this.loyaltyPointsEarned !== 'number' ||
+      this.loyaltyPointsEarned < 0
+    ) {
+      this.loyaltyPointsEarned = 0;
+    }
+
+    // Ensure boolean fields are proper booleans
+    if (typeof this.isGift !== 'boolean') {
+      this.isGift = false;
+    }
+
+    // Ensure arrays are properly set
+    if (!Array.isArray(this.notes)) {
+      this.notes = [];
+    }
+
+    next();
+  } catch (error) {
+    next(error);
   }
-  next();
 });
 
 // Indexes for performance
