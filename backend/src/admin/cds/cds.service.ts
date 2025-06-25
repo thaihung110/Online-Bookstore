@@ -15,8 +15,8 @@ import {
   ProductListResponse
 } from '../products/products.service';
 import { ProductActivityLogService } from '../activity-log/activity-log.service';
-import { CreateCDDto } from './dto/create-cd.dto';
-import { UpdateCDDto } from './dto/update-cd.dto';
+import { AdminCreateCDDto } from './dto/admin-create-cd.dto';
+import { AdminUpdateCDDto } from './dto/admin-update-cd.dto';
 
 // CD-specific filters
 export interface CDFilters extends ProductFilters {

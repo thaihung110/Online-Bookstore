@@ -21,7 +21,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../../auth/guards/roles.guard';
 import { Roles } from '../../auth/decorators/roles.decorator';
 import { AdminDVDsService } from './dvds.service';
-import { CreateDVDDto } from './dto/create-dvd.dto';
+import { AdminCreateDVDDto } from './dto/admin-create-dvd.dto';
 // import { UpdateDVDDto } from './dto/update-dvd.dto';
 import { DVD } from '../../dvds/schemas/dvd.schema';
 import { UploadService } from '../../upload/upload.service';
@@ -29,6 +29,7 @@ import {
   UploadPresignedUrlDto,
   UploadPresignedUrlResponseDto
 } from '../../upload/dto/upload-presigned-url.dto';
+import { GetUserId } from '../../auth/decorators/user.decorator';
 
 @ApiTags('admin-dvds')
 @Controller('admin/dvds')
@@ -58,16 +59,15 @@ export class DvdsController {
     );
   }
 
-  @Post(':userId')
+  @Post()
   @ApiOperation({ summary: 'Create a new DVD' })
-  @ApiParam({ name: 'userId', description: 'ID of the user creating the DVD', type: String })
   @ApiResponse({
     status: 201,
     description: 'DVD created successfully',
     type: DVD,
   })
   @ApiResponse({ status: 400, description: 'Bad request' })
-  async create(@Param('userId') userId: string,@Body() createDVDDto: CreateDVDDto): Promise<DVD> {
+  async create(@GetUserId() userId: string,@Body() createDVDDto: AdminCreateDVDDto): Promise<DVD> {
     return this.adminDVDsService.create(userId, createDVDDto);
     // return;
   }
@@ -90,11 +90,10 @@ export class DvdsController {
 
 
   // viet ham goi update DVD
-  @Put(':userId/:id')
+  @Put(':id')
 
   @ApiOperation({ summary: 'Update a DVD by ID' })
   @ApiParam({ name: 'id', description: 'DVD ID', type: String })
-  @ApiParam({ name: 'userId', description: 'ID of the user updating the DVD', type: String })
   @ApiResponse({
     status: 200,
     description: 'DVD updated successfully',
@@ -103,8 +102,8 @@ export class DvdsController {
   @ApiResponse({ status: 404, description: 'DVD not found' })
   async update(
     @Param('id') id: string,
-    @Param('userId') userId: string, // Assuming userId is needed for logging or auditing
-    @Body() updateDVDDto: CreateDVDDto, // Assuming CreateDVDDto is used for updates as well
+    @GetUserId() userId: string, // Assuming userId is needed for logging or auditing
+    @Body() updateDVDDto: AdminCreateDVDDto, // Assuming CreateDVDDto is used for updates as well
   ): Promise<DVD> {
     return this.adminDVDsService.update(userId, id, updateDVDDto);
   }

@@ -129,9 +129,14 @@ export class AdminProductsService<T extends Product, D extends ProductDocument> 
     if (!existingProduct) {
       throw new NotFoundException(`Product with ID ${id} not found or has already been
       deleted`);
+
+    }
+    const now = new Date();
+    const deletedProductCount = await this.productActivityLogService.countDeletedProductsByUserIdAndDate(userId,now);
+    if (deletedProductCount >= 10) {
+      throw new BadRequestException('You can only delete up to 30 products per day');
     }
     // set isAvailable = false and update updatedAt to now
-    const now = new Date();
     if (!now) {
       throw new BadRequestException('Invalid date');
     }
@@ -171,6 +176,12 @@ export class AdminProductsService<T extends Product, D extends ProductDocument> 
     }
     // set isAvailable = false for all products and update updatedAt to now
     const now = new Date();
+
+
+    const deletedProductCount = await this.productActivityLogService.countDeletedProductsByUserIdAndDate(userId,now);
+    if (deletedProductCount + ids.length > 30) {
+      throw new BadRequestException('You can only delete up to 10 products per day');
+    }
 
     const products = await this.productModel
       .updateMany({ _id: { $in: ids } }, { isAvailable: false, updatedAt: now }, { multi: true })

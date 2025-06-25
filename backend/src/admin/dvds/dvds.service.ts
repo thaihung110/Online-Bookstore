@@ -14,7 +14,7 @@ import {
   ProductFilters,
   ProductListResponse
 } from '../products/products.service';
-import { CreateDVDDto } from './dto/create-dvd.dto';
+import { AdminCreateDVDDto } from './dto/admin-create-dvd.dto';
 // import { UpdateDVDDto } from './dto/update-dvd.dto';
 import { ProductActivityLogService } from '../activity-log/activity-log.service';
 import { ProductActivityLog,ProductActivityLogDocument } from '../activity-log/schemas/product-activity-log.schema';

@@ -8,7 +8,7 @@ import {
 import { ApiProperty } from '@nestjs/swagger';
 import { CreateProductDto, ProductType } from '../../products/dto/create-product.dto';
 
-export class CreateDVDDto extends CreateProductDto {
+export class AdminCreateDVDDto extends CreateProductDto {
   constructor() {
     super();
   }

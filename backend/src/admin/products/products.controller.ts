@@ -29,6 +29,7 @@ import {
   UploadPresignedUrlDto,
   UploadPresignedUrlResponseDto
 } from '../../upload/dto/upload-presigned-url.dto';
+import { GetUserId } from '../../auth/decorators/user.decorator';
 
 @ApiTags('admin-products')
 @Controller('admin/products')
@@ -57,21 +58,20 @@ export class ProductsController {  constructor(
     );
   }
 
-  @Post(':userId')
+  @Post()
   @ApiOperation({ summary: 'Create a new product' })
-  @ApiParam({ name: 'userId', description: 'User ID of the admin creating the product' })
   @ApiResponse({
     status: 201,
     description: 'Product created successfully',
     type: Product,
   })
   @ApiResponse({ status: 400, description: 'Bad request' })
-  async create(@Param('userId') userId: string,@Body() createProductDto: CreateProductDto): Promise<Product> {
+  async create(@GetUserId() userId: string,@Body() createProductDto: CreateProductDto): Promise<Product> {
     return this.adminProductsService.create(userId, createProductDto);
     // return;
   }
 
-  @Get(':id/general-info')
+  @Get('general-info/:id')
   @ApiOperation({ summary: 'Get general information about a product' })
   @ApiParam({ name: 'id', description: 'Product ID', type: String })
   @ApiResponse({
@@ -86,25 +86,23 @@ export class ProductsController {  constructor(
 
 
     // delete many
-  @Delete('many/:userId')
+  @Delete('many')
   @ApiOperation({ summary: 'Delete multiple products' })
-  @ApiParam({ name: 'userId', description: 'user ID' })
   @ApiResponse({ status: 200, description: 'Products deleted successfully' })
   @ApiResponse({ status: 400, description: 'Bad request' })
   @ApiResponse({ status: 404, description: 'Products not found' })
-  async deleteMany(@Param('userId') userId: string,@Body('ids') ids: string[]): Promise<void> {
+  async deleteMany(@GetUserId() userId: string,@Body('ids') ids: string[]): Promise<void> {
     return this.adminProductsService.deleteMany(userId, ids);
   }
 
 
 
-  @Delete(':userId/:id')
+  @Delete('one/:id')
   @ApiOperation({ summary: 'Delete a product' })
   @ApiParam({ name: 'id', description: 'product ID' })
-  @ApiParam({ name: 'userId', description: 'user ID' })
   @ApiResponse({ status: 200, description: 'product deleted successfully' })
   @ApiResponse({ status: 404, description: 'product not found' })
-  async delete(@Param('userId') userId: string,@Param('id') id: string): Promise<void> {
+  async delete(@GetUserId() userId: string,@Param('id') id: string): Promise<void> {
     return this.adminProductsService.delete(userId, id);
   }
 

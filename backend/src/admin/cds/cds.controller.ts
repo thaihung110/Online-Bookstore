@@ -21,14 +21,16 @@ import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../../auth/guards/roles.guard';
 import { Roles } from '../../auth/decorators/roles.decorator';
 import { AdminCDsService } from './cds.service';
-import { CreateCDDto } from './dto/create-cd.dto';
-import { UpdateCDDto } from './dto/update-cd.dto';
+import { AdminCreateCDDto } from './dto/admin-create-cd.dto';
+import { AdminUpdateCDDto } from './dto/admin-update-cd.dto';
 import { CD } from '../../cds/schemas/cd.schema';
 import { UploadService } from '../../upload/upload.service';
+import { } from '../../auth/decorators/'
 import {
   UploadPresignedUrlDto,
   UploadPresignedUrlResponseDto
 } from '../../upload/dto/upload-presigned-url.dto';
+import { GetUserId } from '../../auth/decorators/user.decorator';
 
 @ApiTags('admin-cds')
 @Controller('admin/cds')
@@ -61,16 +63,15 @@ export class CdsController {
     );
   }
 
-  @Post(':userId')
+  @Post()
   @ApiOperation({ summary: 'Create a new CD' })
-  @ApiParam({ name: 'userId', description: 'User ID of the admin creating the CD', type: String })
   @ApiResponse({
     status: 201,
     description: 'CD created successfully',
     type: CD,
   })
   @ApiResponse({ status: 400, description: 'Bad request' })
-  async create(@Param('userId') userId: string,@Body() createCDDto: CreateCDDto): Promise<CD> {
+  async create(@GetUserId() userId: string,@Body() createCDDto: AdminCreateCDDto): Promise<CD> {
     return this.adminCDsService.create(userId,createCDDto);
   }
 
@@ -91,9 +92,8 @@ export class CdsController {
 
 
   // viet ham goi update CD
-  @Put(':userId/:id')
+  @Put(':id')
   @ApiOperation({ summary: 'Update a CD by ID' })
-  @ApiParam({ name: 'userId', description: 'User ID of the admin updating the CD', type: String })
   @ApiParam({ name: 'id', description: 'CD ID', type: String })
   @ApiResponse({
     status: 200,
@@ -102,9 +102,9 @@ export class CdsController {
   })
   @ApiResponse({ status: 404, description: 'CD not found' })
   async update(
-    @Param('userId') userId: string,
+    @GetUserId() userId: string,
     @Param('id') id: string,
-    @Body() updateCDDto: UpdateCDDto,
+    @Body() updateCDDto: AdminUpdateCDDto,
   ): Promise<CD> {
     return this.adminCDsService.update(userId, id, updateCDDto);
   }

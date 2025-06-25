@@ -14,7 +14,7 @@ import {
 import { CreateProductDto, ProductType } from '../../products/dto/create-product.dto';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
-export class CreateBookDto extends CreateProductDto {
+export class AdminCreateBookDto extends CreateProductDto {
   constructor() {
     super();
   }
