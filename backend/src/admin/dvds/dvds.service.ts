@@ -50,93 +50,91 @@ export class AdminDVDsService extends AdminProductsService<DVD, DVDDocument> {
   }
 
 
-  async findAllCD(filters: DVDFilters): Promise<DVDListResponse> {
+  async findAllDVD(filters: DVDFilters): Promise<DVDListResponse> {
       const {
-        page = 1,
-        limit = 10,
-        search,
-        minPrice,
-        maxPrice,
-        inStock,
-        sortBy = 'createdAt',
-        sortOrder = 'desc',
-        director,
-        title,
-        releaseDateStart,
-        releaseDateEnd,
-      } = filters;
-  
-      const query: any = {};
+      page = 1,
+      limit = 10,
+      search,
+      minPrice,
+      maxPrice,
+      inStock,
+      sortBy = 'createdAt',
+      sortOrder = 'desc',
+      director,
+      title,
+      releaseDateStart,
+      releaseDateEnd,
 
-      // choose only available product
-      query.available = true; // Ensure we only fetch available products
-  
-      // Apply filters
-      if (search) {
-        query.$or = [
-          { title: { $regex: search, $options: 'i' } },
-        ];
-      }
-  
-      query.productType = 'CD'; // Ensure we only fetch CDs
-  
-      if (minPrice !== undefined || maxPrice !== undefined) {
-        query.price = {};
-        if (minPrice !== undefined) {
-          query.price.$gte = minPrice;
-        }
-        if (maxPrice !== undefined) {
-          query.price.$lte = maxPrice;
-        }
-      }
-  
-      if (inStock !== undefined) {
-        query.stock = inStock ? { $gt: 0 } : { $lte: 0 };
-      }
-  
-      // DVD-specific filters
-      if (director) {
-        query.director = { $regex: director, $options: 'i' };
-      }
-      if (title) {
-        query.title = { $regex: title, $options: 'i' };
-      }
-      if (releaseDateStart) {
-        query.releaseDate = { $gte: new Date(releaseDateStart) };
-      }
-      if (releaseDateEnd) {
-        query.releaseDate = { ...query.releaseDate, $lte: new Date(releaseDateEnd) };
-      }
-      // Ensure we only fetch DVDs
-      query.productType = 'DVD'; // Ensure we only fetch DVDs
 
-      // Count total documents
-      const total = await this.productModel.countDocuments(query);
-  
-      // Build sort object
-      const sort: any = {};
-      sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
-  
-      // Fetch paginated products
-      const products = await this.productModel
-        .find(query)
-        .sort(sort)
-        .skip((page - 1) * limit)
-        .limit(limit)
-        .exec();
-  
-      // Process products with async image URL processing
-      const processedProducts = await Promise.all(
-        products.map(product => this.processProductData(product))
-      );
-  
-      return {
-        dvds: processedProducts,
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
-      };
+    } = filters;
+
+    const query: any = {};
+    query.productType = 'DVD'; // Ensure we only fetch CDs
+    query.isAvailable = true; // Ensure we only fetch available CDs
+
+    // Apply filters
+    if (search) {
+      query.$or = [
+        { title: { $regex: search, $options: 'i' } },
+      ];
+    }
+
+    if (minPrice !== undefined || maxPrice !== undefined) {
+      query.price = {};
+      if (minPrice !== undefined) {
+        query.price.$gte = minPrice;
+      }
+      if (maxPrice !== undefined) {
+        query.price.$lte = maxPrice;
+      }
+    }
+
+    if (inStock !== undefined) {
+      query.stock = inStock ? { $gt: 0 } : { $lte: 0 };
+    }
+
+    // CD-specific filters
+    if (director) {
+      query.director = { $regex: director, $options: 'i' };
+    }
+    if (title) {
+      query.title = { $regex: title, $options: 'i' };
+    }
+    if (releaseDateStart) {
+      query.releaseddate = { $gte: new Date(releaseDateStart) };
+    }
+    if (releaseDateEnd) {
+      query.releaseddate = { ...query.releaseddate, $lte: new Date(releaseDateEnd) };
+    }
+    
+
+    // Count total documents
+    const total = await this.productModel.countDocuments(query);
+
+    // Build sort object
+    const sort: any = {};
+    sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
+
+    // Fetch paginated products
+    const products = await this.productModel
+      .find(query)
+      .sort(sort)
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .exec();
+
+    // Process products with async image URL processing
+    const processedProducts = await Promise.all(
+      products.map(product => this.processProductData(product))
+    );
+
+    return {
+      dvds: processedProducts,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
 
     }
 }

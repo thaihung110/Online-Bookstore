@@ -5,7 +5,7 @@ export type ProductDocument = Product & Document;
 
 @Schema({ 
   timestamps: true, 
-  collection: 'AN_test'
+  collection: 'products'
 })
 export class Product {
   @Prop({ required: true, enum: ['product', 'BOOK', 'CD', 'DVD'], default: 'product' })

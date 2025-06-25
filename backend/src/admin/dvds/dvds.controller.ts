@@ -108,4 +108,107 @@ export class DvdsController {
     return this.adminDVDsService.update(userId, id, updateDVDDto);
   }
 
+  // findAllDVD
+  // schema: DVD
+  // @ApiProperty({
+  //         description: 'The type of product',
+  //         example: 'DVD',
+  //         default: ProductType.DVD,
+  //     })
+  //     @IsOptional()
+  //     productType: ProductType = ProductType.DVD;
+  
+  //     @ApiProperty({
+  //         description: 'The type of DVD (e.g., Blu-ray, DVD)',
+  //         example: 'Blu-ray',
+  //     })
+  //     @IsString()
+  //     @IsNotEmpty()
+  //     disctype: string;
+      
+  //     @ApiProperty({
+  //         description: 'The director of the DVD',
+  //         example: 'Christopher Nolan',
+  //     })
+  //     @IsString()
+  //     @IsNotEmpty()
+  //     director: string;
+      
+  //     @ApiProperty({
+  //         description: 'Runtime of the DVD in minutes',
+  //         example: 120,
+  //     })
+  //     @IsNumber()
+  //     @IsNotEmpty()
+  //     runtime: number;
+      
+  //     @ApiProperty({
+  //         description: 'The studio that produced the DVD',
+  //         example: 'Warner Bros.',
+  //     })
+  //     @IsString()
+  //     @IsNotEmpty()
+  //     studio: string;
+      
+  //     @ApiProperty({
+  //         description: 'Available subtitles for the DVD',
+  //         example: 'English, Spanish, French',
+  //         default: 'Multiple',
+  //     })
+  //     @IsString()
+  //     subtitles: string;
+      
+  //     @ApiProperty({
+  //         description: 'Release date of the DVD',
+  //         example: '2023-10-01',
+  //     })
+  //     @IsDateString()
+  //     releaseddate: Date;
+      
+  //     @ApiProperty({
+  //         description: 'Film type or genre of the DVD',
+  //         example: 'Action',
+  //     })
+  //     @IsString()
+  //     filmtype: string;
+  @Get()
+  @ApiOperation({ summary: 'Get all DVDs with optional filters' })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number for pagination' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Number of items per page' })
+  @ApiQuery({ name: 'search', required: false, type: String, description: 'Search term for CD title or artist' })
+  @ApiQuery({ name: 'minPrice', required: false, type: Number, description: 'Minimum price filter' })
+  @ApiQuery({ name: 'maxPrice', required: false, type: Number, description: 'Maximum price filter' })
+  @ApiQuery({ name: 'inStock', required: false, type: Boolean, description: 'Filter by stock availability' })
+  @ApiQuery({ name: 'sortBy', required: false, type: String, description: 'Field to sort by', enum: ['createdAt', 'updatedAt', 'title', 'price'] })
+  @ApiQuery({ name: 'sortOrder', required: false, type: String, description: 'Sort order', enum: ['asc', 'desc'] })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns all DVDs with pagination and filters',
+    type: DVD,
+    isArray: true,
+  })
+  async findAll(
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
+    @Query('search') search?: string,
+    @Query('minPrice') minPrice?: number,
+    @Query('maxPrice') maxPrice?: number,
+    @Query('inStock') inStock?: boolean,
+    @Query('sortBy') sortBy: string = 'createdAt',
+    @Query('sortOrder') sortOrder: 'asc' | 'desc' = 'desc',
+  ) {
+    return this.adminDVDsService.findAllDVD({
+      page,
+      limit,
+      search,
+      minPrice,
+      maxPrice,
+      inStock,
+      sortBy,
+      sortOrder,
+    });
+  }
+
+
+
 }

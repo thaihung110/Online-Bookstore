@@ -66,7 +66,7 @@ export class AdminCDsService extends AdminProductsService<CD, CDDocument> {
     } = filters;
 
     const query: any = {};
-
+    query.productType = 'CD'; // Ensure we only fetch CDs
     query.isAvailable = true; // Ensure we only fetch available CDs
 
     // Apply filters
@@ -75,8 +75,6 @@ export class AdminCDsService extends AdminProductsService<CD, CDDocument> {
         { title: { $regex: search, $options: 'i' } },
       ];
     }
-
-    query.productType = 'CD'; // Ensure we only fetch CDs
 
     if (minPrice !== undefined || maxPrice !== undefined) {
       query.price = {};

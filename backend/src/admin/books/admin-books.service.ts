@@ -94,6 +94,9 @@ export class AdminBooksService extends AdminProductsService<Book, BookDocument> 
 
     const query: any = {};
 
+
+    query.productType = 'BOOK';
+    query.isAvailable = true;
     // Apply filters
     if (search) {
       query.$or = [

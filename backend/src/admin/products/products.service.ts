@@ -212,8 +212,14 @@ export class AdminProductsService<T extends Product, D extends ProductDocument> 
       .findById(id)
       .select('title coverImage price originalPrice productType createdAt updateAt isAvailable')
       .exec();  
-    if (!product || product.isAvailable == false) {
-      throw new NotFoundException(`Product with ID ${id} not found or is deleted`);
+    // if (!product || product.isAvailable == false) {
+    //   throw new NotFoundException(`Product with ID ${id} not found or is deleted`);
+    // }
+    if (!product) {
+      throw new NotFoundException(`Product with ID ${id} not found`);
+    }
+    if(product.isAvailable == false){
+      throw new NotFoundException(`Product with ID ${id} is not available`);
     }
     return await this.processProductData(product) as Partial<T>;
   }
