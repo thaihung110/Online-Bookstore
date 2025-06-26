@@ -36,15 +36,16 @@ const BookCard: React.FC<BookCardProps> = memo(({ book }) => {
   // Placeholder image as data URL to avoid network requests
   const placeholderImage = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjMwMCIgdmlld0JveD0iMCAwIDIwMCAzMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMzAwIiBmaWxsPSIjRjVGNUY1Ii8+CjxwYXRoIGQ9Ik04MCA5MEgxMjBWMTEwSDgwVjkwWiIgZmlsbD0iI0NDQ0NDQyIvPgo8cGF0aCBkPSJNNjAgMTMwSDE0MFYxNDBINjBWMTMwWiIgZmlsbD0iI0NDQ0NDQyIvPgo8cGF0aCBkPSJNNjAgMTUwSDE0MFYxNjBINjBWMTUwWiIgZmlsbD0iI0NDQ0NDQyIvPgo8cGF0aCBkPSJNNjAgMTcwSDE0MFYxODBINjBWMTcwWiIgZmlsbD0iI0NDQ0NDQyIvPgo8dGV4dCB4PSIxMDAiIHk9IjIyMCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzk5OTk5OSIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0Ij5ObyBJbWFnZTwvdGV4dD4KPC9zdmc+";
 
-  // Guard: Không hiển thị sách nếu dữ liệu không hợp lệ
+  // Guard: Only filter out products that truly have no price or are invalid
   if (
-    book.price === 0 ||
-    (isDiscounted &&
-      (book.originalPrice === null || book.originalPrice === undefined))
+    !book ||
+    !book.title ||
+    (book.price === 0 && book.originalPrice === 0) || // Only filter if both prices are 0
+    (isDiscounted && book.originalPrice === null)
   ) {
     if (process.env.NODE_ENV !== "production") {
       console.warn(
-        `BookCard: Không hiển thị sách do dữ liệu không hợp lệ:`,
+        `BookCard: Not displaying product due to invalid data:`,
         book
       );
     }
@@ -162,20 +163,44 @@ const priceUsd = book.discountRate > 0 ? originalPriceUsd * (1 - book.discountRa
           </Tooltip>
 
         </Box>
-        {/* Discount badge */}
-        {isDiscounted && (
+        
+        {/* Product type and discount badges */}
+        <Box
+          sx={{
+            position: "absolute",
+            top: 8,
+            left: 8,
+            display: "flex",
+            flexDirection: "column",
+            gap: 1,
+          }}
+        >
           <Chip
-            label={`-${book.discountRate}%`}
-            color="error"
+            label={book.productType}
             size="small"
             sx={{
-              position: "absolute",
-              top: 8,
-              left: 8,
-              fontWeight: "bold",
+              bgcolor: book.productType === 'BOOK' 
+                ? 'primary.main' 
+                : book.productType === 'CD' 
+                ? 'secondary.main' 
+                : 'grey.500',
+              color: 'white',
+              fontWeight: 'bold',
+              fontSize: '0.7rem',
+              height: '24px',
             }}
           />
-        )}
+          {isDiscounted && (
+            <Chip
+              label={`-${book.discountRate}%`}
+              color="error"
+              size="small"
+              sx={{
+                fontWeight: "bold",
+              }}
+            />
+          )}
+        </Box>
       </Box>
 
       <CardContent
@@ -214,10 +239,10 @@ const priceUsd = book.discountRate > 0 ? originalPriceUsd * (1 - book.discountRa
             overflow: "hidden",
             textOverflow: "ellipsis",
             whiteSpace: "nowrap",
-            height: "1.5rem", // Fixed height for author
+            height: "1.5rem", // Fixed height for author/artist
           }}
         >
-          {book.author}
+          {book.productType === 'BOOK' ? book.author : book.artist || book.author}
         </Typography>
 
         {book.rating !== undefined && (

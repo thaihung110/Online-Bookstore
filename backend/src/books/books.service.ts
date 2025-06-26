@@ -272,13 +272,38 @@ export class BooksService {
 
       // Lấy sách có discount rate cao nhất và còn hàng
       const books = await this.bookModel
-        .find({
-          discountRate: { $gt: 0 }, // Chỉ lấy sách đang giảm giá
-          stock: { $gt: 0 }, // Chỉ lấy sách còn hàng
-        })
-        .sort({ discountRate: -1 }) // Sắp xếp theo discount rate giảm dần
-        .limit(safeLimit)
-        .exec();
+      .aggregate([
+        {
+          $match: {
+            stock: { $gt: 0 }, // Còn hàng
+            isAvailable: true, // Có sẵn để bán
+            $expr: { $gt: ["$originalPrice", "$price"] } // originalPrice > price (có giảm giá)
+          }
+        },
+        {
+          $addFields: {
+            // Tính discount rate
+            discountRate: {
+              $multiply: [
+                {
+                  $divide: [
+                    { $subtract: ["$originalPrice", "$price"] },
+                    "$originalPrice"
+                  ]
+                },
+                100
+              ]
+            }
+          }
+        },
+        {
+          $sort: { discountRate: -1 } // Sắp xếp theo discount rate giảm dần
+        },
+        {
+          $limit: safeLimit
+        }
+      ])
+      .exec();
 
       this.logger.log(`Found ${books.length} featured books`);
 

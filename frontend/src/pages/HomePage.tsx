@@ -62,11 +62,25 @@ const HomePage: React.FC = () => {
       try {
         setIsLoading(true);
         setError(null);
-        const books = await getFeaturedBooks(6); // Get 6 featured books
+        console.log('[HomePage] Fetching featured books...');
+        const books = await getFeaturedBooks(6); // Get 6 featured products
+        console.log('[HomePage] Received featured books:', books);
+        console.log('[HomePage] Number of books received:', books.length);
+        books.forEach((book, index) => {
+          console.log(`[HomePage] Book ${index + 1}:`, {
+            id: book.id,
+            title: book.title,
+            productType: book.productType,
+            price: book.price,
+            originalPrice: book.originalPrice,
+            author: book.author,
+            artist: book.artist
+          });
+        });
         setFeaturedBooks(books);
       } catch (err) {
-        setError("Failed to load featured books");
-        console.error(err);
+        console.error('[HomePage] Error loading featured products:', err);
+        setError("Failed to load featured products");
       } finally {
         setIsLoading(false);
       }
@@ -318,7 +332,7 @@ const HomePage: React.FC = () => {
         </Box>
       </Container>
 
-      {/* Featured Books Section */}
+      {/* Featured Products Section */}
       <Container maxWidth="lg" sx={{ mb: 8, px: { xs: 2, md: 3 } }}>
         <Box sx={{ display: "flex", alignItems: "center", mb: 4 }}>
           <LocalLibraryIcon color="primary" sx={{ fontSize: 32, mr: 2 }} />
@@ -334,7 +348,7 @@ const HomePage: React.FC = () => {
               mb: 0,
             }}
           >
-            Featured Books
+            Featured Products
             <Box
               sx={{
                 position: "absolute",

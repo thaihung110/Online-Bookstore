@@ -6,8 +6,6 @@ import {
   DialogContent,
   DialogContentText,
   DialogTitle,
-  Box,
-  Typography,
   CircularProgress,
 } from "@mui/material";
 import { Book } from "../../types/book.types";
@@ -42,37 +40,8 @@ const BookDeleteDialog: React.FC<BookDeleteDialogProps> = ({
       </DialogTitle>
       <DialogContent>
         <DialogContentText>
-          Are you sure you want to delete the following book? This action cannot
-          be undone.
+          Are you sure you want to delete the book "{book.title}"? This action cannot be undone.
         </DialogContentText>
-        <Box sx={{ mt: 2, display: "flex", alignItems: "center" }}>
-          {book.coverImage && (
-            <Box
-              component="img"
-              src={book.coverImage}
-              alt={book.title}
-              sx={{
-                width: 60,
-                height: 90,
-                objectFit: "cover",
-                mr: 2,
-                borderRadius: 1,
-              }}
-              onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
-                e.currentTarget.src = "/placeholder-book.png";
-              }}
-            />
-          )}
-          <Box>
-            <Typography variant="h6" component="h3">
-              {book.title}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              by {book.author}
-            </Typography>
-            <Typography variant="body2">ISBN: {book.isbn}</Typography>
-          </Box>
-        </Box>
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose} disabled={loading} color="inherit">

@@ -7,6 +7,7 @@ export interface Book {
   _id?: string; // Preserve original MongoDB _id for backend operations
   title: string;
   author: string;
+  artist?: string; // For CD/DVD products
   description: string;
   originalPrice: number;
   discountRate: number;
@@ -22,6 +23,11 @@ export interface Book {
   publishedDate?: string;
   pageCount?: number;
   converImage?: string;
+  productType?: string; // 'BOOK', 'CD', 'DVD'
+  // CD/DVD specific fields
+  albumtitle?: string;
+  tracklist?: string;
+  releaseddate?: string;
 }
 
 export interface BookQuery {
@@ -53,7 +59,8 @@ interface RawBookData {
   _id?: string;
   id?: string;
   title: string;
-  author: string;
+  author?: string;
+  artist?: string; // For CD/DVD products
   description: string;
   originalPrice?: number;
   discountRate?: number;
@@ -69,6 +76,11 @@ interface RawBookData {
   category?: string[];
   publishedDate?: string;
   pageCount?: number;
+  productType?: string; // 'BOOK', 'CD', 'DVD'
+  // CD/DVD specific fields
+  albumtitle?: string;
+  tracklist?: string;
+  releaseddate?: string;
 }
 
 // Validate book data
@@ -76,13 +88,13 @@ const isValidBook = (book: any): book is RawBookData => {
   return (
     typeof book === "object" &&
     book !== null &&
-    typeof book.title === "string" &&
-    typeof book.author === "string" &&
-    typeof book.description === "string" &&
+    book.title &&
+    (book.author || book.artist) && // Accept either author or artist
+    book.description &&
     typeof book.price === "number" &&
-    typeof book.isbn === "string" &&
+    book.isbn &&
     Array.isArray(book.genres) &&
-    typeof book.publisher === "string" &&
+    book.publisher &&
     typeof book.publicationYear === "number"
   );
 };
@@ -118,20 +130,26 @@ const transformBookData = (bookData: RawBookData): Book => {
   return {
     id,
     _id, // Include original MongoDB _id
-    title: bookData.title.trim(),
-    author: bookData.author.trim(),
-    description: bookData.description.trim(),
+    title: bookData.title?.trim() || '',
+    author: bookData.author?.trim() || bookData.artist?.trim() || '',
+    artist: bookData.artist?.trim() || bookData.author?.trim() || '',
+    description: bookData.description?.trim() || '',
     originalPrice,
     discountRate,
     price,
     coverImage: bookData.coverImage,
-    isbn: bookData.isbn,
+    isbn: bookData.isbn || '',
     genres,
-    publisher: bookData.publisher.trim(),
-    publicationYear: bookData.publicationYear,
+    publisher: bookData.publisher?.trim() || '',
+    publicationYear: bookData.publicationYear || 0,
     rating,
     stock,
     category,
+    productType: bookData.productType || 'BOOK',
+    // CD/DVD specific fields
+    albumtitle: bookData.albumtitle?.trim(),
+    tracklist: bookData.tracklist?.trim(),
+    releaseddate: bookData.releaseddate,
     publishedDate: bookData.publishedDate,
     pageCount,
   };

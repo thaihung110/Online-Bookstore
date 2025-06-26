@@ -44,6 +44,13 @@ const BookList: React.FC<BookListProps> = ({
 }) => {
   const navigate = useNavigate();
 
+  // Calculate discount rate from original price and current price
+  const calculateDiscountRate = (originalPrice: number, currentPrice: number): number => {
+    if (originalPrice <= 0) return 0;
+    const discountRate = (1 - currentPrice / originalPrice) * 100;
+    return Math.max(0, Math.round(discountRate * 10) / 10); // Round to 1 decimal place, minimum 0
+  };
+
   // Placeholder image as data URL to avoid network requests
   const placeholderImage = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA0MCA2MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjRjVGNUY1Ii8+CjxwYXRoIGQ9Ik0xNiAxOEgyNFYyMkgxNlYxOFoiIGZpbGw9IiNDQ0NDQ0MiLz4KPHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA0MCA2MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjRjVGNUY1Ii8+CjxwYXRoIGQ9Ik0xNiAxOEgyNFYyMkgxNlYxOFoiIGZpbGw9IiNDQ0NDQ0MiLz4KPHBhdGggZD0iTTEyIDI2SDI4VjI4SDEyVjI2WiIgZmlsbD0iI0NDQ0NDQyIvPgo8cGF0aCBkPSJNMTIgMzBIMjhWMzJIMTJWMzBaIiBmaWxsPSIjQ0NDQ0NDIi8+Cjx0ZXh0IHg9IjIwIiB5PSI0NCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzk5OTk5OSIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjgiPk5vIEltYWdlPC90ZXh0Pgo8L3N2Zz4K";
 
@@ -119,6 +126,21 @@ const BookList: React.FC<BookListProps> = ({
               </TableCell>
               <TableCell>
                 <TableSortLabel
+                  active={filters.sortBy === "originalPrice"}
+                  direction={
+                    filters.sortBy === "originalPrice"
+                      ? filters.sortOrder === "asc"
+                        ? "asc"
+                        : "desc"
+                      : "asc"
+                  }
+                  onClick={createSortHandler("originalPrice")}
+                >
+                  Original Price
+                </TableSortLabel>
+              </TableCell>
+              <TableCell>
+                <TableSortLabel
                   active={filters.sortBy === "price"}
                   direction={
                     filters.sortBy === "price"
@@ -129,7 +151,7 @@ const BookList: React.FC<BookListProps> = ({
                   }
                   onClick={createSortHandler("price")}
                 >
-                  Price
+                  Current Price
                 </TableSortLabel>
               </TableCell>
               <TableCell>Genres</TableCell>
@@ -154,13 +176,13 @@ const BookList: React.FC<BookListProps> = ({
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={6} align="center" sx={{ py: 3 }}>
+                <TableCell colSpan={7} align="center" sx={{ py: 3 }}>
                   <CircularProgress size={40} />
                 </TableCell>
               </TableRow>
             ) : books.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} align="center" sx={{ py: 3 }}>
+                <TableCell colSpan={7} align="center" sx={{ py: 3 }}>
                   <Typography variant="body1">
                     No books found. Try adjusting your filters.
                   </Typography>
@@ -210,39 +232,36 @@ const BookList: React.FC<BookListProps> = ({
                   </TableCell>
                   <TableCell>{book.author}</TableCell>
                   <TableCell>
-                    {book.discountRate > 0 ? (
-                      <>
-                        <Typography
-                          variant="body2"
-                          component="span"
-                          sx={{
-                            textDecoration: "line-through",
-                            color: "text.secondary",
-                            mr: 1,
-                          }}
-                        >
-                          ${(book.originalPrice || 0).toFixed(2)}
-                        </Typography>
-                        <Typography
-                          variant="body1"
-                          component="span"
-                          sx={{ color: "error.main", fontWeight: "bold" }}
-                        >
+                    <Typography variant="body1">
+                      ${(book.originalPrice || 0).toFixed(2)}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    {(() => {
+                      const discountRate = book.discountRate ?? calculateDiscountRate(book.originalPrice || 0, book.price || 0);
+                      return discountRate > 0 ? (
+                        <>
+                          <Typography
+                            variant="body1"
+                            component="span"
+                            sx={{ color: "error.main", fontWeight: "bold" }}
+                          >
+                            ${(book.price || 0).toFixed(2)}
+                          </Typography>
+                          <Typography
+                            variant="caption"
+                            component="div"
+                            sx={{ color: "success.main" }}
+                          >
+                            ({discountRate.toFixed(1)}% off)
+                          </Typography>
+                        </>
+                      ) : (
+                        <Typography variant="body1">
                           ${(book.price || 0).toFixed(2)}
                         </Typography>
-                        <Typography
-                          variant="caption"
-                          component="span"
-                          sx={{ color: "success.main", ml: 1 }}
-                        >
-                          ({book.discountRate}% off)
-                        </Typography>
-                      </>
-                    ) : (
-                      <Typography variant="body1">
-                        ${(book.price || 0).toFixed(2)}
-                      </Typography>
-                    )}
+                      );
+                    })()}
                   </TableCell>
                   <TableCell>
                     <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>

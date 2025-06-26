@@ -26,7 +26,7 @@ import {
   ArrowBack as ArrowBackIcon,
   CloudUpload as CloudUploadIcon,
 } from "@mui/icons-material";
-import { BookFormData } from "../types/book.types";
+import { BookFormData, CreateBookRequest, UpdateBookRequest } from "../types/book.types";
 import { getBook, createBook, updateBook, uploadBookCover } from "../api/bookApi";
 
 // Available book genres
@@ -91,6 +91,13 @@ const BookFormPage: React.FC = () => {
     return originalPrice * (1 - discountRate / 100);
   };
 
+  // Calculate discount rate from original price and current price
+  const calculateDiscountRate = (originalPrice: number, currentPrice: number): number => {
+    if (originalPrice <= 0) return 0;
+    const discountRate = (1 - currentPrice / originalPrice) * 100;
+    return Math.round(discountRate * 100) / 100; // Round to 2 decimal places
+  };
+
   // Form state
   const [formData, setFormData] = useState<BookFormData>({
     title: "",
@@ -140,7 +147,7 @@ const BookFormPage: React.FC = () => {
           author: bookData.author || "",
           description: bookData.description || "",
           originalPrice: bookData.originalPrice || 0,
-          discountRate: bookData.discountRate || 0,
+          discountRate: calculateDiscountRate(bookData.originalPrice || 0, bookData.price || 0),
           isbn: bookData.isbn || "",
           publicationYear: bookData.publicationYear || new Date().getFullYear(),
           publisher: bookData.publisher || "",
@@ -349,7 +356,7 @@ const BookFormPage: React.FC = () => {
     setSuccess(null);
 
     try {
-      let finalFormData = { ...formData };
+      let NearfinalFormData = { ...formData };
 
       // If there's a selected file, upload it first
       if (selectedFile) {
@@ -360,13 +367,13 @@ const BookFormPage: React.FC = () => {
           });
 
           // Update form data with S3 key instead of file
-          finalFormData = {
-            ...finalFormData,
+          NearfinalFormData = {
+            ...NearfinalFormData,
             coverImage: null, // Remove file object
             coverImageUrl: s3Key, // Use S3 key
           };
         } catch (uploadError) {
-          console.error("Failed to upload image:", uploadError);
+          console.error("Failed to upload image:::::::", uploadError);
           setError("Failed to upload image. Please try again.");
           return;
         } finally {
@@ -375,11 +382,28 @@ const BookFormPage: React.FC = () => {
         }
       }
 
+      const finalFormData = {
+        title: NearfinalFormData.title.trim(),
+        author: NearfinalFormData.author.trim(),
+        description: NearfinalFormData.description.trim(),
+        price: NearfinalFormData.originalPrice * (1 - NearfinalFormData.discountRate / 100), // Fixed formula
+        originalPrice: NearfinalFormData.originalPrice,
+        isbn: NearfinalFormData.isbn.trim(),
+        publicationYear: NearfinalFormData.publicationYear,
+        publisher: NearfinalFormData.publisher.trim(),
+        pageCount: NearfinalFormData.pageCount,
+        genres: NearfinalFormData.genres,
+        language: NearfinalFormData.language,
+        stock: NearfinalFormData.stock,
+        coverImage: NearfinalFormData.coverImageUrl, // Use S3 key instead of file
+      };
+
+      // xoa truong discountRate trong finalFormData 
       if (isEditMode) {
-        await updateBook(id, finalFormData);
+        await updateBook(id!, finalFormData as UpdateBookRequest);
         setSuccess("Book updated successfully");
       } else {
-        await createBook(finalFormData);
+        await createBook(finalFormData as CreateBookRequest);
         setSuccess("Book created successfully");
 
         // Clear form data on successful creation
@@ -414,6 +438,113 @@ const BookFormPage: React.FC = () => {
       setSaving(false);
     }
   };
+
+
+  // const handleSubmit = async (e: React.FormEvent) => {
+  //   e.preventDefault();
+
+  //   if (!validateForm()) {
+  //     // Scroll to the first error
+  //     const firstError = Object.keys(errors)[0];
+  //     const element = document.querySelector(`[name="${firstError}"]`);
+  //     if (element) {
+  //       element.scrollIntoView({ behavior: "smooth", block: "center" });
+  //     }
+  //     return;
+  //   }
+
+  //   setSaving(true);
+  //   setError(null);
+  //   setSuccess(null);
+
+  //   try {
+  //     let finalFormData = { ...formData };
+
+  //     // If there's a selected file, upload it first
+  //     if (selectedFile) {
+  //       setUploading(true);
+  //       try {
+  //         const s3Key = await uploadBookCover(selectedFile, (progress) => {
+  //           setUploadProgress(progress);
+  //         });
+
+  //         // Update form data with S3 key instead of file
+  //         finalFormData = {
+  //           ...finalFormData,
+  //           coverImage: null, // Remove file object
+  //           coverImageUrl: s3Key, // Use S3 key
+  //         };
+  //       } catch (uploadError) {
+  //         console.error("Failed to upload image:::::::", uploadError);
+  //         setError("Failed to upload image. Please try again.");
+  //         return;
+  //       } finally {
+  //         setUploading(false);
+  //         setUploadProgress(0);
+  //       }
+  //     }
+
+  //     const payload = {
+  //     title: formData.title.trim(),
+  //     author: formData.author.trim(),
+  //     description: formData.description.trim(),
+  //     price: (formData.originalPrice * (formData.discountRate / 100)),
+  //     originalPrice: formData.originalPrice,
+  //     isbn: formData.isbn.trim(),
+  //     publicationYear: formData.publicationYear,
+  //     publisher: formData.publisher.trim(),
+  //     pageCount: formData.pageCount,
+  //     genres: formData.genres,
+  //     language: formData.language,
+  //     stock: formData.stock,
+  //     coverImage: formData.coverImage,
+  //   };
+
+
+
+  //     // xoa truong discountRate trong finalFormData 
+  //     if (isEditMode) {
+  //       await updateBook(id, finalFormData);
+  //       setSuccess("Book updated successfully");
+  //     } else {
+  //       await createBook(finalFormData);
+  //       setSuccess("Book created successfully");
+
+  //       // Clear form data on successful creation
+  //       setFormData({
+  //         title: "",
+  //         author: "",
+  //         description: "",
+  //         originalPrice: 0,
+  //         discountRate: 0,
+  //         isbn: "",
+  //         publicationYear: new Date().getFullYear(),
+  //         publisher: "",
+  //         pageCount: 0,
+  //         genres: [],
+  //         language: "English",
+  //         stock: 0,
+  //         coverImage: null,
+  //         coverImageUrl: "",
+  //       });
+  //       setSelectedFile(null);
+  //       setPreviewUrl("");
+  //     }
+
+  //     // Navigate back to book list after a short delay
+  //     setTimeout(() => {
+  //       navigate("/admin/books");
+  //     }, 1500);
+  //   } catch (err) {
+  //     console.error("Failed to save book:", err);
+  //     setError("Failed to save book. Please try again.");
+  //   } finally {
+  //     setSaving(false);
+  //   }
+  // };
+
+
+  
 
   // Handle navigation back to book list
   const handleBack = () => {

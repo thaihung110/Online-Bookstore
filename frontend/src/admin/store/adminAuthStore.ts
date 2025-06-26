@@ -104,8 +104,14 @@ export const useAdminAuthStore = create<AdminAuthState>((set) => ({
 
       // Check for token in localStorage
       const token = localStorage.getItem("adminToken");
+      
+      console.log('🔍 Admin checkAuth:', { 
+        hasToken: !!token, 
+        tokenPreview: token?.substring(0, 20) + '...'
+      });
 
       if (!token) {
+        console.log('❌ No admin token found');
         set({
           admin: null,
           isAuthenticated: false,
@@ -120,9 +126,11 @@ export const useAdminAuthStore = create<AdminAuthState>((set) => ({
       });
 
       const user = response.data;
+      console.log('✅ Admin auth verified:', { userId: user.id, role: user.role });
 
       // Check if user has admin role
       if (user.role !== 'admin') {
+        console.log('❌ User does not have admin role:', user.role);
         localStorage.removeItem("adminToken");
         localStorage.removeItem("adminData");
         set({

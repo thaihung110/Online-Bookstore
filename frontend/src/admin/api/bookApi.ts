@@ -4,6 +4,8 @@ import {
   BookFilters,
   BookFormData,
   BookListResponse,
+  CreateBookRequest,
+  UpdateBookRequest,
 } from "../types/book.types";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:3001/api";
@@ -16,6 +18,12 @@ const getAdminToken = (): string | null => {
 // Helper function to set auth header
 const getAuthHeaders = () => {
   const token = getAdminToken();
+  console.log('🔍 Admin token for delete request:', token ? `${token.substring(0, 20)}...` : 'No token');
+  
+  if (!token) {
+    console.error('❌ No admin token found for delete request');
+  }
+  
   return {
     headers: {
       Authorization: `Bearer ${token}`,
@@ -66,7 +74,7 @@ export const getBook = async (id: string): Promise<Book> => {
 };
 
 // Create a new book
-export const createBook = async (bookData: BookFormData): Promise<Book> => {
+export const createBook = async (bookData: CreateBookRequest): Promise<Book> => {
   const response = await axios.post(`${API_URL}/admin/books`, bookData, getAuthHeaders());
   return response.data;
 };
@@ -74,7 +82,7 @@ export const createBook = async (bookData: BookFormData): Promise<Book> => {
 // Update an existing book
 export const updateBook = async (
   id: string,
-  bookData: BookFormData
+  bookData: UpdateBookRequest
 ): Promise<Book> => {
   const response = await axios.put(`${API_URL}/admin/books/${id}`, bookData, getAuthHeaders());
   return response.data;
@@ -82,7 +90,17 @@ export const updateBook = async (
 
 // Delete a book
 export const deleteBook = async (id: string): Promise<void> => {
-  await axios.delete(`${API_URL}/admin/books/${id}`, getAuthHeaders());
+  console.log('🗑️ Attempting to delete book:', id);
+  
+  try {
+    const response = await axios.delete(`${API_URL}/admin/products/one/${id}`, getAuthHeaders());
+    console.log('✅ Book deleted successfully:', response.status);
+  } catch (error: any) {
+    console.error('❌ Delete book failed:', error.response?.data || error.message);
+    console.error('Response status:', error.response?.status);
+    console.error('Request headers:', error.config?.headers);
+    throw error;
+  }
 };
 
 // Types for presigned URL upload
