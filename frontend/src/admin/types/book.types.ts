@@ -43,7 +43,6 @@ export interface BookFormData {
   author: string;
   description: string;
   originalPrice: number; // Base price before discount
-  discountRate: number; // Percentage discount (0-100)
   price: number; // Calculated field
   coverImage?: File | null;
   coverImageUrl?: string;

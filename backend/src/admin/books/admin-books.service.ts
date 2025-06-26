@@ -100,10 +100,7 @@ export class AdminBooksService extends AdminProductsService<Book, BookDocument> 
     // Apply filters
     if (search) {
       query.$or = [
-        { title: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } },
-        { author: { $regex: search, $options: 'i' } },
-        { isbn: { $regex: search, $options: 'i' } },
+        { title: { $regex: search } },
       ];
     }
 

@@ -114,7 +114,6 @@ const [formData, setFormData] = useState<BookFormData>({
     author: "",
     description: "",
     originalPrice: 0,
-    discountRate: 0,
     price: 0, // Calculated field
     isbn: "",
     publicationYear: new Date().getFullYear(),
@@ -160,7 +159,6 @@ const [formData, setFormData] = useState<BookFormData>({
           author: bookData.author || "",
           description: bookData.description || "",
           originalPrice: bookData.originalPrice || 0,
-          discountRate: bookData.discountRate || 0,
           price: calculateCurrentPrice(bookData.originalPrice, bookData.discountRate),
           isbn: bookData.isbn || "",
           publicationYear: bookData.publicationYear || new Date().getFullYear(),
@@ -297,9 +295,9 @@ const [formData, setFormData] = useState<BookFormData>({
     }
 
     // Discount rate validation
-    if (formData.discountRate < 0 || formData.discountRate > 100) {
-      newErrors.discountRate = "Discount rate must be between 0 and 100";
-    }
+    // if (formData.discountRate < 0 || formData.discountRate > 100) {
+    //   newErrors.discountRate = "Discount rate must be between 0 and 100";
+    // }
 
     // ISBN validation
     if (!formData.isbn.trim()) {
@@ -386,7 +384,7 @@ const [formData, setFormData] = useState<BookFormData>({
             coverImage: null, // Remove file object
             coverImageUrl: s3Key, // Use S3 key
             // tinh price = originalPrice * (1 - discountRate / 100)
-            price: calculateCurrentPrice(finalFormData.originalPrice, finalFormData.discountRate),
+            // price: calculateCurrentPrice(finalFormData.originalPrice, finalFormData.discountRate),
           };
         } catch (uploadError) {
           console.error("Failed to upload image:", uploadError);
@@ -411,7 +409,7 @@ const [formData, setFormData] = useState<BookFormData>({
           author: "",
           description: "",
           originalPrice: 0,
-          discountRate: 0,
+          // discountRate: 0,
           price: 0, // Reset calculated price
           isbn: "",
           publicationYear: new Date().getFullYear(),
@@ -695,7 +693,7 @@ const [formData, setFormData] = useState<BookFormData>({
                   />
                 </Grid>
 
-                <Grid size={6}>
+                {/* <Grid size={6}>
                   <TextField
                     fullWidth
                     required
@@ -713,9 +711,9 @@ const [formData, setFormData] = useState<BookFormData>({
                       errors.discountRate || "Percentage discount (0-100%)"
                     }
                   />
-                </Grid>
+                </Grid> */}
 
-                <Grid size={6}>
+                {/* <Grid size={6}>
                   <TextField
                     fullWidth
                     label="Current Price (Calculated)"
@@ -729,6 +727,25 @@ const [formData, setFormData] = useState<BookFormData>({
                         backgroundColor: theme.palette.grey[100],
                       },
                     }}
+                  />
+                </Grid> */}
+
+                {/* nguoi dung nhap vao price */}
+                <Grid size={6}>
+                  <TextField
+                    fullWidth
+                    required
+                    label="Price"
+                    name="price"
+                    type="number"
+                    value={formData.price === 0 ? "" : formData.price}
+                    onChange={handleNumberInputChange}
+                    InputProps={{
+                      startAdornment: <Typography sx={{ mr: 1 }}>$</Typography>,
+                      inputProps: { min: 0, step: 0.01 },
+                    }}
+                    error={!!errors.price}
+                    helperText={errors.price || "The final price after any discounts"}
                   />
                 </Grid>
               </Grid>
