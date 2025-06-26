@@ -1,0 +1,42 @@
+### Test Products API
+GET http://localhost:3001/api/products
+
+###
+GET http://localhost:3001/api/products/671d3cbab66b81a0fef2f8e2
+
+### Test Cart API - Get cart (requires auth)
+GET http://localhost:3001/api/carts
+Authorization: Bearer YOUR_JWT_TOKEN
+
+### Test Cart API - Add product to cart
+POST http://localhost:3001/api/carts/items
+Content-Type: application/json
+Authorization: Bearer YOUR_JWT_TOKEN
+
+{
+  "productId": "671d3cbab66b81a0fef2f8e2",
+  "quantity": 2,
+  "isTicked": true
+}
+
+### Test Cart API - Update product quantity in cart
+PATCH http://localhost:3001/api/carts/items/671d3cbab66b81a0fef2f8e2
+Content-Type: application/json
+Authorization: Bearer YOUR_JWT_TOKEN
+
+{
+  "quantity": 5,
+  "isTicked": true
+}
+
+### Test Cart API - Remove product from cart
+DELETE http://localhost:3001/api/carts/items/671d3cbab66b81a0fef2f8e2
+Authorization: Bearer YOUR_JWT_TOKEN
+
+### Test Cart API - Validate cart
+GET http://localhost:3001/api/carts/validate
+Authorization: Bearer YOUR_JWT_TOKEN
+
+### Test Cart API - Clear cart
+DELETE http://localhost:3001/api/carts
+Authorization: Bearer YOUR_JWT_TOKEN 

@@ -1,0 +1,123 @@
+### ============ STOCK RESERVATION FLOW TEST ============
+### This file tests the new stock reservation system where:
+### 1. Stock is reserved when adding to cart
+### 2. Stock is restored when removing from cart  
+### 3. Stock remains reserved when creating order (no double deduction)
+### 4. Stock is restored when canceling order
+
+@baseUrl = http://localhost:3001/api
+@token = YOUR_JWT_TOKEN
+@productId = YOUR_PRODUCT_ID
+
+### Step 1: Check initial stock
+GET {{baseUrl}}/products/{{productId}}
+
+### Step 2: Add product to cart (STOCK WILL BE RESERVED)
+POST {{baseUrl}}/carts/items
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "productId": "{{productId}}",
+  "quantity": 2,
+  "isTicked": true
+}
+
+### Step 3: Check stock after adding to cart (should be reduced by 2)
+GET {{baseUrl}}/products/{{productId}}
+
+### Step 4: Get cart to verify items
+GET {{baseUrl}}/carts
+Authorization: Bearer {{token}}
+
+### Step 5: Create order from cart (STOCK REMAINS RESERVED, NOT DOUBLE-DEDUCTED)
+POST {{baseUrl}}/orders/from-cart
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "shippingAddress": {
+    "fullName": "Test User",
+    "addressLine1": "123 Test Street",
+    "city": "Hanoi",
+    "state": "Hanoi", 
+    "postalCode": "10000",
+    "country": "Vietnam",
+    "phoneNumber": "+84987654321"
+  },
+  "paymentInfo": {
+    "method": "VNPAY"
+  }
+}
+
+### Step 6: Check final stock (should remain same as step 3 - no double deduction)
+GET {{baseUrl}}/products/{{productId}}
+
+### ============ STOCK RESTORATION TESTS ============
+
+### Test: Add to cart then remove (stock should be restored)
+POST {{baseUrl}}/carts/items
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "productId": "{{productId}}",
+  "quantity": 1,
+  "isTicked": true
+}
+
+### Check stock after adding
+GET {{baseUrl}}/products/{{productId}}
+
+### Remove from cart (should restore stock)
+DELETE {{baseUrl}}/carts/items/{{productId}}
+Authorization: Bearer {{token}}
+
+### Check stock after removal (should be restored)
+GET {{baseUrl}}/products/{{productId}}
+
+### ============ QUANTITY UPDATE TESTS ============
+
+### Add item to cart
+POST {{baseUrl}}/carts/items
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "productId": "{{productId}}",
+  "quantity": 3,
+  "isTicked": true
+}
+
+### Update quantity (increase by 2, so total = 5)
+PATCH {{baseUrl}}/carts/items/{{productId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "quantity": 5,
+  "isTicked": true
+}
+
+### Check stock (should be reduced by additional 2)
+GET {{baseUrl}}/products/{{productId}}
+
+### Update quantity (decrease to 2, should restore 3 to stock)
+PATCH {{baseUrl}}/carts/items/{{productId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "quantity": 2,
+  "isTicked": true
+}
+
+### Check stock (should be increased by 3)
+GET {{baseUrl}}/products/{{productId}}
+
+### Clear entire cart (should restore all remaining stock)
+DELETE {{baseUrl}}/carts
+Authorization: Bearer {{token}}
+
+### Check final stock (should be fully restored)
+GET {{baseUrl}}/products/{{productId}} 

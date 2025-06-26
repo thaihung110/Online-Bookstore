@@ -57,16 +57,16 @@ export class CartsController {
     type: Cart,
   })
   @ApiResponse({ status: 400, description: 'Bad Request - Not enough stock' })
-  @ApiResponse({ status: 404, description: 'Book not found' })
+  @ApiResponse({ status: 404, description: 'Product not found' })
   async addToCart(@Request() req, @Body() addItemDto: AddItemToCartDto) {
     return this.cartsService.addItem(req.user.id, addItemDto);
   }
 
-  @Patch('items/:bookId')
+  @Patch('items/:productId')
   @ApiOperation({ summary: 'Update item in the cart (quantity, isTicked)' })
   @ApiParam({
-    name: 'bookId',
-    description: 'ID of the book in the cart',
+    name: 'productId',
+    description: 'ID of the product in the cart',
     type: String,
   })
   @ApiBody({ type: UpdateItemInCartDto })
@@ -82,21 +82,25 @@ export class CartsController {
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   @ApiResponse({
     status: 404,
-    description: 'Book not found in cart or user/book not found.',
+    description: 'Product not found in cart or user/product not found.',
   })
   async updateItemInCart(
     @Request() req,
-    @Param('bookId') bookId: string,
+    @Param('productId') productId: string,
     @Body() updateDto: UpdateItemInCartDto,
   ) {
-    return this.cartsService.updateItemInCart(req.user.id, bookId, updateDto);
+    return this.cartsService.updateItemInCart(
+      req.user.id,
+      productId,
+      updateDto,
+    );
   }
 
-  @Delete('items/:bookId')
+  @Delete('items/:productId')
   @ApiOperation({ summary: 'Remove an item from the cart' })
   @ApiParam({
-    name: 'bookId',
-    description: 'ID of the book to remove from the cart',
+    name: 'productId',
+    description: 'ID of the product to remove from the cart',
     type: String,
   })
   @ApiResponse({
@@ -107,10 +111,13 @@ export class CartsController {
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   @ApiResponse({
     status: 404,
-    description: 'Book not found in cart or user/book not found.',
+    description: 'Product not found in cart or user/product not found.',
   })
-  async removeItemFromCart(@Request() req, @Param('bookId') bookId: string) {
-    return this.cartsService.removeItem(req.user.id, bookId);
+  async removeItemFromCart(
+    @Request() req,
+    @Param('productId') productId: string,
+  ) {
+    return this.cartsService.removeItem(req.user.id, productId);
   }
 
   @Delete()
@@ -140,7 +147,7 @@ export class CartsController {
           items: {
             type: 'object',
             properties: {
-              bookId: { type: 'string' },
+              productId: { type: 'string' },
               type: { type: 'string', enum: ['stock', 'price', 'unavailable'] },
               message: { type: 'string' },
               currentStock: { type: 'number' },

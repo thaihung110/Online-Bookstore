@@ -6,6 +6,7 @@ import { AppService } from './app.service';
 import { UsersModule } from './users';
 import { AuthModule } from './auth';
 import { BooksModule } from './books';
+import { ProductsModule } from './products/products.module';
 import { CartsModule } from './carts';
 import { OrdersModule } from './orders';
 
@@ -68,6 +69,7 @@ import { RecommendProxyMiddleware } from './proxy/recommend-proxy.middleware';
     UsersModule,
     AuthModule,
     BooksModule,
+    ProductsModule,
     CartsModule,
     OrdersModule,
     PaymentsModule,
