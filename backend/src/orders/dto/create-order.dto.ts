@@ -16,14 +16,18 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 class OrderItemDto {
   @ApiProperty({
-    description: 'Book ID for the order item',
+    description: 'Product ID for the order item',
     example: '60d21b4667d0d8992e610c85',
   })
   @IsMongoId()
   @IsNotEmpty()
-  bookId: string;
+  productId: string;
 
-  @ApiProperty({ description: 'Quantity of the book', example: 1, minimum: 1 })
+  @ApiProperty({
+    description: 'Quantity of the product',
+    example: 1,
+    minimum: 1,
+  })
   @IsNumber()
   @Min(1)
   quantity: number;
