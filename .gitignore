@@ -77,3 +77,7 @@ scripts/
 .taskmasterconfig
 .windsurfrules
 .taskmaster/
+
+test-vnpay-integration.md
+mongodb-setup-commands.md
+debug-vnpay-config.md
