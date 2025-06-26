@@ -6,6 +6,7 @@ import {
   IsOptional,
   IsEnum,
   IsDate,
+  IsBoolean,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -23,6 +24,15 @@ export class CreateProductDto {
   @IsString()
   @IsNotEmpty()
   title: string;
+
+  @ApiPropertyOptional({
+    description: 'Whether the book is available for rush delivery',
+    example: false,
+    default: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  isAvailableRush?: boolean;
 
   @ApiProperty({
     description: 'The original price of the product before discount',

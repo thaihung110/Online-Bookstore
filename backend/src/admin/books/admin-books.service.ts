@@ -29,6 +29,7 @@ export interface BookFilters extends ProductFilters{
   maxPrice?: number;
   inStock?: boolean;
   sortBy?: string;
+  isAvailableRush?: boolean;
   sortOrder?: 'asc' | 'desc';
 }
 

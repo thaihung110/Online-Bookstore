@@ -75,6 +75,7 @@ export class AdminBooksController {
   @ApiQuery({ name: 'maxPrice', required: false, type: Number })
   @ApiQuery({ name: 'inStock', required: false, type: Boolean })
   @ApiQuery({ name: 'sortBy', required: false, type: String })
+  @ApiQuery({ name: 'isAvailableRush', required: false, type: Boolean })
   @ApiQuery({
     name: 'sortOrder',
     required: false,
@@ -96,6 +97,7 @@ export class AdminBooksController {
     @Query('inStock') inStock?: boolean,
     @Query('sortBy') sortBy?: string,
     @Query('sortOrder') sortOrder?: 'asc' | 'desc',
+    @Query('isAvailableRush') isAvailableRush?: boolean,
   ) {
     return this.adminBooksService.findAll({
       page,
@@ -108,6 +110,7 @@ export class AdminBooksController {
       inStock,
       sortBy,
       sortOrder,
+      isAvailableRush,
     });
   }
 

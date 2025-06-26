@@ -22,6 +22,7 @@ export interface ProductFilters {
   maxPrice?: number;
   inStock?: boolean;
   sortBy?: string;
+  isAvailable?: boolean;
   sortOrder?: 'asc' | 'desc';
 }
 
