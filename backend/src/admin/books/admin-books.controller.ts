@@ -179,13 +179,4 @@ export class AdminBooksController {
   ): Promise<Book> {
     return this.adminBooksService.update(userId, id, updateBookDto);
   }
-
-  // @Delete(':id')
-  // @ApiOperation({ summary: 'Delete a book' })
-  // @ApiParam({ name: 'id', description: 'Book ID' })
-  // @ApiResponse({ status: 200, description: 'Book deleted successfully' })
-  // @ApiResponse({ status: 404, description: 'Book not found' })
-  // async delete(@Param('id') id: string): Promise<void> {
-  //   return this.adminBooksService.delete(id);
-  // }
 }
