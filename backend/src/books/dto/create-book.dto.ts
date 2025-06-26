@@ -12,6 +12,7 @@ import {
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
+
 export class CreateBookDto {
   @ApiProperty({
     description: 'The title of the book',
