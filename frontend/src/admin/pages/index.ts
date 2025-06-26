@@ -6,3 +6,6 @@ export { default as OrdersManagementPage } from "./OrdersManagementPage";
 export { default as PromotionsManagementPage } from "./PromotionsManagementPage";
 export { default as UserFormPage } from "./UserFormPage";
 export { default as UserManagementPage } from "./UserManagementPage";
+export { default as CDManagementPage } from "./CDManagementPage";
+export { default as CDFormPage } from "./CDFormPage";
+

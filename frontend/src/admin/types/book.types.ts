@@ -20,12 +20,31 @@ export interface Book {
   updatedAt: string;
 }
 
+// export interface BookFormData {
+//   title: string;
+//   author: string;
+//   description: string;
+//   originalPrice: number; // Base price before discount
+//   discountRate: number; // Percentage discount (0-100)
+//   coverImage?: File | null;
+//   coverImageUrl?: string;
+//   isbn: string;
+//   publicationYear: number; // Use publication year instead of full date
+//   publisher: string;
+//   pageCount: number;
+//   genres: string[];
+//   language: string;
+//   stock: number;
+// }
+
+
 export interface BookFormData {
   title: string;
   author: string;
   description: string;
   originalPrice: number; // Base price before discount
   discountRate: number; // Percentage discount (0-100)
+  price: number; // Calculated field
   coverImage?: File | null;
   coverImageUrl?: string;
   isbn: string;

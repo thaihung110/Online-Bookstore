@@ -26,41 +26,23 @@ import {
   ArrowBack as ArrowBackIcon,
   CloudUpload as CloudUploadIcon,
 } from "@mui/icons-material";
-import { BookFormData } from "../types/book.types";
-import { getBook, createBook, updateBook, uploadBookCover } from "../api/bookApi";
+import { CDFormData } from "../types/cd.types";
+import { getCD, createCD, updateCD, uploadCDCover } from "../api/cdApi";
 
-// Available book genres
-const AVAILABLE_GENRES = [
-  "Fiction",
-  "Non-fiction",
-  "Mystery",
-  "Thriller",
-  "Science Fiction",
-  "Fantasy",
-  "Romance",
-  "Biography",
-  "History",
-  "Self-help",
-  "Business",
-  "Cooking",
-  "Travel",
-  "Science",
-  "Technology",
-  "Philosophy",
-  "Poetry",
-  "Drama",
-  "Children",
-  "Young Adult",
-  "Dystopian",
-  "Classic",
-  "Horror",
-  "Adventure",
-  "Comics",
-  "Art",
-  "Religion",
-  "Sports",
-  "Music",
-  "Educational",
+// Available cd genres
+const AVAILABLE_CATEGORY = [
+    "Pop",
+    "Rock",
+    "Hip-Hop",
+    "Jazz",
+    "Classical",
+    "Country",
+    "Electronic",
+    "R&B",
+    "Reggae",
+    "Blues",
+    "Folk",
+    "Latin",
 ];
 
 // Available languages
@@ -80,7 +62,7 @@ const AVAILABLE_LANGUAGES = [
   "Vietnamese",
 ];
 
-const BookFormPage: React.FC = () => {
+const CDFormPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const theme = useTheme();
@@ -92,42 +74,19 @@ const BookFormPage: React.FC = () => {
   };
 
   // Form state
-  // const [formData, setFormData] = useState<BookFormData>({
-  //   title: "",
-  //   author: "",
-  //   description: "",
-  //   originalPrice: 0,
-  //   discountRate: 0,
-  //   isbn: "",
-  //   publicationYear: new Date().getFullYear(),
-  //   publisher: "",
-  //   pageCount: 0,
-  //   genres: [],
-  //   language: "English",
-  //   stock: 0,
-  //   coverImage: null,
-  //   coverImageUrl: "",
-  // });
-
-const [formData, setFormData] = useState<BookFormData>({
+  const [formData, setFormData] = useState<CDFormData>({
     title: "",
-    author: "",
-    description: "",
+    artist: "",
     originalPrice: 0,
     discountRate: 0,
-    price: 0, // Calculated field
-    isbn: "",
-    publicationYear: new Date().getFullYear(),
-    publisher: "",
-    pageCount: 0,
-    genres: [],
-    language: "English",
     stock: 0,
     coverImage: null,
     coverImageUrl: "",
+    albumTitle: "",
+    trackList: "",
+    category: "Pop", // Default category
+    releasedDate: new Date().toISOString().split("T")[0], // Default to today
   });
-
-
 
   // Validation state
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -144,45 +103,42 @@ const [formData, setFormData] = useState<BookFormData>({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string>("");
 
-  // Load book data if in edit mode
+  // Load cd data if in edit mode
   useEffect(() => {
-    const loadBook = async () => {
+    const loadCD = async () => {
       if (!isEditMode) return;
 
       try {
         setLoading(true);
-        const bookData = await getBook(id);
+        const cdData = await getCD(id);
 
 
 
         setFormData({
-          title: bookData.title || "",
-          author: bookData.author || "",
-          description: bookData.description || "",
-          originalPrice: bookData.originalPrice || 0,
-          discountRate: bookData.discountRate || 0,
-          price: calculateCurrentPrice(bookData.originalPrice, bookData.discountRate),
-          isbn: bookData.isbn || "",
-          publicationYear: bookData.publicationYear || new Date().getFullYear(),
-          publisher: bookData.publisher || "",
-          pageCount: bookData.pageCount || 0,
-          genres: bookData.genres || [],
-          language: bookData.language || "English",
-          stock: bookData.stock || 0,
-          coverImageUrl: bookData.coverImage || "",
+          title: cdData.title || "",
+          originalPrice: cdData.originalPrice || 0,
+          discountRate: cdData.discountRate || 0,
+          stock: cdData.stock || 0,
+          coverImageUrl: cdData.coverImage || "",
+
+          artist: cdData.artist || "",
+            albumTitle: cdData.albumTitle || "",
+            trackList: cdData.trackList || "",
+            category: cdData.category || "Pop", // Default to Pop if not set
+            releasedDate: cdData.releasedDate || new Date().toISOString().split("T")[0], // Default to today
         });
 
         // Set preview URL for existing image
-        setPreviewUrl(bookData.coverImage || "");
+        setPreviewUrl(cdData.coverImage || "");
       } catch (err) {
-        console.error("Failed to load book:", err);
-        setError("Failed to load book data. Please try again.");
+        console.error("Failed to load cd:", err);
+        setError("Failed to load cd data. Please try again.");
       } finally {
         setLoading(false);
       }
     };
 
-    loadBook();
+    loadCD();
   }, [id, isEditMode]);
 
   // Handle form input changes
@@ -282,14 +238,10 @@ const [formData, setFormData] = useState<BookFormData>({
     }
 
     // Author validation
-    if (!formData.author.trim()) {
-      newErrors.author = "Author is required";
+    if (!formData.artist.trim()) {
+      newErrors.author = "Artist is required";
     }
 
-    // Description validation
-    if (!formData.description.trim()) {
-      newErrors.description = "Description is required";
-    }
 
     // Original price validation
     if (formData.originalPrice <= 0) {
@@ -301,51 +253,15 @@ const [formData, setFormData] = useState<BookFormData>({
       newErrors.discountRate = "Discount rate must be between 0 and 100";
     }
 
-    // ISBN validation
-    if (!formData.isbn.trim()) {
-      newErrors.isbn = "ISBN is required";
-    } else if (
-      !/^(?:\d[- ]?){13}$|^(?:\d[- ]?){10}$/.test(
-        formData.isbn.replace(/[- ]/g, "")
-      )
-    ) {
-      newErrors.isbn = "ISBN must be a valid 10 or 13 digit number";
-    }
-
-    // Publication year validation
-    if (!formData.publicationYear) {
-      newErrors.publicationYear = "Publication year is required";
-    } else {
-      const currentYear = new Date().getFullYear();
-      if (formData.publicationYear < 1000 || formData.publicationYear > currentYear + 5) {
-        newErrors.publicationYear = `Publication year must be between 1000 and ${currentYear + 5}`;
-      }
-    }
-
-    // Publisher validation
-    if (!formData.publisher.trim()) {
-      newErrors.publisher = "Publisher is required";
-    }
-
-    // Page count validation
-    if (formData.pageCount <= 0) {
-      newErrors.pageCount = "Page count must be greater than 0";
-    }
-
-    // Genres validation
-    if (formData.genres.length === 0) {
-      newErrors.genres = "Select at least one genre";
-    }
-
     // Stock quantity validation
     if (formData.stock < 0) {
       newErrors.stock = "Stock quantity cannot be negative";
     }
 
-    // Cover image validation for new books
-    if (!isEditMode && !selectedFile && !previewUrl) {
-      newErrors.coverImage = "Cover image is required";
-    }
+    // // Cover image validation for new cds
+    // if (!isEditMode && !selectedFile && !previewUrl) {
+    //   newErrors.coverImage = "Cover image is required";
+    // }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -376,7 +292,7 @@ const [formData, setFormData] = useState<BookFormData>({
       if (selectedFile) {
         setUploading(true);
         try {
-          const s3Key = await uploadBookCover(selectedFile, (progress) => {
+          const s3Key = await uploadCDCover(selectedFile, (progress) => {
             setUploadProgress(progress);
           });
 
@@ -385,8 +301,6 @@ const [formData, setFormData] = useState<BookFormData>({
             ...finalFormData,
             coverImage: null, // Remove file object
             coverImageUrl: s3Key, // Use S3 key
-            // tinh price = originalPrice * (1 - discountRate / 100)
-            price: calculateCurrentPrice(finalFormData.originalPrice, finalFormData.discountRate),
           };
         } catch (uploadError) {
           console.error("Failed to upload image:", uploadError);
@@ -399,49 +313,45 @@ const [formData, setFormData] = useState<BookFormData>({
       }
 
       if (isEditMode) {
-        await updateBook(id, finalFormData);
-        setSuccess("Book updated successfully");
+        await updateCD(id, finalFormData);
+        setSuccess("CD updated successfully");
       } else {
-        await createBook(finalFormData);
-        setSuccess("Book created successfully");
+        await createCD(finalFormData);
+        setSuccess("CD created successfully");
 
         // Clear form data on successful creation
         setFormData({
           title: "",
-          author: "",
-          description: "",
           originalPrice: 0,
           discountRate: 0,
-          price: 0, // Reset calculated price
-          isbn: "",
-          publicationYear: new Date().getFullYear(),
-          publisher: "",
-          pageCount: 0,
-          genres: [],
-          language: "English",
           stock: 0,
           coverImage: null,
           coverImageUrl: "",
+          artist:  "",
+            albumTitle:  "",
+            trackList:  "",
+            category: "Pop", // Default to Pop if not set
+            releasedDate:new Date().toISOString().split("T")[0], // Default to today
         });
         setSelectedFile(null);
         setPreviewUrl("");
       }
 
-      // Navigate back to book list after a short delay
+      // Navigate back to cd list after a short delay
       setTimeout(() => {
-        navigate("/admin/books");
+        navigate("/admin/cds");
       }, 1500);
     } catch (err) {
-      console.error("Failed to save book:", err);
-      setError("Failed to save book. Please try again.");
+      console.error("Failed to save cd:", err);
+      setError("Failed to save cd. Please try again.");
     } finally {
       setSaving(false);
     }
   };
 
-  // Handle navigation back to book list
+  // Handle navigation back to cd list
   const handleBack = () => {
-    navigate("/admin/books");
+    navigate("/admin/cds");
   };
 
   if (loading) {
@@ -470,14 +380,14 @@ const [formData, setFormData] = useState<BookFormData>({
         }}
       >
         <Typography variant="h4" component="h1">
-          {isEditMode ? "Edit Book" : "Add New Book"}
+          {isEditMode ? "Edit CD" : "Add New CD"}
         </Typography>
         <Button
           variant="outlined"
           startIcon={<ArrowBackIcon />}
           onClick={handleBack}
         >
-          Back to Books
+          Back to CD
         </Button>
       </Box>
 
@@ -499,7 +409,7 @@ const [formData, setFormData] = useState<BookFormData>({
             {/* Left Column */}
             <Grid size={{ xs: 12, md: 8 }}>
               <Typography variant="h6" gutterBottom>
-                Book Information
+                CD Information
               </Typography>
               <Divider sx={{ mb: 3 }} />
 
@@ -521,137 +431,75 @@ const [formData, setFormData] = useState<BookFormData>({
                   <TextField
                     fullWidth
                     required
-                    label="Author"
-                    name="author"
-                    value={formData.author}
+                    label="Artist"
+                    name="artist"
+                    value={formData.artist}
                     onChange={handleInputChange}
                     error={!!errors.author}
                     helperText={errors.author}
                   />
                 </Grid>
 
+
+        
                 <Grid size={12}>
                   <TextField
                     fullWidth
-                    required
-                    label="Description"
-                    name="description"
-                    value={formData.description}
+                    label="Album Title"
+                    name="albumTitle"
+                    value={formData.albumTitle}
+                    onChange={handleInputChange}
+                  />
+                </Grid>
+                <Grid size={12}>
+                  <TextField
+                    fullWidth
+                    label="Track List"
+                    name="trackList"
+                    value={formData.trackList}
                     onChange={handleInputChange}
                     multiline
                     rows={4}
-                    error={!!errors.description}
-                    helperText={errors.description}
+                    placeholder="Enter track names separated by commas"
                   />
                 </Grid>
-
                 <Grid size={6}>
-                  <TextField
-                    fullWidth
-                    required
-                    label="ISBN"
-                    name="isbn"
-                    value={formData.isbn}
-                    onChange={handleInputChange}
-                    error={!!errors.isbn}
-                    helperText={errors.isbn}
-                  />
-                </Grid>
-
-                <Grid size={6}>
-                  <TextField
-                    fullWidth
-                    required
-                    label="Publication Year"
-                    name="publicationYear"
-                    type="number"
-                    value={formData.publicationYear === 0 ? "" : formData.publicationYear}
-                    onChange={handleNumberInputChange}
-                    InputProps={{ inputProps: { min: 1000, max: new Date().getFullYear() + 5 } }}
-                    error={!!errors.publicationYear}
-                    helperText={errors.publicationYear || "Enter the year the book was published"}
-                  />
-                </Grid>
-
-                <Grid size={6}>
-                  <TextField
-                    fullWidth
-                    required
-                    label="Publisher"
-                    name="publisher"
-                    value={formData.publisher}
-                    onChange={handleInputChange}
-                    error={!!errors.publisher}
-                    helperText={errors.publisher}
-                  />
-                </Grid>
-
-                <Grid size={6}>
-                  <TextField
-                    fullWidth
-                    required
-                    label="Page Count"
-                    name="pageCount"
-                    type="number"
-                    value={formData.pageCount === 0 ? "" : formData.pageCount}
-                    onChange={handleNumberInputChange}
-                    InputProps={{ inputProps: { min: 1 } }}
-                    error={!!errors.pageCount}
-                    helperText={errors.pageCount}
-                  />
-                </Grid>
-
-                <Grid size={12}>
-                  <FormControl fullWidth error={!!errors.genres}>
-                    <InputLabel id="genres-label">Genres</InputLabel>
+                  <FormControl fullWidth>
+                    <InputLabel id="category-label">Category</InputLabel>
                     <Select
-                      labelId="genres-label"
-                      multiple
-                      required
-                      name="genres"
-                      value={formData.genres}
+                      labelId="category-label"
+                      name="category"
+                      value={formData.category}
                       onChange={handleSelectChange}
-                      input={<OutlinedInput label="Genres" />}
-                      renderValue={(selected) => (
-                        <Box
-                          sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}
-                        >
-                          {(selected as string[]).map((value) => (
-                            <Chip key={value} label={value} />
-                          ))}
-                        </Box>
-                      )}
+                      input={<OutlinedInput label="Category" />}
+                      error={!!errors.category}
                     >
-                      {AVAILABLE_GENRES.map((genre) => (
-                        <MenuItem key={genre} value={genre}>
-                          {genre}
+                      {AVAILABLE_CATEGORY.map((category) => (
+                        <MenuItem key={category} value={category}>
+                          {category}
                         </MenuItem>
                       ))}
                     </Select>
-                    {errors.genres && (
-                      <FormHelperText>{errors.genres}</FormHelperText>
+                    {errors.category && (
+                      <FormHelperText error>{errors.category}</FormHelperText>
                     )}
                   </FormControl>
                 </Grid>
-
                 <Grid size={6}>
-                  <FormControl fullWidth>
-                    <InputLabel id="language-label">Language</InputLabel>
-                    <Select
-                      labelId="language-label"
-                      name="language"
-                      value={formData.language}
-                      onChange={handleSelectChange}
-                      label="Language"
-                    >
-                      {AVAILABLE_LANGUAGES.map((language) => (
-                        <MenuItem key={language} value={language}>
-                          {language}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
+                  <TextField
+                    fullWidth
+                    label="Released Date"
+                    name="releasedDate"
+                    type="date"
+                    value={formData.releasedDate}
+                    onChange={handleInputChange}
+                    InputLabelProps={{ shrink: true }}
+                  />
                 </Grid>
+
+                
+
+                
 
                 <Grid size={6}>
                   <TextField
@@ -763,7 +611,7 @@ const [formData, setFormData] = useState<BookFormData>({
                   <Box
                     component="img"
                     src={previewUrl || formData.coverImageUrl}
-                    alt="Book cover preview"
+                    alt="CD cover preview"
                     sx={{
                       maxWidth: "100%",
                       maxHeight: 300,
@@ -833,8 +681,8 @@ const [formData, setFormData] = useState<BookFormData>({
                 : saving
                 ? "Saving..."
                 : isEditMode
-                ? "Update Book"
-                : "Add Book"
+                ? "Update CD"
+                : "Add CD"
               }
             </Button>
           </Box>
@@ -844,4 +692,4 @@ const [formData, setFormData] = useState<BookFormData>({
   );
 };
 
-export default BookFormPage;
+export default CDFormPage;

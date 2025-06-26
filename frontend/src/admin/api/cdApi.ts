@@ -1,10 +1,10 @@
 import axios from "axios";
 import {
-  Book,
-  BookFilters,
-  BookFormData,
-  BookListResponse,
-} from "../types/book.types";
+  CD,
+  CDFilters,
+  CDFormData,
+  CDListResponse,
+} from "../types/cd.types";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:3001/api";
 
@@ -23,19 +23,15 @@ const getAuthHeaders = () => {
   };
 };
 
-// Function to convert BookFilters to query params
-const buildQueryParams = (filters: BookFilters): string => {
+// Function to convert CDFilters to query params
+const buildQueryParams = (filters: CDFilters): string => {
   const params = new URLSearchParams();
 
   if (filters.search) params.append("search", filters.search);
-  if (filters.author) params.append("author", filters.author);
   if (filters.minPrice !== undefined)
     params.append("minPrice", filters.minPrice.toString());
   if (filters.maxPrice !== undefined)
     params.append("maxPrice", filters.maxPrice.toString());
-  if (filters.genres && filters.genres.length > 0) {
-    filters.genres.forEach((genre) => params.append("genres", genre));
-  }
   if (filters.inStock !== undefined)
     params.append("inStock", filters.inStock.toString());
   if (filters.onSale !== undefined)
@@ -51,37 +47,37 @@ const buildQueryParams = (filters: BookFilters): string => {
 
 
 
-// Get all books with filters
-export const getBooks = async (
-  filters: BookFilters
-): Promise<BookListResponse> => {
-  const response = await axios.get(`${API_URL}/admin/books?${buildQueryParams(filters)}`, getAuthHeaders());
+// Get all cds with filters
+export const getCDs = async (
+  filters: CDFilters
+): Promise<CDListResponse> => {
+  const response = await axios.get(`${API_URL}/admin/cds?${buildQueryParams(filters)}`, getAuthHeaders());
   return response.data;
 };
 
-// Get a single book by ID
-export const getBook = async (id: string): Promise<Book> => {
-  const response = await axios.get(`${API_URL}/admin/books/${id}`, getAuthHeaders());
+// Get a single cd by ID
+export const getCD = async (id: string): Promise<CD> => {
+  const response = await axios.get(`${API_URL}/admin/cds/${id}`, getAuthHeaders());
   return response.data;
 };
 
-// Create a new book
-export const createBook = async (bookData: BookFormData): Promise<Book> => {
-  const response = await axios.post(`${API_URL}/admin/books`, bookData, getAuthHeaders());
+// Create a new cd
+export const createCD = async (cdData: CDFormData): Promise<CD> => {
+  const response = await axios.post(`${API_URL}/admin/cds`, cdData, getAuthHeaders());
   return response.data;
 };
 
-// Update an existing book
-export const updateBook = async (
+// Update an existing cd
+export const updateCD = async (
   id: string,
-  bookData: BookFormData
-): Promise<Book> => {
-  const response = await axios.put(`${API_URL}/admin/books/${id}`, bookData, getAuthHeaders());
+  cdData: CDFormData
+): Promise<CD> => {
+  const response = await axios.put(`${API_URL}/admin/cds/${id}`, cdData, getAuthHeaders());
   return response.data;
 };
 
-// Delete a book
-export const deleteBook = async (id: string): Promise<void> => {
+// Delete a cd
+export const deleteCD = async (id: string): Promise<void> => {
   await axios.delete(`${API_URL}/admin/products/one/${id}`, getAuthHeaders());
 };
 
@@ -97,14 +93,14 @@ export interface UploadPresignedUrlResponse {
   expiresIn: number;
 }
 
-// Get presigned URL for uploading book cover image
+// Get presigned URL for uploading cd cover image
 export const getUploadPresignedUrl = async (
   fileName: string,
   contentType: string
 ): Promise<UploadPresignedUrlResponse> => {
   try {
     const response = await axios.post(
-      `${API_URL}/admin/books/upload-presigned-url`,
+      `${API_URL}/admin/cds/upload-presigned-url`,
       { fileName, contentType },
       getAuthHeaders()
     );
@@ -142,7 +138,7 @@ export const uploadToR2 = async (
 };
 
 // Complete upload flow: get presigned URL and upload file
-export const uploadBookCover = async (
+export const uploadCDCover = async (
   file: File,
   onProgress?: (progress: number) => void
 ): Promise<string> => {
@@ -156,10 +152,10 @@ export const uploadBookCover = async (
     // Step 2: Upload file to R2
     await uploadToR2(file, uploadUrl, onProgress);
 
-    // Step 3: Return S3 key for saving with book data
+    // Step 3: Return S3 key for saving with cd data
     return s3Key;
   } catch (error) {
-    console.error("Failed to upload book cover:", error);
+    console.error("Failed to upload cd cover:", error);
     throw error;
   }
 };
