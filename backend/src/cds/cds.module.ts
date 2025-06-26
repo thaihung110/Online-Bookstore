@@ -1,6 +1,9 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { CD, CDSchema } from './schemas/cd.schema';
+import { CDsController } from './cds.controller';
+import { CDsService } from './cds.service';
+import { UploadModule } from '../upload/upload.module';
 import { Product, ProductSchema } from '../products/schemas/product.schema';
 
 @Module({
@@ -8,15 +11,18 @@ import { Product, ProductSchema } from '../products/schemas/product.schema';
     MongooseModule.forFeature([
       {
         name: Product.name, 
-        schema: ProductSchema
+        schema: ProductSchema,
       },
       {
         name: CD.name, 
         schema: CDSchema,
-        collection: 'products'
+        collection: 'products' // Specify the collection name if needed
       }
-    ])  ],
-  providers: [],
-  exports: [MongooseModule]
+    ]),
+    UploadModule
+  ],
+  controllers: [CDsController],
+  providers: [CDsService],
+  exports: [MongooseModule, CDsService]
 })
 export class CDsModule {}
