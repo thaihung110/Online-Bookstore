@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigModule } from '@nestjs/config';
 
@@ -14,8 +14,11 @@ import { VnpayService } from './vnpay.service';
 import { Payment, PaymentSchema } from './schemas/payment.schema';
 // @ts-ignore
 import { Transaction, TransactionSchema } from './schemas/transaction.schema';
+import { PaymentLog, PaymentLogSchema } from './schemas/payment-log.schema';
 
 import { PaymentLoggingService } from './services/payment-logging.service';
+import { OrdersModule } from '../orders/orders.module';
+import { EmailModule } from '../email/email.module';
 
 @Module({
   imports: [
@@ -23,7 +26,10 @@ import { PaymentLoggingService } from './services/payment-logging.service';
     MongooseModule.forFeature([
       { name: Payment.name, schema: PaymentSchema },
       { name: Transaction.name, schema: TransactionSchema },
+      { name: PaymentLog.name, schema: PaymentLogSchema },
     ]),
+    forwardRef(() => OrdersModule),
+    EmailModule,
   ],
   controllers: [PaymentsController],
   providers: [
@@ -34,6 +40,6 @@ import { PaymentLoggingService } from './services/payment-logging.service';
       useClass: VnpayService,
     },
   ],
-  exports: [PaymentsService],
+  exports: [PaymentsService, PaymentLoggingService, 'VnpayService'],
 })
 export class PaymentsModule {}

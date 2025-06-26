@@ -75,25 +75,27 @@ class ShippingAddressDto {
 }
 
 enum PaymentMethod {
-  COD = 'cod',
-  VNPAY = 'vnpay',
-  PAYPAL = 'paypal',
-  GIFT_CARD = 'gift_card', // For future use
-  LOYALTY_POINTS = 'loyalty_points', // For future use
-  MOCK = 'mock', // For initial implementation
+  CASH = 'COD', // Updated to match MongoDB validation
+  VNPAY = 'VNPAY', // Updated to match MongoDB validation
 }
 
 class PaymentInfoDto {
   @ApiProperty({
     description: 'Payment method used',
     enum: PaymentMethod,
-    example: PaymentMethod.COD,
+    example: PaymentMethod.CASH,
   })
   @IsEnum(PaymentMethod)
   @IsNotEmpty()
   method: PaymentMethod;
 
-  // transactionId will be set by the backend for mock payments or by the payment gateway
+  @ApiPropertyOptional({
+    description: 'Payment ID reference to payments collection',
+  })
+  @IsOptional()
+  @IsString()
+  paymentId?: string;
+
   @ApiPropertyOptional({ description: 'Transaction ID from payment gateway' })
   @IsOptional()
   @IsString()
@@ -111,6 +113,34 @@ export class CreateOrderDto {
   @Type(() => OrderItemDto)
   items: OrderItemDto[];
 
+  @ApiProperty({
+    description: 'Shipping address for the order',
+    type: ShippingAddressDto,
+  })
+  @ValidateNested()
+  @Type(() => ShippingAddressDto)
+  shippingAddress: ShippingAddressDto;
+
+  @ApiProperty({
+    description: 'Payment information for the order',
+    type: PaymentInfoDto,
+  })
+  @ValidateNested()
+  @Type(() => PaymentInfoDto)
+  paymentInfo: PaymentInfoDto;
+
+  @ApiPropertyOptional({ description: 'Is this order a gift?', default: false })
+  @IsOptional()
+  @IsBoolean()
+  isGift?: boolean;
+
+  @ApiPropertyOptional({ description: 'Gift message if the order is a gift' })
+  @IsOptional()
+  @IsString()
+  giftMessage?: string;
+}
+
+export class CreateOrderFromCartDto {
   @ApiProperty({
     description: 'Shipping address for the order',
     type: ShippingAddressDto,

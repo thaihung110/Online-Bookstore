@@ -12,6 +12,7 @@ import { OrdersModule } from './orders';
 import { PaymentsModule } from './payments/payments.module';
 import { AdminModule } from './admin/admin.module';
 import { UploadModule } from './upload/upload.module';
+import { EmailModule } from './email/email.module';
 import { BooksUpdater } from './scripts/update-books';
 import { Book, BookSchema } from './books/schemas/book.schema';
 import { RecommendProxyMiddleware } from './proxy/recommend-proxy.middleware';
@@ -72,6 +73,7 @@ import { RecommendProxyMiddleware } from './proxy/recommend-proxy.middleware';
     PaymentsModule,
     AdminModule,
     UploadModule,
+    EmailModule,
   ],
   controllers: [AppController],
   providers: [

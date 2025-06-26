@@ -10,6 +10,7 @@ import { AddItemToCartDto } from './dto/add-item-to-cart.dto';
 import { UsersService } from '../users/users.service';
 import { BooksService } from '../books/books.service';
 import { Book, BookDocument } from '../books/schemas/book.schema';
+import { calculateOrderTotal } from '../shared/price-calculator';
 
 @Injectable()
 export class CartsService {
@@ -30,23 +31,25 @@ export class CartsService {
       cart = await this.cartModel.create({
         user: userId,
         items: [],
+        appliedCouponCode: null,
+        appliedGiftCardCode: null,
+        loyaltyPointsToUse: 0,
         subtotal: 0,
-        discount: 0,
+        shippingCost: 0,
+        taxAmount: 0,
+        total: 0,
+      });
+
+      // Populate the newly created cart
+      cart = await this.cartModel.findById(cart._id).populate({
+        path: 'items.book',
+        model: 'Book',
       });
     }
 
-    // Debug: Log cart data being returned
-    console.log('Debug - getCart returning:', {
-      userId,
-      cartId: cart._id,
-      itemsCount: cart.items.length,
-      items: cart.items.map((item) => ({
-        bookId: (item.book as any)._id ? (item.book as any)._id.toString() : item.book.toString(),
-        quantity: item.quantity,
-        priceAtAdd: item.priceAtAdd,
-        isTicked: item.isTicked,
-      })),
-    });
+    // Recalculate cart totals to ensure accuracy
+    await this.recalculateCartTotals(cart);
+    await cart.save();
 
     return cart;
   }
@@ -85,29 +88,33 @@ export class CartsService {
             isTicked: isTicked,
           },
         ],
-        subtotal: book.price * quantity,
-        discount: 0,
+        appliedCouponCode: null,
+        appliedGiftCardCode: null,
+        loyaltyPointsToUse: 0,
+        subtotal: 0,
+        shippingCost: 0,
+        taxAmount: 0,
+        total: 0,
       });
 
-      return this.cartModel.findById(newCart._id).populate({
-        path: 'items.book',
-        model: 'Book',
-      });
+      const populatedCart = await this.cartModel
+        .findById(newCart._id)
+        .populate({
+          path: 'items.book',
+          model: 'Book',
+        });
+
+      // Recalculate totals for new cart
+      await this.recalculateCartTotals(populatedCart);
+      await populatedCart.save();
+
+      return populatedCart;
     }
 
     // Find if the book already exists in cart
     const existingItemIndex = cart.items.findIndex(
       (item) => item.book.toString() === bookObjectId.toString(),
     );
-
-    console.log('Debug - Current cart state:', {
-      cartId: cart._id,
-      existingItemIndex,
-      currentItems: cart.items.map((item) => ({
-        bookId: item.book.toString(),
-        quantity: item.quantity,
-      })),
-    });
 
     if (existingItemIndex > -1) {
       // Update existing item quantity
@@ -122,7 +129,7 @@ export class CartsService {
       }
 
       // Update quantity using MongoDB update operators
-      const result = await this.cartModel.findOneAndUpdate(
+      await this.cartModel.findOneAndUpdate(
         {
           user: userId,
           'items.book': bookObjectId,
@@ -130,7 +137,6 @@ export class CartsService {
         {
           $inc: {
             'items.$.quantity': quantity,
-            subtotal: book.price * quantity,
           },
           $set: {
             'items.$.priceAtAdd': book.price,
@@ -138,15 +144,6 @@ export class CartsService {
         },
         { new: true },
       );
-
-      console.log('Debug - Updated cart:', {
-        success: !!result,
-        newQuantity,
-        updatedItems: result?.items.map((item) => ({
-          bookId: item.book.toString(),
-          quantity: item.quantity,
-        })),
-      });
     } else {
       // Validate stock for new item
       if (book.stock < quantity) {
@@ -156,7 +153,7 @@ export class CartsService {
       }
 
       // Add new item using MongoDB update operators
-      const result = await this.cartModel.findOneAndUpdate(
+      await this.cartModel.findOneAndUpdate(
         { user: userId },
         {
           $push: {
@@ -167,25 +164,23 @@ export class CartsService {
               isTicked: isTicked,
             },
           },
-          $inc: { subtotal: book.price * quantity },
         },
         { new: true },
       );
-
-      console.log('Debug - Added new item:', {
-        success: !!result,
-        newItem: {
-          bookId: bookId,
-          quantity: quantity,
-        },
-      });
     }
 
-    // Return fully populated cart
-    return this.cartModel.findOne({ user: userId }).populate({
-      path: 'items.book',
-      model: 'Book',
-    });
+    // Return fully populated cart with recalculated totals
+    const updatedCart = await this.cartModel
+      .findOne({ user: userId })
+      .populate({
+        path: 'items.book',
+        model: 'Book',
+      });
+
+    await this.recalculateCartTotals(updatedCart);
+    await updatedCart.save();
+
+    return updatedCart;
   }
 
   async removeItem(userId: string, bookId: string): Promise<CartDocument> {
@@ -199,26 +194,10 @@ export class CartsService {
       throw new NotFoundException(`Cart not found`);
     }
 
-    console.log('Debug - Remove Item:', {
-      bookIdToRemove: bookId,
-      bookObjectId: bookObjectId.toString(),
-      currentItems: cart.items.map((item) => ({
-        bookId: item.book.toString(),
-        isMatch: item.book.toString() === bookObjectId.toString(),
-      })),
-    });
-
     // Check if item exists using toString() comparison
-    const itemExists = cart.items.some((item) => {
-      const itemBookId = item.book.toString();
-      const targetBookId = bookObjectId.toString();
-      console.log('Debug - Comparing IDs:', {
-        itemBookId,
-        targetBookId,
-        isEqual: itemBookId === targetBookId,
-      });
-      return itemBookId === targetBookId;
-    });
+    const itemExists = cart.items.some(
+      (item) => item.book.toString() === bookObjectId.toString(),
+    );
 
     if (!itemExists) {
       throw new NotFoundException(`Book with ID "${bookId}" not found in cart`);
@@ -288,15 +267,6 @@ export class CartsService {
       throw new NotFoundException('Cart not found');
     }
 
-    console.log('Debug - Update Quantity:', {
-      bookId: bookObjectId.toString(),
-      currentItems: cart.items.map((item) => ({
-        bookId: item.book.toString(),
-        quantity: item.quantity,
-        isMatch: item.book.toString() === bookObjectId.toString(),
-      })),
-    });
-
     // Check if item exists
     const itemExists = cart.items.some(
       (item) => item.book.toString() === bookObjectId.toString(),
@@ -338,86 +308,51 @@ export class CartsService {
 
   async clearCart(userId: string): Promise<CartDocument> {
     await this.usersService.findById(userId);
-    const cart = await this.getCart(userId);
 
-    cart.items = [];
-    cart.subtotal = 0;
-    cart.discount = 0;
-
-    await cart.save();
-    return this.cartModel.findById(cart._id).populate('items.book');
-  }
-
-  // Helper method to recalculate subtotal
-  private async recalculateSubtotal(cart: CartDocument): Promise<void> {
-    cart.subtotal = cart.items.reduce((total, item) => {
-      if (item.isTicked) {
-        return total + item.priceAtAdd * item.quantity;
-      }
-      return total;
-    }, 0);
-  }
-
-  // Atomic add item method to prevent race conditions
-  async addItemAtomic(
-    userId: string,
-    addItemDto: AddItemToCartDto,
-  ): Promise<CartDocument> {
-    const { bookId, quantity, isTicked = true } = addItemDto;
-
-    // Validate user and book
-    await this.usersService.findById(userId);
-    const book = await this.bookModel.findById(bookId);
-    if (!book) {
-      throw new NotFoundException(`Book with ID "${bookId}" not found`);
-    }
-
-    // Check stock
-    if (book.stock < quantity) {
-      throw new BadRequestException(
-        `Not enough stock. Available: ${book.stock}, Requested: ${quantity}`,
-      );
-    }
-
-    // Try to update existing item first
-    const updatedCart = await this.cartModel.findOneAndUpdate(
-      {
-        user: userId,
-        'items.book': new MongooseSchema.Types.ObjectId(bookId),
-      },
-      {
-        $inc: { 'items.$.quantity': quantity },
-        $set: { 'items.$.priceAtAdd': book.price },
-      },
-      { new: true },
-    );
-
-    if (updatedCart) {
-      // Item was found and updated
-      await this.recalculateSubtotal(updatedCart);
-      await updatedCart.save();
-      return this.cartModel.findById(updatedCart._id).populate('items.book');
-    }
-
-    // Item doesn't exist, add new item
-    const cartWithNewItem = await this.cartModel.findOneAndUpdate(
+    // Use atomic update for better performance
+    const clearedCart = await this.cartModel.findOneAndUpdate(
       { user: userId },
       {
-        $push: {
-          items: {
-            book: new MongooseSchema.Types.ObjectId(bookId),
-            quantity: quantity,
-            priceAtAdd: book.price,
-            isTicked: isTicked,
-          },
-        },
+        items: [],
+        appliedCouponCode: null,
+        appliedGiftCardCode: null,
+        loyaltyPointsToUse: 0,
+        subtotal: 0,
+        shippingCost: 0,
+        taxAmount: 0,
+        total: 0,
+        updatedAt: new Date(),
       },
       { new: true, upsert: true },
     );
 
-    await this.recalculateSubtotal(cartWithNewItem);
-    await cartWithNewItem.save();
-    return this.cartModel.findById(cartWithNewItem._id).populate('items.book');
+    return this.cartModel.findById(clearedCart._id).populate('items.book');
+  }
+
+  // Helper method to recalculate cart totals using universal price calculator
+  private async recalculateCartTotals(cart: CartDocument): Promise<void> {
+    // Prepare cart items for calculation (only ticked items)
+    const cartItems = cart.items
+      .filter((item) => item.isTicked)
+      .map((item) => ({
+        quantity: item.quantity,
+        priceAtAdd: item.priceAtAdd,
+      }));
+
+    // Use universal price calculator
+    const calculation = calculateOrderTotal(cartItems);
+
+    // Update cart with calculated values
+    cart.subtotal = parseFloat(calculation.subtotal.toFixed(2));
+    cart.shippingCost = parseFloat(calculation.shippingCost.toFixed(2));
+    cart.taxAmount = parseFloat(calculation.taxAmount.toFixed(2));
+    cart.discount = 0;
+    cart.total = parseFloat(calculation.total.toFixed(2));
+  }
+
+  // Legacy method for backward compatibility
+  private async recalculateSubtotal(cart: CartDocument): Promise<void> {
+    await this.recalculateCartTotals(cart);
   }
 
   // Simplified addToCart method - delegates to addItem
@@ -475,7 +410,8 @@ export class CartsService {
       // Check price changes (allow small floating point differences)
       const priceDifference = Math.abs(book.price - item.priceAtAdd);
       if (priceDifference > 0.01) {
-        const priceChange = book.price > item.priceAtAdd ? 'increased' : 'decreased';
+        const priceChange =
+          book.price > item.priceAtAdd ? 'increased' : 'decreased';
         issues.push({
           bookId: book._id.toString(),
           type: 'price' as const,
@@ -538,13 +474,6 @@ export class CartsService {
   ): Promise<CartDocument> {
     const bookObjectId = new Types.ObjectId(bookId);
 
-    console.log('Debug - updateItemInCart called:', {
-      userId,
-      bookId,
-      bookObjectId: bookObjectId.toString(),
-      updateDto,
-    });
-
     // Use atomic update with MongoDB operators instead of loading and saving
     const updateFields: any = {};
 
@@ -559,8 +488,6 @@ export class CartsService {
       updateFields['items.$.isTicked'] = updateDto.isTicked;
     }
 
-    console.log('Debug - updateItemInCart atomic update fields:', updateFields);
-
     // Perform atomic update
     const result = await this.cartModel.findOneAndUpdate(
       {
@@ -570,34 +497,16 @@ export class CartsService {
       {
         $set: updateFields,
       },
-      { new: true }
+      { new: true },
     );
 
     if (!result) {
       throw new NotFoundException('Item not found in cart');
     }
 
-    console.log('Debug - updateItemInCart after atomic update:', {
-      items: result.items.map((item) => ({
-        bookId: item.book.toString(),
-        quantity: item.quantity,
-        priceAtAdd: item.priceAtAdd,
-        isTicked: item.isTicked,
-      })),
-    });
-
-    // Recalculate subtotal
-    await this.recalculateSubtotal(result);
+    // Recalculate cart totals
+    await this.recalculateCartTotals(result);
     await result.save();
-
-    console.log('Debug - updateItemInCart after recalculate and save:', {
-      items: result.items.map((item) => ({
-        bookId: item.book.toString(),
-        quantity: item.quantity,
-        priceAtAdd: item.priceAtAdd,
-        isTicked: item.isTicked,
-      })),
-    });
 
     // Return populated cart
     return this.cartModel.findById(result._id).populate({

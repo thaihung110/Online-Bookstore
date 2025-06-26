@@ -37,21 +37,23 @@ const transformBookData = (bookData: any): Book => {
 
 // Enums and Types
 export enum PaymentMethod {
-  COD = 'cod',
-  VNPAY = 'vnpay',
-  PAYPAL = 'paypal',
-  GIFT_CARD = 'gift_card',
-  LOYALTY_POINTS = 'loyalty_points',
-  MOCK = 'mock',
+  CASH = "COD", // Updated to match MongoDB validation
+  VNPAY = "VNPAY", // Updated to match MongoDB validation
+  PAYPAL = "paypal",
+  GIFT_CARD = "gift_card",
+  LOYALTY_POINTS = "loyalty_points",
+  MOCK = "mock",
 }
 
 export enum OrderStatus {
-  PENDING = 'pending',
-  PROCESSING = 'processing',
-  SHIPPED = 'shipped',
-  DELIVERED = 'delivered',
-  CANCELLED = 'cancelled',
-  REFUNDED = 'refunded',
+  PENDING = "PENDING",
+  RECEIVED = "RECEIVED",
+  CONFIRMED = "CONFIRMED",
+  PREPARED = "PREPARED",
+  SHIPPED = "SHIPPED",
+  DELIVERED = "DELIVERED",
+  CANCELLED = "CANCELLED",
+  REFUNDED = "REFUNDED",
 }
 
 // Interfaces
@@ -131,6 +133,65 @@ export interface UpdateOrderRequest {
   notes?: string[];
 }
 
+export interface CreateOrderFromCartRequest {
+  shippingAddress: {
+    fullName: string;
+    phone: string;
+    address: string;
+    city: string;
+  };
+  paymentMethod: string;
+  notes?: string;
+}
+
+export interface OrderViewResponse {
+  order: {
+    id: string;
+    orderNumber: string;
+    status: string;
+    items: Array<{
+      title: string;
+      author: string;
+      price: number;
+      quantity: number;
+      discount?: number;
+    }>;
+    total: number;
+    subtotal: number;
+    tax: number;
+    shippingCost: number;
+    shippingAddress: {
+      fullName: string;
+      phone: string;
+      address: string;
+      city: string;
+    };
+    createdAt: string;
+    receivedAt?: string;
+  };
+  payment: {
+    id: string;
+    status: string;
+    method: string;
+    amount: number;
+    transactionId?: string;
+    bankCode?: string;
+    completedAt?: string;
+  } | null;
+  canRefund: boolean;
+}
+
+export interface RefundResponse {
+  success: boolean;
+  message: string;
+  orderId?: string;
+  paymentId?: string;
+  refundAmount?: number;
+  orderStatus?: string;
+  paymentStatus?: string;
+  error?: any;
+}
+
 // Response interfaces
 export interface OrderListResponse {
   orders: Order[];
@@ -145,10 +206,14 @@ const transformOrderData = (orderData: any): Order => {
   return {
     ...orderData,
     _id: orderData._id || orderData.id,
-    items: orderData.items?.map((item: any) => ({
-      ...item,
-      book: typeof item.book === 'object' ? transformBookData(item.book) : item.book,
-    })) || [],
+    items:
+      orderData.items?.map((item: any) => ({
+        ...item,
+        book:
+          typeof item.book === "object"
+            ? transformBookData(item.book)
+            : item.book,
+      })) || [],
     createdAt: orderData.createdAt || new Date().toISOString(),
     updatedAt: orderData.updatedAt || new Date().toISOString(),
   };
@@ -157,11 +222,18 @@ const transformOrderData = (orderData: any): Order => {
 // Transform order list response
 const transformOrderListResponse = (response: any): OrderListResponse => {
   return {
-    orders: response.orders?.map(transformOrderData) || response.map?.(transformOrderData) || [],
+    orders:
+      response.orders?.map(transformOrderData) ||
+      response.map?.(transformOrderData) ||
+      [],
     total: response.total || response.length || 0,
     page: response.page || 1,
     limit: response.limit || 10,
-    totalPages: response.totalPages || Math.ceil((response.total || response.length || 0) / (response.limit || 10)),
+    totalPages:
+      response.totalPages ||
+      Math.ceil(
+        (response.total || response.length || 0) / (response.limit || 10)
+      ),
   };
 };
 
@@ -172,11 +244,13 @@ const transformOrderListResponse = (response: any): OrderListResponse => {
  * @param orderData The order data to create
  * @returns Promise<Order> The created order
  */
-export const createOrder = async (orderData: CreateOrderRequest): Promise<Order> => {
+export const createOrder = async (
+  orderData: CreateOrderRequest
+): Promise<Order> => {
   try {
-    console.log('[Order API] Creating order:', orderData);
+    console.log("[Order API] Creating order:", orderData);
     const response = await api.post("/orders", orderData);
-    console.log('[Order API] Order created successfully:', response.data);
+    console.log("[Order API] Order created successfully:", response.data);
     return transformOrderData(response.data);
   } catch (error: any) {
     console.error("Error creating order:", error);
@@ -187,7 +261,9 @@ export const createOrder = async (orderData: CreateOrderRequest): Promise<Order>
 
       switch (status) {
         case 400:
-          throw new Error(data.message || "Invalid order data. Please check your input.");
+          throw new Error(
+            data.message || "Invalid order data. Please check your input."
+          );
         case 401:
           throw new Error("Authentication required. Please log in.");
         case 403:
@@ -199,10 +275,14 @@ export const createOrder = async (orderData: CreateOrderRequest): Promise<Order>
         case 500:
           throw new Error("Server error. Please try again later.");
         default:
-          throw new Error(data.message || `Order creation failed with status ${status}`);
+          throw new Error(
+            data.message || `Order creation failed with status ${status}`
+          );
       }
     } else if (error.request) {
-      throw new Error("Network error. Please check your connection and try again.");
+      throw new Error(
+        "Network error. Please check your connection and try again."
+      );
     } else {
       throw new Error("An unexpected error occurred while creating the order.");
     }
@@ -219,24 +299,24 @@ export const getUserOrders = async (params?: {
   limit?: number;
   status?: OrderStatus;
   sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
+  sortOrder?: "asc" | "desc";
 }): Promise<OrderListResponse> => {
   try {
-    console.log('[Order API] Fetching user orders:', params);
+    console.log("[Order API] Fetching user orders:", params);
 
     // Build query parameters
     const queryParams = new URLSearchParams();
-    if (params?.page) queryParams.append('page', params.page.toString());
-    if (params?.limit) queryParams.append('limit', params.limit.toString());
-    if (params?.status) queryParams.append('status', params.status);
-    if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
-    if (params?.sortOrder) queryParams.append('sortOrder', params.sortOrder);
+    if (params?.page) queryParams.append("page", params.page.toString());
+    if (params?.limit) queryParams.append("limit", params.limit.toString());
+    if (params?.status) queryParams.append("status", params.status);
+    if (params?.sortBy) queryParams.append("sortBy", params.sortBy);
+    if (params?.sortOrder) queryParams.append("sortOrder", params.sortOrder);
 
     const queryString = queryParams.toString();
-    const url = queryString ? `/orders?${queryString}` : '/orders';
+    const url = queryString ? `/orders?${queryString}` : "/orders";
 
     const response = await api.get(url);
-    console.log('[Order API] User orders fetched successfully:', response.data);
+    console.log("[Order API] User orders fetched successfully:", response.data);
 
     // Handle both array response and paginated response
     if (Array.isArray(response.data)) {
@@ -258,10 +338,14 @@ export const getUserOrders = async (params?: {
         case 500:
           throw new Error("Server error. Please try again later.");
         default:
-          throw new Error(data.message || `Failed to fetch orders with status ${status}`);
+          throw new Error(
+            data.message || `Failed to fetch orders with status ${status}`
+          );
       }
     } else if (error.request) {
-      throw new Error("Network error. Please check your connection and try again.");
+      throw new Error(
+        "Network error. Please check your connection and try again."
+      );
     } else {
       throw new Error("An unexpected error occurred while fetching orders.");
     }
@@ -275,9 +359,9 @@ export const getUserOrders = async (params?: {
  */
 export const getOrderById = async (orderId: string): Promise<Order> => {
   try {
-    console.log('[Order API] Fetching order by ID:', orderId);
+    console.log("[Order API] Fetching order by ID:", orderId);
     const response = await api.get(`/orders/${orderId}`);
-    console.log('[Order API] Order fetched successfully:', response.data);
+    console.log("[Order API] Order fetched successfully:", response.data);
     return transformOrderData(response.data);
   } catch (error: any) {
     console.error("Error fetching order by ID:", error);
@@ -295,10 +379,14 @@ export const getOrderById = async (orderId: string): Promise<Order> => {
         case 500:
           throw new Error("Server error. Please try again later.");
         default:
-          throw new Error(data.message || `Failed to fetch order with status ${status}`);
+          throw new Error(
+            data.message || `Failed to fetch order with status ${status}`
+          );
       }
     } else if (error.request) {
-      throw new Error("Network error. Please check your connection and try again.");
+      throw new Error(
+        "Network error. Please check your connection and try again."
+      );
     } else {
       throw new Error("An unexpected error occurred while fetching the order.");
     }
@@ -312,11 +400,14 @@ export const getOrderById = async (orderId: string): Promise<Order> => {
  * @param updateData The data to update
  * @returns Promise<Order> The updated order
  */
-export const updateOrder = async (orderId: string, updateData: UpdateOrderRequest): Promise<Order> => {
+export const updateOrder = async (
+  orderId: string,
+  updateData: UpdateOrderRequest
+): Promise<Order> => {
   try {
-    console.log('[Order API] Updating order:', orderId, updateData);
+    console.log("[Order API] Updating order:", orderId, updateData);
     const response = await api.put(`/orders/${orderId}`, updateData);
-    console.log('[Order API] Order updated successfully:', response.data);
+    console.log("[Order API] Order updated successfully:", response.data);
     return transformOrderData(response.data);
   } catch (error: any) {
     console.error("Error updating order:", error);
@@ -326,7 +417,9 @@ export const updateOrder = async (orderId: string, updateData: UpdateOrderReques
 
       switch (status) {
         case 400:
-          throw new Error(data.message || "Invalid update data. Please check your input.");
+          throw new Error(
+            data.message || "Invalid update data. Please check your input."
+          );
         case 401:
           throw new Error("Authentication required. Please log in.");
         case 403:
@@ -338,10 +431,14 @@ export const updateOrder = async (orderId: string, updateData: UpdateOrderReques
         case 500:
           throw new Error("Server error. Please try again later.");
         default:
-          throw new Error(data.message || `Failed to update order with status ${status}`);
+          throw new Error(
+            data.message || `Failed to update order with status ${status}`
+          );
       }
     } else if (error.request) {
-      throw new Error("Network error. Please check your connection and try again.");
+      throw new Error(
+        "Network error. Please check your connection and try again."
+      );
     } else {
       throw new Error("An unexpected error occurred while updating the order.");
     }
@@ -355,12 +452,15 @@ export const updateOrder = async (orderId: string, updateData: UpdateOrderReques
  * @param reason Optional cancellation reason
  * @returns Promise<Order> The cancelled order
  */
-export const cancelOrder = async (orderId: string, reason?: string): Promise<Order> => {
+export const cancelOrder = async (
+  orderId: string,
+  reason?: string
+): Promise<Order> => {
   try {
-    console.log('[Order API] Cancelling order:', orderId, reason);
+    console.log("[Order API] Cancelling order:", orderId, reason);
     const updateData: UpdateOrderRequest = {
       status: OrderStatus.CANCELLED,
-      ...(reason && { notes: [reason] })
+      ...(reason && { notes: [reason] }),
     };
     return await updateOrder(orderId, updateData);
   } catch (error) {
@@ -376,9 +476,9 @@ export const cancelOrder = async (orderId: string, reason?: string): Promise<Ord
  */
 export const deleteOrder = async (orderId: string): Promise<void> => {
   try {
-    console.log('[Order API] Deleting order:', orderId);
+    console.log("[Order API] Deleting order:", orderId);
     await api.delete(`/orders/${orderId}`);
-    console.log('[Order API] Order deleted successfully');
+    console.log("[Order API] Order deleted successfully");
   } catch (error: any) {
     console.error("Error deleting order:", error);
 
@@ -397,12 +497,255 @@ export const deleteOrder = async (orderId: string): Promise<void> => {
         case 500:
           throw new Error("Server error. Please try again later.");
         default:
-          throw new Error(data.message || `Failed to delete order with status ${status}`);
+          throw new Error(
+            data.message || `Failed to delete order with status ${status}`
+          );
       }
     } else if (error.request) {
-      throw new Error("Network error. Please check your connection and try again.");
+      throw new Error(
+        "Network error. Please check your connection and try again."
+      );
     } else {
       throw new Error("An unexpected error occurred while deleting the order.");
+    }
+  }
+};
+
+// --- New API Functions from Backend ---
+
+/**
+ * Creates an order from the current user's cart
+ * @param orderData The order data including shipping address and payment method
+ * @returns Promise<Order> The created order
+ */
+export const createOrderFromCart = async (
+  orderData: CreateOrderFromCartRequest
+): Promise<Order> => {
+  try {
+    console.log("[Order API] Creating order from cart:", orderData);
+    const response = await api.post("/orders/from-cart", orderData);
+    console.log(
+      "[Order API] Order from cart created successfully:",
+      response.data
+    );
+    return transformOrderData(response.data);
+  } catch (error: any) {
+    console.error("Error creating order from cart:", error);
+
+    if (error.response) {
+      const { status, data } = error.response;
+
+      switch (status) {
+        case 400:
+          throw new Error(data.message || "Invalid order data or empty cart.");
+        case 401:
+          throw new Error("Authentication required. Please log in.");
+        case 403:
+          throw new Error("You don't have permission to create orders.");
+        case 404:
+          throw new Error("Cart is empty or items not found.");
+        case 409:
+          throw new Error("Insufficient stock for one or more items in cart.");
+        case 500:
+          throw new Error("Server error. Please try again later.");
+        default:
+          throw new Error(
+            data.message ||
+              `Failed to create order from cart with status ${status}`
+          );
+      }
+    } else if (error.request) {
+      throw new Error(
+        "Network error. Please check your connection and try again."
+      );
+    } else {
+      throw new Error(
+        "An unexpected error occurred while creating order from cart."
+      );
+    }
+  }
+};
+
+/**
+ * Views an order using a secure token (public access, no auth required)
+ * @param token The secure token from email link
+ * @returns Promise<OrderViewResponse> Order details with payment info
+ */
+export const viewOrderByToken = async (
+  token: string
+): Promise<OrderViewResponse> => {
+  try {
+    console.log("[Order API] Viewing order by token:", token);
+    const response = await api.get(`/orders/view/${token}`);
+    console.log("[Order API] Order viewed successfully:", response.data);
+    return response.data;
+  } catch (error: any) {
+    console.error("Error viewing order by token:", error);
+
+    if (error.response) {
+      const { status, data } = error.response;
+
+      switch (status) {
+        case 400:
+          throw new Error("Invalid token format.");
+        case 404:
+          throw new Error("Order not found or token expired.");
+        case 500:
+          throw new Error("Server error. Please try again later.");
+        default:
+          throw new Error(
+            data.message || `Failed to view order with status ${status}`
+          );
+      }
+    } else if (error.request) {
+      throw new Error(
+        "Network error. Please check your connection and try again."
+      );
+    } else {
+      throw new Error("An unexpected error occurred while viewing the order.");
+    }
+  }
+};
+
+/**
+ * Requests a refund using a secure token (public access, no auth required)
+ * @param token The secure token from email link
+ * @param reason The reason for refund request
+ * @returns Promise<RefundResponse> Refund processing result
+ */
+export const requestRefundByToken = async (
+  token: string,
+  reason: string
+): Promise<RefundResponse> => {
+  try {
+    console.log("[Order API] Requesting refund by token:", token, reason);
+    const response = await api.post(`/orders/refund/${token}`, { reason });
+    console.log("[Order API] Refund requested successfully:", response.data);
+    return response.data;
+  } catch (error: any) {
+    console.error("Error requesting refund by token:", error);
+
+    if (error.response) {
+      const { status, data } = error.response;
+
+      switch (status) {
+        case 400:
+          throw new Error(
+            data.message || "Invalid token or refund not allowed."
+          );
+        case 404:
+          throw new Error("Order not found or token expired.");
+        case 409:
+          throw new Error(
+            "Order has already been refunded or cannot be refunded."
+          );
+        case 500:
+          throw new Error("Server error. Please try again later.");
+        default:
+          throw new Error(
+            data.message || `Failed to request refund with status ${status}`
+          );
+      }
+    } else if (error.request) {
+      throw new Error(
+        "Network error. Please check your connection and try again."
+      );
+    } else {
+      throw new Error("An unexpected error occurred while requesting refund.");
+    }
+  }
+};
+
+/**
+ * Executes a refund using a secure token via GET request (direct link from email)
+ * @param token The secure token from email link
+ * @returns Promise<string> HTML response for refund result
+ */
+export const executeRefundByToken = async (token: string): Promise<string> => {
+  try {
+    console.log("[Order API] Executing refund by token:", token);
+    const response = await api.get(`/orders/refund/${token}/execute`, {
+      headers: {
+        Accept: "text/html",
+      },
+    });
+    console.log("[Order API] Refund executed successfully");
+    return response.data;
+  } catch (error: any) {
+    console.error("Error executing refund by token:", error);
+
+    if (error.response) {
+      const { status, data } = error.response;
+      // Return HTML error response if available
+      if (typeof data === "string" && data.includes("<html>")) {
+        return data;
+      }
+
+      switch (status) {
+        case 400:
+          throw new Error(
+            data.message || "Invalid token or refund not allowed."
+          );
+        case 404:
+          throw new Error("Order not found or token expired.");
+        case 409:
+          throw new Error("Order has already been refunded.");
+        case 500:
+          throw new Error("Server error. Please try again later.");
+        default:
+          throw new Error(
+            data.message || `Failed to execute refund with status ${status}`
+          );
+      }
+    } else if (error.request) {
+      throw new Error(
+        "Network error. Please check your connection and try again."
+      );
+    } else {
+      throw new Error("An unexpected error occurred while executing refund.");
+    }
+  }
+};
+
+/**
+ * Checks refund status using a secure token
+ * @param token The secure token from email link
+ * @returns Promise<any> Refund status information
+ */
+export const checkRefundStatus = async (token: string): Promise<any> => {
+  try {
+    console.log("[Order API] Checking refund status by token:", token);
+    const response = await api.get(`/orders/refund-status/${token}`);
+    console.log(
+      "[Order API] Refund status checked successfully:",
+      response.data
+    );
+    return response.data;
+  } catch (error: any) {
+    console.error("Error checking refund status by token:", error);
+
+    if (error.response) {
+      const { status, data } = error.response;
+
+      switch (status) {
+        case 404:
+          throw new Error("Order not found or token expired.");
+        case 500:
+          throw new Error("Server error. Please try again later.");
+        default:
+          throw new Error(
+            data.message ||
+              `Failed to check refund status with status ${status}`
+          );
+      }
+    } else if (error.request) {
+      throw new Error(
+        "Network error. Please check your connection and try again."
+      );
+    } else {
+      throw new Error(
+        "An unexpected error occurred while checking refund status."
+      );
     }
   }
 };

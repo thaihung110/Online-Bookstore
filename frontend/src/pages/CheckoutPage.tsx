@@ -105,7 +105,10 @@ const CheckoutPage: React.FC = () => {
 
       // Nếu cần chuyển hướng đến cổng thanh toán (VNPAY)
       if (result.redirectUrl) {
-        window.open(result.redirectUrl, "_blank", "noopener");
+        // Mở VNPay trong tab mới
+        window.open(result.redirectUrl, "_blank", "noopener,noreferrer");
+        // Chuyển đến trang xác nhận đơn hàng
+        navigate("/order-confirmation");
         return;
       }
 

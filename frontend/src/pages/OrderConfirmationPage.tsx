@@ -61,14 +61,21 @@ const OrderConfirmationPage: React.FC = () => {
 
   // Xóa giỏ hàng khi đơn hàng đã hoàn thành
   useEffect(() => {
-    // Clear cart for successful payments OR when we have a valid order (COD case)
+    // Clear cart for successful payments OR when we have a valid order (CASH case)
     const shouldClearCart =
       payment?.status === "COMPLETED" || // VNPAY success
-      (order && (payment?.status === "PENDING" || !payment)) || // COD or order without payment
+      (order && (payment?.status === "PENDING" || !payment)) || // CASH or order without payment
       (order && payment?.paymentMethod === "COD"); // Explicit COD check
 
     if (shouldClearCart) {
-      console.log('[Order Confirmation] Clearing cart - Order:', !!order, 'Payment status:', payment?.status, 'Payment method:', payment?.paymentMethod);
+      console.log(
+        "[Order Confirmation] Clearing cart - Order:",
+        !!order,
+        "Payment status:",
+        payment?.status,
+        "Payment method:",
+        payment?.paymentMethod
+      );
       clearCart();
     }
 
@@ -98,12 +105,21 @@ const OrderConfirmationPage: React.FC = () => {
   // Calculate total amount - backend uses 'total' field (in USD)
   const totalAmount = order?.total || payment?.amount || 0;
 
-  // Check payment status - handle COD orders as successful
+  // Check payment status - handle CASH orders as successful
   const paymentStatus = payment?.status || "PENDING";
-  const isCODOrder = payment?.paymentMethod === "COD" || (!payment && order);
-  const isPaymentSuccessful = paymentStatus === "COMPLETED" || isCODOrder;
+  const orderStatus = order?.status || "PENDING";
+  const isCashOrder = payment?.paymentMethod === "COD" || (!payment && order);
+
+  // Fix VNPAY success detection: Check both payment status and order status
+  const isVNPaySuccessful =
+    payment?.paymentMethod === "VNPAY" &&
+    (paymentStatus === "COMPLETED" || orderStatus === "RECEIVED");
+  const isOrderReceived = orderStatus === "RECEIVED";
+  const isPaymentSuccessful =
+    isVNPaySuccessful || isCashOrder || isOrderReceived;
   const isPaymentFailed = paymentStatus === "FAILED";
-  const isPaymentPending = paymentStatus === "PENDING" && !isCODOrder;
+  const isPaymentPending =
+    paymentStatus === "PENDING" && orderStatus !== "RECEIVED" && !isCashOrder;
 
   if (isLoading) {
     return (
@@ -139,40 +155,134 @@ const OrderConfirmationPage: React.FC = () => {
           <Box sx={{ textAlign: "center", mb: 4 }}>
             {isPaymentSuccessful ? (
               <>
-                <CheckCircleOutlineIcon
-                  color="success"
-                  fontSize="large"
-                  sx={{ fontSize: 60, mb: 2 }}
-                />
-                <Typography variant="h4" gutterBottom>
-                  {isCODOrder ? "Đặt hàng thành công!" : "Thanh toán thành công!"}
+                <Box
+                  sx={{
+                    width: 100,
+                    height: 100,
+                    mx: "auto",
+                    mb: 3,
+                    background: "linear-gradient(45deg, #4caf50, #81c784)",
+                    borderRadius: "50%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    animation: "pulse 2s infinite",
+                    "@keyframes pulse": {
+                      "0%": { transform: "scale(1)" },
+                      "50%": { transform: "scale(1.05)" },
+                      "100%": { transform: "scale(1)" },
+                    },
+                  }}
+                >
+                  <CheckCircleOutlineIcon
+                    sx={{ fontSize: 60, color: "white" }}
+                  />
+                </Box>
+                <Typography
+                  variant="h3"
+                  gutterBottom
+                  sx={{
+                    fontWeight: "bold",
+                    background: "linear-gradient(45deg, #4caf50, #81c784)",
+                    backgroundClip: "text",
+                    WebkitBackgroundClip: "text",
+                    WebkitTextFillColor: "transparent",
+                    mb: 2,
+                  }}
+                >
+                  {isCashOrder
+                    ? "🎉 Đặt hàng thành công!"
+                    : isOrderReceived
+                    ? "🎉 Số tiền của bạn đã được thanh toán!"
+                    : isVNPaySuccessful
+                    ? "🎉 Thanh toán thành công!"
+                    : "🎉 Đặt hàng thành công!"}
                 </Typography>
-                <Typography variant="body1" color="text.secondary">
-                  Cảm ơn bạn đã đặt hàng. Đơn hàng của bạn đã được xác nhận và
-                  đang được xử lý.
-                  {isCODOrder && " Bạn sẽ thanh toán khi nhận hàng."}
+                <Typography
+                  variant="h6"
+                  color="text.secondary"
+                  sx={{
+                    maxWidth: 600,
+                    mx: "auto",
+                    lineHeight: 1.6,
+                  }}
+                >
+                  {isCashOrder
+                    ? "Cảm ơn bạn đã đặt hàng. Đơn hàng của bạn đã được xác nhận và đang được xử lý. Bạn sẽ thanh toán khi nhận hàng."
+                    : isOrderReceived
+                    ? "Cảm ơn bạn đã thanh toán. Đơn hàng của bạn đã được xác nhận và đang được chuẩn bị giao hàng."
+                    : isVNPaySuccessful
+                    ? "Cảm ơn bạn đã thanh toán qua VNPay. Đơn hàng của bạn đã được xác nhận và đang được xử lý."
+                    : "Cảm ơn bạn đã đặt hàng. Đơn hàng của bạn đã được xác nhận và đang được xử lý."}
                 </Typography>
               </>
             ) : isPaymentFailed ? (
               <>
-                <Box sx={{ color: "error.main", fontSize: 60, mb: 2 }}>✕</Box>
-                <Typography variant="h4" gutterBottom>
+                <Box
+                  sx={{
+                    width: 100,
+                    height: 100,
+                    mx: "auto",
+                    mb: 3,
+                    background: "linear-gradient(45deg, #f44336, #e57373)",
+                    borderRadius: "50%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Box sx={{ color: "white", fontSize: 60 }}>❌</Box>
+                </Box>
+                <Typography
+                  variant="h3"
+                  gutterBottom
+                  sx={{ fontWeight: "bold", color: "error.main" }}
+                >
                   Thanh toán thất bại
                 </Typography>
-                <Typography variant="body1" color="text.secondary">
+                <Typography
+                  variant="h6"
+                  color="text.secondary"
+                  sx={{ maxWidth: 600, mx: "auto" }}
+                >
                   Có lỗi xảy ra trong quá trình thanh toán. Vui lòng thử lại
                   hoặc chọn phương thức thanh toán khác.
                 </Typography>
               </>
             ) : (
               <>
-                <Box sx={{ color: "warning.main", fontSize: 60, mb: 2 }}>
-                  ⌛
+                <Box
+                  sx={{
+                    width: 100,
+                    height: 100,
+                    mx: "auto",
+                    mb: 3,
+                    background: "linear-gradient(45deg, #ff9800, #ffb74d)",
+                    borderRadius: "50%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    animation: "spin 2s linear infinite",
+                    "@keyframes spin": {
+                      "0%": { transform: "rotate(0deg)" },
+                      "100%": { transform: "rotate(360deg)" },
+                    },
+                  }}
+                >
+                  <Box sx={{ color: "white", fontSize: 60 }}>⏳</Box>
                 </Box>
-                <Typography variant="h4" gutterBottom>
+                <Typography
+                  variant="h3"
+                  gutterBottom
+                  sx={{ fontWeight: "bold", color: "warning.main" }}
+                >
                   Đang xử lý thanh toán
                 </Typography>
-                <Typography variant="body1" color="text.secondary">
+                <Typography
+                  variant="h6"
+                  color="text.secondary"
+                  sx={{ maxWidth: 600, mx: "auto" }}
+                >
                   Thanh toán của bạn đang được xử lý. Vui lòng chờ trong giây
                   lát.
                 </Typography>
@@ -182,75 +292,172 @@ const OrderConfirmationPage: React.FC = () => {
 
           <Divider sx={{ my: 3 }} />
 
-          <Box sx={{ my: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              Thông tin đơn hàng
+          <Box sx={{ my: 4 }}>
+            <Typography
+              variant="h5"
+              gutterBottom
+              sx={{ fontWeight: "bold", mb: 3 }}
+            >
+              📋 Thông tin đơn hàng
             </Typography>
 
-            <Stack spacing={2}>
-              <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                <Typography variant="body1" color="text.secondary">
-                  Mã đơn hàng:
-                </Typography>
-                <Typography variant="body1" fontWeight="bold">
-                  {orderId}
-                </Typography>
-              </Box>
-
-              <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                <Typography variant="body1" color="text.secondary">
-                  Ngày đặt hàng:
-                </Typography>
-                <Typography variant="body1">{formatDate(orderDate)}</Typography>
-              </Box>
-
-              <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                <Typography variant="body1" color="text.secondary">
-                  Phương thức thanh toán:
-                </Typography>
-                <Typography variant="body1">
-                  {payment?.paymentMethod === "VNPAY"
-                    ? "VNPAY"
-                    : payment?.paymentMethod === "COD" || isCODOrder
-                    ? "Thanh toán khi nhận hàng (COD)"
-                    : "Thẻ ngân hàng"}
-                </Typography>
-              </Box>
-
-              <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                <Typography variant="body1" color="text.secondary">
-                  Trạng thái:
-                </Typography>
-                <Typography
-                  variant="body1"
-                  color={
-                    isPaymentSuccessful
-                      ? "success.main"
-                      : isPaymentFailed
-                      ? "error.main"
-                      : "warning.main"
-                  }
-                  fontWeight="bold"
+            <Paper
+              elevation={2}
+              sx={{
+                p: 3,
+                background: "linear-gradient(135deg, #f5f5f5 0%, #ffffff 100%)",
+              }}
+            >
+              <Stack spacing={3}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
                 >
-                  {isPaymentSuccessful
-                    ? isCODOrder
-                      ? "Đặt hàng thành công - COD"
-                      : "Thanh toán thành công"
-                    : isPaymentFailed
-                    ? "Thanh toán thất bại"
-                    : "Đang xử lý"}
-                </Typography>
-              </Box>
+                  <Typography
+                    variant="body1"
+                    color="text.secondary"
+                    sx={{ fontWeight: 500 }}
+                  >
+                    Mã đơn hàng:
+                  </Typography>
+                  <Typography
+                    variant="body1"
+                    fontWeight="bold"
+                    sx={{
+                      background: "linear-gradient(45deg, #2196f3, #21cbf3)",
+                      backgroundClip: "text",
+                      WebkitBackgroundClip: "text",
+                      WebkitTextFillColor: "transparent",
+                      fontSize: "1.1rem",
+                    }}
+                  >
+                    #{orderId.slice(-8).toUpperCase()}
+                  </Typography>
+                </Box>
 
-              <Divider />
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <Typography
+                    variant="body1"
+                    color="text.secondary"
+                    sx={{ fontWeight: 500 }}
+                  >
+                    Ngày đặt hàng:
+                  </Typography>
+                  <Typography variant="body1" fontWeight="medium">
+                    {formatDate(orderDate)}
+                  </Typography>
+                </Box>
 
-              <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                <Typography variant="h6">Tổng thanh toán:</Typography>
-                <Typography variant="h6" color="primary">
-                  {formatCurrency(totalAmount)}
-                </Typography>
-              </Box>
-            </Stack>
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <Typography
+                    variant="body1"
+                    color="text.secondary"
+                    sx={{ fontWeight: 500 }}
+                  >
+                    Phương thức thanh toán:
+                  </Typography>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    {payment?.paymentMethod === "VNPAY"
+                      ? "💳"
+                      : payment?.paymentMethod === "COD"
+                      ? "💵"
+                      : "🏦"}
+                    <Typography variant="body1" fontWeight="medium">
+                      {payment?.paymentMethod === "VNPAY"
+                        ? "VNPAY"
+                        : payment?.paymentMethod === "COD"
+                        ? "Thanh toán khi nhận hàng (COD)"
+                        : "Thẻ ngân hàng"}
+                    </Typography>
+                  </Box>
+                </Box>
+
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <Typography
+                    variant="body1"
+                    color="text.secondary"
+                    sx={{ fontWeight: 500 }}
+                  >
+                    Trạng thái:
+                  </Typography>
+                  <Box
+                    sx={{
+                      px: 2,
+                      py: 1,
+                      borderRadius: "20px",
+                      background: isPaymentSuccessful
+                        ? "linear-gradient(45deg, #4caf50, #81c784)"
+                        : isPaymentFailed
+                        ? "linear-gradient(45deg, #f44336, #e57373)"
+                        : "linear-gradient(45deg, #ff9800, #ffb74d)",
+                      color: "white",
+                      fontWeight: "bold",
+                      fontSize: "0.9rem",
+                      boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+                    }}
+                  >
+                    {isPaymentSuccessful
+                      ? isCashOrder
+                        ? "✅ Đặt hàng thành công - COD"
+                        : isOrderReceived
+                        ? "✅ Đơn hàng đã được thanh toán"
+                        : isVNPaySuccessful
+                        ? "✅ Thanh toán thành công - VNPAY"
+                        : "✅ Đặt hàng thành công"
+                      : isPaymentFailed
+                      ? "❌ Thanh toán thất bại"
+                      : "⏳ Đang xử lý"}
+                  </Box>
+                </Box>
+
+                <Divider sx={{ my: 2 }} />
+
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <Typography variant="h6" sx={{ fontWeight: "bold" }}>
+                    💰 Tổng thanh toán:
+                  </Typography>
+                  <Typography
+                    variant="h5"
+                    sx={{
+                      fontWeight: "bold",
+                      background: "linear-gradient(45deg, #4caf50, #81c784)",
+                      backgroundClip: "text",
+                      WebkitBackgroundClip: "text",
+                      WebkitTextFillColor: "transparent",
+                    }}
+                  >
+                    {formatCurrency(totalAmount)}
+                  </Typography>
+                </Box>
+              </Stack>
+            </Paper>
           </Box>
 
           <Divider sx={{ my: 3 }} />
@@ -259,14 +466,14 @@ const OrderConfirmationPage: React.FC = () => {
             sx={{
               display: "flex",
               justifyContent: "center",
-              gap: 2,
+              gap: 3,
               flexWrap: "wrap",
-              mt: 4,
+              mt: 5,
             }}
           >
             <Button
               variant="contained"
-              color="primary"
+              size="large"
               component={RouterLink}
               to="/books"
               startIcon={<ShoppingBagIcon />}
@@ -274,12 +481,27 @@ const OrderConfirmationPage: React.FC = () => {
                 // Reset checkout store when user manually navigates away
                 resetCheckout();
               }}
+              sx={{
+                px: 4,
+                py: 1.5,
+                background: "linear-gradient(45deg, #2196f3, #21cbf3)",
+                fontWeight: "bold",
+                fontSize: "1rem",
+                borderRadius: "25px",
+                boxShadow: "0 4px 15px rgba(33, 150, 243, 0.3)",
+                "&:hover": {
+                  background: "linear-gradient(45deg, #1976d2, #1e88e5)",
+                  boxShadow: "0 6px 20px rgba(33, 150, 243, 0.4)",
+                  transform: "translateY(-2px)",
+                },
+              }}
             >
-              Tiếp tục mua sắm
+              🛍️ Tiếp tục mua sắm
             </Button>
 
             <Button
               variant="outlined"
+              size="large"
               component={RouterLink}
               to="/"
               startIcon={<HomeIcon />}
@@ -287,9 +509,55 @@ const OrderConfirmationPage: React.FC = () => {
                 // Reset checkout store when user manually navigates away
                 resetCheckout();
               }}
+              sx={{
+                px: 4,
+                py: 1.5,
+                fontWeight: "bold",
+                fontSize: "1rem",
+                borderRadius: "25px",
+                borderWidth: 2,
+                color: "#4caf50",
+                borderColor: "#4caf50",
+                "&:hover": {
+                  background: "linear-gradient(45deg, #4caf50, #81c784)",
+                  color: "white",
+                  borderColor: "#4caf50",
+                  transform: "translateY(-2px)",
+                  boxShadow: "0 4px 15px rgba(76, 175, 80, 0.3)",
+                },
+              }}
             >
-              Về trang chủ
+              🏠 Về trang chủ
             </Button>
+
+            {isPaymentSuccessful && (
+              <Button
+                variant="contained"
+                size="large"
+                sx={{
+                  px: 4,
+                  py: 1.5,
+                  background: "linear-gradient(45deg, #ff9800, #ffb74d)",
+                  fontWeight: "bold",
+                  fontSize: "1rem",
+                  borderRadius: "25px",
+                  boxShadow: "0 4px 15px rgba(255, 152, 0, 0.3)",
+                  "&:hover": {
+                    background: "linear-gradient(45deg, #f57c00, #ff9800)",
+                    boxShadow: "0 6px 20px rgba(255, 152, 0, 0.4)",
+                    transform: "translateY(-2px)",
+                  },
+                }}
+                onClick={() => {
+                  // TODO: Implement order tracking
+                  alert(
+                    `Theo dõi đơn hàng #${orderId.slice(-8).toUpperCase()}`
+                  );
+                }}
+              >
+                📦 Theo dõi đơn hàng
+              </Button>
+            )}
           </Box>
         </Paper>
       </Container>

@@ -26,12 +26,12 @@ import { useCartStore } from "../store/cartStore";
 import { CartItem } from "../api/cart";
 import { vndToUsd } from "../utils/currency";
 import CartValidationAlert from "../components/cart/CartValidationAlert";
-import { calculateOrderTotal } from "../utils/price-calculator";
 
 const CartItemRow: React.FC<{
   item: CartItem;
 }> = ({ item }) => {
-  const { updateItemQuantity, updateItemSelection, removeItem, isLoading } = useCartStore();
+  const { updateItemQuantity, updateItemSelection, removeItem, isLoading } =
+    useCartStore();
 
   // Lấy id đúng cho book (sau khi transform, chỉ có id)
   const bookId = item.book.id;
@@ -41,13 +41,25 @@ const CartItemRow: React.FC<{
 
   // Khi số lượng trong store thay đổi (do update từ backend), đồng bộ lại input
   React.useEffect(() => {
-    console.log("CartItemRow: item.quantity changed to:", item.quantity, "for book:", bookId);
+    console.log(
+      "CartItemRow: item.quantity changed to:",
+      item.quantity,
+      "for book:",
+      bookId
+    );
     console.log("CartItemRow: updating inputQty to:", item.quantity.toString());
     setInputQty(item.quantity.toString());
   }, [item.quantity, bookId]);
 
   // Debug: Log when component re-renders
-  console.log("CartItemRow render - bookId:", bookId, "quantity:", item.quantity, "inputQty:", inputQty);
+  console.log(
+    "CartItemRow render - bookId:",
+    bookId,
+    "quantity:",
+    item.quantity,
+    "inputQty:",
+    inputQty
+  );
 
   const handleUpdateQuantity = (qty: number) => {
     if (qty > 0 && qty <= (item.book.stock || 0)) {
@@ -94,10 +106,17 @@ const CartItemRow: React.FC<{
     console.log("CartItemRow: bookId:", bookId);
     console.log("CartItemRow: current quantity:", item.quantity);
     console.log("CartItemRow: stock:", item.book.stock);
-    console.log("CartItemRow: can increment?", item.quantity < (item.book.stock || 0));
+    console.log(
+      "CartItemRow: can increment?",
+      item.quantity < (item.book.stock || 0)
+    );
 
     if (item.quantity < (item.book.stock || 0)) {
-      console.log("CartItemRow: calling updateItemQuantity with:", bookId, item.quantity + 1);
+      console.log(
+        "CartItemRow: calling updateItemQuantity with:",
+        bookId,
+        item.quantity + 1
+      );
       updateItemQuantity(bookId, item.quantity + 1);
     } else {
       console.log("CartItemRow: cannot increment - at max stock");
@@ -116,7 +135,12 @@ const CartItemRow: React.FC<{
   };
 
   const handleSelectionChange = (checked: boolean) => {
-    console.log("CartItemRow selection change bookId:", bookId, "checked:", checked);
+    console.log(
+      "CartItemRow selection change bookId:",
+      bookId,
+      "checked:",
+      checked
+    );
     updateItemSelection(bookId, checked);
   };
 
@@ -251,7 +275,7 @@ const CartPage: React.FC = () => {
     validateCart,
     getValidationIssues,
     hasValidationIssues,
-    isValidating
+    isValidating,
   } = useCartStore();
 
   // Handle Buy Now functionality by updating backend state
@@ -291,21 +315,15 @@ const CartPage: React.FC = () => {
   const selectedCartItems = getSelectedItems();
   const validationIssues = getValidationIssues();
 
-  // Use universal price calculator - SINGLE SOURCE OF TRUTH
-  const cartItems = selectedCartItems.map(item => ({
-    quantity: item.quantity,
-    priceAtAdd: vndToUsd(item.priceAtAdd), // Convert to USD if needed
-  }));
-
-  const calculation = calculateOrderTotal(cartItems);
-
-  // Extract values for display
-  const subtotal = calculation.subtotal;
-  const shippingCost = calculation.shippingCost;
-  const taxAmount = calculation.taxAmount;
-  const discount = calculation.discount;
-  const orderTotal = calculation.total;
-  const totalItems = calculation.totalItems;
+  // Use cart totals calculated by backend (single source of truth)
+  const subtotal = cart?.subtotal || 0;
+  const shippingCost = cart?.shippingCost || 0;
+  const taxAmount = cart?.taxAmount || 0;
+  const orderTotal = cart?.total || 0;
+  const totalItems = selectedCartItems.reduce(
+    (sum, item) => sum + item.quantity,
+    0
+  );
 
   if (isLoading && !cart?.items.length) {
     return (
@@ -406,9 +424,15 @@ const CartPage: React.FC = () => {
               onFixIssues={() => {
                 // Auto-fix issues by updating quantities to available stock
                 validationIssues.forEach((issue) => {
-                  if (issue.type === "stock" && issue.currentStock !== undefined) {
+                  if (
+                    issue.type === "stock" &&
+                    issue.currentStock !== undefined
+                  ) {
                     // This would need to be implemented to auto-fix quantities
-                    console.log("Auto-fixing stock issue for book:", issue.bookId);
+                    console.log(
+                      "Auto-fixing stock issue for book:",
+                      issue.bookId
+                    );
                   }
                 });
               }}
@@ -437,13 +461,15 @@ const CartPage: React.FC = () => {
                 const id = item.book.id;
                 // Use a more unique key that includes the item's position and book ID
                 const uniqueKey = `${id}-${index}-${item.quantity}-${item.isTicked}`;
-                console.log("CartPage: Rendering item with key:", uniqueKey, "bookId:", id, "isTicked:", item.isTicked);
-                return (
-                  <CartItemRow
-                    key={uniqueKey}
-                    item={item}
-                  />
+                console.log(
+                  "CartPage: Rendering item with key:",
+                  uniqueKey,
+                  "bookId:",
+                  id,
+                  "isTicked:",
+                  item.isTicked
                 );
+                return <CartItemRow key={uniqueKey} item={item} />;
               })}
             </Box>
 
@@ -477,23 +503,6 @@ const CartPage: React.FC = () => {
                 <Typography variant="body1">Subtotal</Typography>
                 <Typography variant="body1">${subtotal.toFixed(2)}</Typography>
               </Box>
-
-              {discount > 0 && (
-                <Box
-                  sx={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    mb: 1,
-                  }}
-                >
-                  <Typography variant="body1" color="success.main">
-                    Discount
-                  </Typography>
-                  <Typography variant="body1" color="success.main">
-                    -${discount.toFixed(2)}
-                  </Typography>
-                </Box>
-              )}
 
               <Box
                 sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}
@@ -531,9 +540,11 @@ const CartPage: React.FC = () => {
                   isValidating ||
                   !cart?.items.length ||
                   selectedCartItems.length === 0 ||
-                  (hasValidationIssues() && validationIssues.some(issue =>
-                    issue.type === 'stock' || issue.type === 'unavailable'
-                  ))
+                  (hasValidationIssues() &&
+                    validationIssues.some(
+                      (issue) =>
+                        issue.type === "stock" || issue.type === "unavailable"
+                    ))
                 }
               >
                 Proceed to Checkout
