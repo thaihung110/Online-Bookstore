@@ -5,7 +5,7 @@ export type ProductDocument = Product & Document;
 
 @Schema({ 
   timestamps: true, 
-  collection: 'AN_test'
+  collection: 'products'
 })
 export class Product {
   @Prop({ required: true, enum: ['product', 'BOOK', 'CD', 'DVD'], default: 'product' })
@@ -26,17 +26,17 @@ export class Product {
   @Prop()
   coverImage: string;
 
-    // createAt
-    @Prop({ type: Date, default: Date.now, required: true })
-    createdAt: Date;
+  @Prop({ type: Date, default: Date.now, required: true })
+  createdAt: Date;
 
-    // updateAt
-    @Prop({ type: Date, default: Date.now, required: true })
-    updatedAt: Date;
+  @Prop({ type: Date, default: Date.now, required: true })
+  updatedAt: Date;
 
-    // isAvailable
   @Prop({ type: Boolean, default: true })
   isAvailable: boolean;
+
+  @Prop({ type: Boolean, default: true })
+  isAvailableRush: boolean;
 }
 
 export const ProductSchema = SchemaFactory.createForClass(Product);

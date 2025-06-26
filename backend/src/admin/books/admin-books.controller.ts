@@ -21,8 +21,8 @@ import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../../auth/guards/roles.guard';
 import { Roles } from '../../auth/decorators/roles.decorator';
 import { AdminBooksService } from './admin-books.service';
-import { CreateBookDto } from './dto/create-book.dto';
-import { UpdateBookDto } from './dto/update-book.dto';
+import { AdminCreateBookDto } from './dto/create-book.dto';
+import { AdminUpdateBookDto } from './dto/update-book.dto';
 import { Book } from '../../books/schemas/book.schema';
 import { UploadService } from '../../upload/upload.service';
 import {
@@ -128,7 +128,7 @@ export class AdminBooksController {
     type: Book,
   })
   @ApiResponse({ status: 400, description: 'Bad request' })
-  async create(@Param('userId') userId: string,@Body() createBookDto: CreateBookDto): Promise<Book> {
+  async create(@Param('userId') userId: string,@Body() createBookDto: AdminCreateBookDto): Promise<Book> {
     return this.adminBooksService.create(userId, createBookDto);
   }
 
@@ -145,7 +145,7 @@ export class AdminBooksController {
   async update(
     @Param('userId') userId: string,
     @Param('id') id: string,
-    @Body() updateBookDto: UpdateBookDto,
+    @Body() updateBookDto: AdminUpdateBookDto,
   ): Promise<Book> {
     return this.adminBooksService.update(userId, id, updateBookDto);
   }

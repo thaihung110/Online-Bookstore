@@ -8,8 +8,8 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { ConfigService } from '@nestjs/config';
 import { Book, BookDocument } from '../../books/schemas/book.schema';
-import { CreateBookDto } from '../../books/dto/create-book.dto';
-import { UpdateBookDto } from '../../books/dto/update-book.dto';
+import { AdminCreateBookDto } from './dto/create-book.dto';
+import { AdminUpdateBookDto } from './dto/update-book.dto';
 import { UploadService } from '../../upload/upload.service';
 import { 
   AdminProductsService,

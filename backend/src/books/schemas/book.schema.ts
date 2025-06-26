@@ -11,7 +11,6 @@ export class Book extends Product {
     this.productType = 'BOOK'; // Set the productType to 'book'
   }
 
-
   @Prop({ required: true, trim: true, index: true })
   title: string;
 

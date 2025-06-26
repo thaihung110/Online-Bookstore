@@ -59,7 +59,7 @@ export class BooksService {
     this.logger.log(`Finding books with filters: ${JSON.stringify(queryDto)}`);
 
     try {
-      const filter: any = {};
+      const filter: any = { productType: 'BOOK' };
 
       // Search term (match title or description or author)
       if (queryDto.search) {
@@ -273,6 +273,7 @@ export class BooksService {
       // Lấy sách có discount rate cao nhất và còn hàng
       const books = await this.bookModel
         .find({
+          productType: 'BOOK', // Only get books
           discountRate: { $gt: 0 }, // Chỉ lấy sách đang giảm giá
           stock: { $gt: 0 }, // Chỉ lấy sách còn hàng
         })
@@ -301,7 +302,7 @@ export class BooksService {
     console.log('[Books Service] ID length:', id.length);
 
     try {
-      const book = await this.bookModel.findById(id).exec();
+      const book = await this.bookModel.findOne({ _id: id, productType: 'BOOK' }).exec();
       console.log('[Books Service] MongoDB query result:', book ? 'Found' : 'Not found');
 
       if (!book) {
@@ -352,15 +353,15 @@ export class BooksService {
   async getAllGenres(): Promise<string[]> {
     this.logger.log('Getting all unique genres');
     try {
-      const booksCount = await this.bookModel.countDocuments();
+      const booksCount = await this.bookModel.countDocuments({ productType: 'BOOK' });
       this.logger.log(`Total books in collection: ${booksCount}`);
 
-      const sampleBooks = await this.bookModel.find().limit(5).select('genres');
+      const sampleBooks = await this.bookModel.find({ productType: 'BOOK' }).limit(5).select('genres');
       this.logger.log(
         `Sample books genres: ${JSON.stringify(sampleBooks.map((book) => book.genres))}`,
       );
 
-      const rawGenres = await this.bookModel.distinct('genres').exec();
+      const rawGenres = await this.bookModel.distinct('genres', { productType: 'BOOK' }).exec();
       this.logger.log(
         `Found ${rawGenres.length} raw genres: ${JSON.stringify(rawGenres)}`,
       );
@@ -392,6 +393,7 @@ export class BooksService {
       const commonGenres = genres.slice(0, Math.min(5, genres.length));
       for (const genre of commonGenres) {
         const count = await this.bookModel.countDocuments({
+          productType: 'BOOK',
           genres: { $regex: new RegExp(`^${genre}$`, 'i') },
         });
         this.logger.log(`Genre "${genre}" has ${count} books`);

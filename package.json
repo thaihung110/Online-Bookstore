@@ -1,0 +1,7 @@
+{
+  "devDependencies": {
+    "run-script-webpack-plugin": "^0.2.3",
+    "webpack": "^5.99.9",
+    "webpack-node-externals": "^3.0.0"
+  }
+}
