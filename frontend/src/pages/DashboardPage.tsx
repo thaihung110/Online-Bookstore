@@ -59,17 +59,44 @@ const DashboardPage: React.FC = () => {
   const getOrderStatusDisplay = (status: OrderStatus) => {
     switch (status) {
       case OrderStatus.PENDING:
-        return { icon: <Schedule fontSize="small" />, color: "warning" as const };
-      case OrderStatus.PROCESSING:
-        return { icon: <Schedule fontSize="small" />, color: "info" as const };
+        return {
+          icon: <Schedule fontSize="small" />,
+          color: "warning" as const,
+        };
+      case OrderStatus.RECEIVED:
+        return {
+          icon: <CheckCircle fontSize="small" />,
+          color: "info" as const,
+        };
+      case OrderStatus.CONFIRMED:
+        return {
+          icon: <CheckCircle fontSize="small" />,
+          color: "info" as const,
+        };
+      case OrderStatus.PREPARED:
+        return {
+          icon: <Schedule fontSize="small" />,
+          color: "primary" as const,
+        };
       case OrderStatus.SHIPPED:
-        return { icon: <LocalShipping fontSize="small" />, color: "primary" as const };
+        return {
+          icon: <LocalShipping fontSize="small" />,
+          color: "primary" as const,
+        };
       case OrderStatus.DELIVERED:
-        return { icon: <CheckCircle fontSize="small" />, color: "success" as const };
+        return {
+          icon: <CheckCircle fontSize="small" />,
+          color: "success" as const,
+        };
       case OrderStatus.CANCELLED:
         return { icon: <Cancel fontSize="small" />, color: "error" as const };
+      case OrderStatus.REFUNDED:
+        return { icon: <Cancel fontSize="small" />, color: "error" as const };
       default:
-        return { icon: <Schedule fontSize="small" />, color: "default" as const };
+        return {
+          icon: <Schedule fontSize="small" />,
+          color: "default" as const,
+        };
     }
   };
 
@@ -144,7 +171,14 @@ const DashboardPage: React.FC = () => {
 
         {/* All Orders Section */}
         <Grid size={{ xs: 12, md: 6 }}>
-          <Paper sx={{ p: 3, height: "100%", display: "flex", flexDirection: "column" }}>
+          <Paper
+            sx={{
+              p: 3,
+              height: "100%",
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
             <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
               <ShoppingBasket color="primary" sx={{ mr: 1 }} />
               <Typography variant="h6">Your Orders</Typography>
@@ -153,7 +187,7 @@ const DashboardPage: React.FC = () => {
 
             {/* Loading state */}
             {isLoadingHistory && (
-              <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+              <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
                 <CircularProgress size={24} />
                 <Typography variant="body2" sx={{ ml: 1 }}>
                   Loading orders...
@@ -171,7 +205,11 @@ const DashboardPage: React.FC = () => {
             {/* No orders state */}
             {!isLoadingHistory && !historyError && !hasOrders() && (
               <>
-                <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
+                <Typography
+                  variant="body1"
+                  color="text.secondary"
+                  sx={{ mb: 2 }}
+                >
                   You haven't placed any orders yet.
                 </Typography>
                 <Button
@@ -186,29 +224,37 @@ const DashboardPage: React.FC = () => {
 
             {/* Scrollable Orders list */}
             {!isLoadingHistory && !historyError && hasOrders() && (
-              <Box sx={{
-                flexGrow: 1,
-                overflow: "hidden",
-                display: "flex",
-                flexDirection: "column"
-              }}>
-                <Box sx={{
+              <Box
+                sx={{
                   flexGrow: 1,
-                  overflowY: "auto",
-                  maxHeight: "400px",
-                  pr: 1 // Add padding for scrollbar
-                }}>
+                  overflow: "hidden",
+                  display: "flex",
+                  flexDirection: "column",
+                }}
+              >
+                <Box
+                  sx={{
+                    flexGrow: 1,
+                    overflowY: "auto",
+                    maxHeight: "400px",
+                    pr: 1, // Add padding for scrollbar
+                  }}
+                >
                   <List dense>
                     {allOrders.map((order) => {
                       const statusDisplay = getOrderStatusDisplay(order.status);
                       return (
                         <ListItem key={order._id} sx={{ px: 0 }}>
-                          <ListItemIcon>
-                            {statusDisplay.icon}
-                          </ListItemIcon>
+                          <ListItemIcon>{statusDisplay.icon}</ListItemIcon>
                           <ListItemText
                             primary={
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Box
+                                sx={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 1,
+                                }}
+                              >
                                 <Typography variant="body2" fontWeight="medium">
                                   Order #{order._id.slice(-6)}
                                 </Typography>
@@ -222,11 +268,20 @@ const DashboardPage: React.FC = () => {
                             }
                             secondary={
                               <Box>
-                                <Typography variant="body2" color="text.secondary">
-                                  {formatCurrency(order.total)} • {order.items.length} item(s)
+                                <Typography
+                                  variant="body2"
+                                  color="text.secondary"
+                                >
+                                  {formatCurrency(order.total)} •{" "}
+                                  {order.items.length} item(s)
                                 </Typography>
-                                <Typography variant="caption" color="text.secondary">
-                                  {new Date(order.createdAt).toLocaleDateString()}
+                                <Typography
+                                  variant="caption"
+                                  color="text.secondary"
+                                >
+                                  {new Date(
+                                    order.createdAt
+                                  ).toLocaleDateString()}
                                 </Typography>
                               </Box>
                             }
@@ -240,8 +295,6 @@ const DashboardPage: React.FC = () => {
             )}
           </Paper>
         </Grid>
-
-
       </Grid>
     </MainLayout>
   );

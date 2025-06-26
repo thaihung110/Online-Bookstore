@@ -8,7 +8,7 @@ export class CartItem {
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Book', required: true })
   book: MongooseSchema.Types.ObjectId;
 
-  @Prop({ required: true, min: 1, default: 1 })
+  @Prop({ required: true, min: 1 })
   quantity: number;
 
   @Prop({ required: true, min: 0 })
@@ -29,7 +29,7 @@ export class Cart {
   })
   user: MongooseSchema.Types.ObjectId;
 
-  @Prop({ type: [CartItem], default: [] })
+  @Prop({ type: [CartItem], required: true, default: [] })
   items: CartItem[];
 
   @Prop({ type: String, default: null })
@@ -41,11 +41,24 @@ export class Cart {
   @Prop({ type: Number, min: 0, default: 0 })
   loyaltyPointsToUse: number;
 
-  @Prop({ type: Number, default: 0 })
-  subtotal: number; // Tổng giá trước khuyến mãi
+  @Prop({ type: Number, required: true, min: 0, default: 0 })
+  subtotal: number; // Tổng giá items
 
-  @Prop({ type: Number, default: 0 })
-  discount: number; // Tổng giảm giá
+  @Prop({ type: Number, required: true, min: 0, default: 0 })
+  shippingCost: number; // Phí ship
+
+  @Prop({ type: Number, required: true, min: 0, default: 0 })
+  taxAmount: number; // Thuế
+
+  @Prop({ type: Number, required: true, min: 0, default: 0 })
+  discount: number; // Giảm giá
+
+  @Prop({ type: Number, required: true, min: 0, default: 0 })
+  total: number; // Tổng cuối cùng
+
+  // Virtual fields for timestamps
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export const CartSchema = SchemaFactory.createForClass(Cart);

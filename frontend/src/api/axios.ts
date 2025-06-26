@@ -8,11 +8,11 @@ interface ApiErrorResponse {
 
 // Base API URL - would be set from environment in production
 const API_BASE_URL =
-  process.env.REACT_APP_API_URL || "http://localhost:3000/api";
+  process.env.REACT_APP_API_URL || "http://localhost:3001/api";
 
 // Đảm bảo URL có định dạng chính xác với /api ở cuối
 const ensureApiSuffix = (url: string) => {
-  if (!url) return "http://localhost:3000/api";
+  if (!url) return "http://localhost:3001/api";
 
   // Loại bỏ dấu / ở cuối nếu có
   const cleanUrl = url.endsWith("/") ? url.slice(0, -1) : url;

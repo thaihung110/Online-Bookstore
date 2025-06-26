@@ -1,10 +1,17 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Schema as MongooseSchema } from 'mongoose';
+import { Collection, Document, Schema as MongooseSchema } from 'mongoose';
+import { Product, ProductDocument } from '../../products/schemas/product.schema';
 
 export type BookDocument = Book & Document;
 
-@Schema({ timestamps: true })
-export class Book {
+@Schema({collection: 'products'}) // Specify the collection name and enable timestamps
+export class Book extends Product {
+  constructor() {
+    super();
+    this.productType = 'BOOK'; // Set the productType to 'book'
+  }
+
+
   @Prop({ required: true, trim: true, index: true })
   title: string;
 
@@ -64,28 +71,30 @@ export class Book {
 
   @Prop({ default: 0 })
   totalRatings: number;
+
+
 }
 
 export const BookSchema = SchemaFactory.createForClass(Book);
 
 
 
-// Calculate price from originalPrice and discountRate
-BookSchema.pre('save', function (next) {
-  if (this.originalPrice !== undefined) {
-    const discountRate = this.discountRate || 0;
-    this.price = this.originalPrice * (1 - discountRate / 100);
-  }
-  next();
-});
+// // Calculate price from originalPrice and discountRate
+// BookSchema.pre('save', function (next) {
+//   if (this.originalPrice !== undefined) {
+//     const discountRate = this.discountRate || 0;
+//     this.price = this.originalPrice * (1 - discountRate / 100);
+//   }
+//   next();
+// });
 
-// Add virtual for average rating
-BookSchema.virtual('averageRating').get(function () {
-  if (this.totalRatings === 0) return 0;
-  return this.ratings / this.totalRatings;
-});
+// // Add virtual for average rating
+// BookSchema.virtual('averageRating').get(function () {
+//   if (this.totalRatings === 0) return 0;
+//   return this.ratings / this.totalRatings;
+// });
 
-// Add virtual for availability
-BookSchema.virtual('isInStock').get(function () {
-  return this.stock > 0;
-});
+// // Add virtual for availability
+// BookSchema.virtual('isInStock').get(function () {
+//   return this.stock > 0;
+// });

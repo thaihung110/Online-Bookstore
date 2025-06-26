@@ -78,6 +78,6 @@ scripts/
 .windsurfrules
 .taskmaster/
 
-test-vnpay-integration.md
-mongodb-setup-commands.md
 debug-vnpay-config.md
+mongodb-setup-commands.md
+test-vnpay-integration.md

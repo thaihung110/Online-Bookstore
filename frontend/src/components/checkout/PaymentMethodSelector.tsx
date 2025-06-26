@@ -80,9 +80,12 @@ const PaymentMethodSelector: React.FC = () => {
                   <Stack direction="row" spacing={2} alignItems="center">
                     <LocalShippingIcon color="primary" />
                     <Box>
-                      <Typography variant="subtitle1">Thanh toán khi nhận hàng</Typography>
+                      <Typography variant="subtitle1">
+                        Thanh toán khi nhận hàng
+                      </Typography>
                       <Typography variant="body2" color="text.secondary">
-                        Thanh toán bằng tiền mặt khi nhận hàng. Không cần thẻ ngân hàng hay ví điện tử.
+                        Thanh toán bằng tiền mặt khi nhận hàng. Không cần thẻ
+                        ngân hàng hay ví điện tử.
                       </Typography>
                     </Box>
                   </Stack>

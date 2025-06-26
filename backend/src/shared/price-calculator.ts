@@ -1,6 +1,6 @@
 /**
  * UNIVERSAL PRICE CALCULATOR
- * 
+ *
  * This is the SINGLE SOURCE OF TRUTH for all price calculations
  * Used by both frontend and backend to ensure consistency
  */
@@ -14,7 +14,6 @@ export interface PriceCalculation {
   subtotal: number;
   shippingCost: number;
   taxAmount: number;
-  discount: number;
   total: number;
   totalItems: number;
 }
@@ -22,21 +21,17 @@ export interface PriceCalculation {
 export interface PriceCalculatorConfig {
   // Shipping rules
   freeShippingThreshold: number; // USD amount for free shipping
-  standardShippingCost: number;  // Standard shipping cost in USD
-  
+  standardShippingCost: number; // Standard shipping cost in USD
+
   // Tax rules
   taxRate: number; // Tax rate as decimal (0.08 = 8%)
-  
-  // Discount rules
-  orderDiscount: number; // Fixed order discount in USD
 }
 
 // Default configuration - SINGLE SOURCE OF TRUTH
 export const DEFAULT_PRICE_CONFIG: PriceCalculatorConfig = {
-  freeShippingThreshold: 50.00, // Free shipping over $50
-  standardShippingCost: 5.99,   // $5.99 standard shipping
-  taxRate: 0.08,                // 8% tax rate
-  orderDiscount: 0,             // No order discount by default
+  freeShippingThreshold: 50.0, // Free shipping over $50
+  standardShippingCost: 2.99, // $2.99 standard shipping
+  taxRate: 0.08, // 8% tax rate
 };
 
 /**
@@ -44,9 +39,9 @@ export const DEFAULT_PRICE_CONFIG: PriceCalculatorConfig = {
  */
 export function calculateSubtotal(items: CartItem[]): number {
   const subtotal = items.reduce((sum, item) => {
-    return sum + (item.priceAtAdd * item.quantity);
+    return sum + item.priceAtAdd * item.quantity;
   }, 0);
-  
+
   return parseFloat(subtotal.toFixed(2));
 }
 
@@ -61,15 +56,15 @@ export function calculateTotalItems(items: CartItem[]): number {
  * Calculate shipping cost based on subtotal and item count
  */
 export function calculateShippingCost(
-  subtotal: number, 
-  totalItems: number, 
-  config: PriceCalculatorConfig = DEFAULT_PRICE_CONFIG
+  subtotal: number,
+  totalItems: number,
+  config: PriceCalculatorConfig = DEFAULT_PRICE_CONFIG,
 ): number {
   // Free shipping if subtotal exceeds threshold, otherwise standard rate if there are items
   if (subtotal >= config.freeShippingThreshold) {
     return 0;
   }
-  
+
   return totalItems > 0 ? config.standardShippingCost : 0;
 }
 
@@ -77,21 +72,11 @@ export function calculateShippingCost(
  * Calculate tax amount based on subtotal
  */
 export function calculateTaxAmount(
-  subtotal: number, 
-  config: PriceCalculatorConfig = DEFAULT_PRICE_CONFIG
+  subtotal: number,
+  config: PriceCalculatorConfig = DEFAULT_PRICE_CONFIG,
 ): number {
   const taxAmount = subtotal * config.taxRate;
   return parseFloat(taxAmount.toFixed(2));
-}
-
-/**
- * Calculate order discount
- */
-export function calculateOrderDiscount(
-  subtotal: number, 
-  config: PriceCalculatorConfig = DEFAULT_PRICE_CONFIG
-): number {
-  return config.orderDiscount;
 }
 
 /**
@@ -99,32 +84,28 @@ export function calculateOrderDiscount(
  * This is the ONLY function that should be used for price calculations
  */
 export function calculateOrderTotal(
-  items: CartItem[], 
-  config: PriceCalculatorConfig = DEFAULT_PRICE_CONFIG
+  items: CartItem[],
+  config: PriceCalculatorConfig = DEFAULT_PRICE_CONFIG,
 ): PriceCalculation {
   // Step 1: Calculate subtotal
   const subtotal = calculateSubtotal(items);
-  
+
   // Step 2: Calculate total items
   const totalItems = calculateTotalItems(items);
-  
+
   // Step 3: Calculate shipping cost
   const shippingCost = calculateShippingCost(subtotal, totalItems, config);
-  
+
   // Step 4: Calculate tax (on subtotal only, not shipping)
   const taxAmount = calculateTaxAmount(subtotal, config);
-  
-  // Step 5: Calculate discount
-  const discount = calculateOrderDiscount(subtotal, config);
-  
-  // Step 6: Calculate final total
-  const total = parseFloat((subtotal + shippingCost + taxAmount - discount).toFixed(2));
-  
+
+  // Step 5: Calculate final total
+  const total = parseFloat((subtotal + shippingCost + taxAmount).toFixed(2));
+
   return {
     subtotal,
     shippingCost,
     taxAmount,
-    discount,
     total,
     totalItems,
   };
@@ -134,8 +115,8 @@ export function calculateOrderTotal(
  * Format currency amount to USD string
  */
 export function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
   }).format(amount);
 }
