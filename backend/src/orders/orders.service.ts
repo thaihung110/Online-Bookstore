@@ -565,4 +565,121 @@ export class OrdersService {
       throw saveError;
     }
   }
+
+  // Cancel order method - simplified version
+  async cancelOrder(orderId: string, reason: string): Promise<OrderDocument> {
+    const order = await this.orderModel.findById(new Types.ObjectId(orderId));
+    if (!order) {
+      throw new NotFoundException(`Order with ID "${orderId}" not found.`);
+    }
+
+    if (
+      ['COMPLETED', 'SHIPPED', 'DELIVERED', 'REFUNDED', 'CANCELED'].includes(
+        order.status,
+      )
+    ) {
+      throw new BadRequestException(
+        `Cannot cancel order with status: ${order.status}`,
+      );
+    }
+
+    const canceledAt = new Date();
+
+    await this.orderModel.updateOne(
+      { _id: new Types.ObjectId(orderId) },
+      {
+        $set: {
+          status: 'CANCELED',
+          canceledAt,
+          cancelReason: reason,
+          updatedAt: new Date(),
+        },
+      },
+    );
+
+    return this.orderModel.findById(new Types.ObjectId(orderId));
+  }
+
+  // Update order status method - simplified version
+  async updateOrderStatus(
+    orderId: string,
+    status: string,
+    updatedBy?: string,
+  ): Promise<OrderDocument> {
+    const order = await this.orderModel.findById(new Types.ObjectId(orderId));
+    if (!order) {
+      throw new NotFoundException(`Order with ID "${orderId}" not found.`);
+    }
+
+    await this.orderModel.updateOne(
+      { _id: new Types.ObjectId(orderId) },
+      {
+        $set: {
+          status,
+          updatedAt: new Date(),
+          ...(updatedBy && { updatedBy }),
+        },
+      },
+    );
+
+    return this.orderModel.findById(new Types.ObjectId(orderId));
+  }
+
+  // Find orders by status
+  async findOrdersByStatus(status: string): Promise<OrderDocument[]> {
+    return this.orderModel.find({ status }).sort({ createdAt: -1 }).exec();
+  }
+
+  // Cancel expired orders (for scheduler) - simplified version
+  async cancelExpiredOrders(): Promise<number> {
+    const now = new Date();
+
+    const expiredOrders = await this.orderModel.find({
+      status: 'PENDING',
+      pendingExpiry: { $lt: now },
+    });
+
+    console.log(
+      `[ORDERS] Found ${expiredOrders.length} expired orders to cancel`,
+    );
+
+    let canceledCount = 0;
+    for (const order of expiredOrders) {
+      try {
+        await this.cancelOrder(
+          order._id.toString(),
+          'Order expired - payment not completed within 24 hours',
+        );
+        canceledCount++;
+        console.log(`[ORDERS] Canceled expired order: ${order._id}`);
+      } catch (error) {
+        console.error(
+          `[ORDERS] Failed to cancel expired order ${order._id}:`,
+          error,
+        );
+      }
+    }
+
+    return canceledCount;
+  }
+
+  // Find orders expiring soon (for scheduler notifications)
+  async findOrdersExpiringSoon(
+    hoursBeforeExpiry: number = 2,
+  ): Promise<OrderDocument[]> {
+    const now = new Date();
+    const soonExpiry = new Date(
+      now.getTime() + hoursBeforeExpiry * 60 * 60 * 1000,
+    );
+
+    return this.orderModel
+      .find({
+        status: 'PENDING',
+        pendingExpiry: {
+          $gte: now,
+          $lte: soonExpiry,
+        },
+      })
+      .exec();
+  }
 }
