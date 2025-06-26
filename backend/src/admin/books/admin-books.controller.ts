@@ -21,14 +21,15 @@ import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../../auth/guards/roles.guard';
 import { Roles } from '../../auth/decorators/roles.decorator';
 import { AdminBooksService } from './admin-books.service';
-import { CreateBookDto } from '../../books/dto/create-book.dto';
-import { UpdateBookDto } from '../../books/dto/update-book.dto';
+import { AdminCreateBookDto } from './dto/admin-create-book.dto';
+import { AdminUpdateBookDto } from './dto/admin-update-book.dto';
 import { Book } from '../../books/schemas/book.schema';
 import { UploadService } from '../../upload/upload.service';
 import {
   UploadPresignedUrlDto,
   UploadPresignedUrlResponseDto
 } from '../../upload/dto/upload-presigned-url.dto';
+import { GetUserId } from '../../auth/decorators/user.decorator';
 
 @ApiTags('admin-books')
 @Controller('admin/books')
@@ -40,6 +41,11 @@ export class AdminBooksController {
     private readonly adminBooksService: AdminBooksService,
     private readonly uploadService: UploadService,
   ) {}
+
+
+
+
+
 
   @Post('upload-presigned-url')
   @ApiOperation({ summary: 'Generate presigned URL for book cover upload' })
@@ -114,6 +120,21 @@ export class AdminBooksController {
     return this.adminBooksService.findById(id);
   }
 
+  // @Post(':userId')
+  // @ApiOperation({ summary: 'Create a new book' })
+  // @ApiParam({ name: 'userId', description: 'User ID of the admin creating the book' })
+  // @ApiResponse({
+  //   status: 201,
+  //   description: 'Book created successfully',
+  //   type: Book,
+  // })
+  // @ApiResponse({ status: 400, description: 'Bad request' })
+  // async create(@Param('userId') userId: string,@Body() createBookDto: CreateBookDto): Promise<Book> {
+  //   return this.adminBooksService.create(userId, createBookDto);
+  // }
+
+
+
   @Post()
   @ApiOperation({ summary: 'Create a new book' })
   @ApiResponse({
@@ -122,9 +143,25 @@ export class AdminBooksController {
     type: Book,
   })
   @ApiResponse({ status: 400, description: 'Bad request' })
-  async create(@Body() createBookDto: CreateBookDto): Promise<Book> {
-    return this.adminBooksService.create(createBookDto);
+  async create2(@GetUserId() userId: string,@Body() createBookDto: AdminCreateBookDto): Promise<Book> {
+    return this.adminBooksService.create(userId, createBookDto);
   }
+
+
+  // @Post('c')
+  // @ApiOperation({ summary: 'Create a new book' })
+  // @ApiResponse({
+  //   status: 201,
+  //   description: 'Book created successfully',
+  //   type: Book,
+  // })
+  // @ApiResponse({ status: 400, description: 'Bad request' })
+  // async create2(@GetUserId() userId: string,@Body() createBookDto: CreateBookDto): Promise<string> {
+  //   return userId;
+  //   // return "hello";
+  // }
+
+
 
   @Put(':id')
   @ApiOperation({ summary: 'Update a book' })
@@ -136,18 +173,19 @@ export class AdminBooksController {
   })
   @ApiResponse({ status: 404, description: 'Book not found' })
   async update(
+    @GetUserId() userId: string,
     @Param('id') id: string,
-    @Body() updateBookDto: UpdateBookDto,
+    @Body() updateBookDto: AdminUpdateBookDto,
   ): Promise<Book> {
-    return this.adminBooksService.update(id, updateBookDto);
+    return this.adminBooksService.update(userId, id, updateBookDto);
   }
 
-  @Delete(':id')
-  @ApiOperation({ summary: 'Delete a book' })
-  @ApiParam({ name: 'id', description: 'Book ID' })
-  @ApiResponse({ status: 200, description: 'Book deleted successfully' })
-  @ApiResponse({ status: 404, description: 'Book not found' })
-  async delete(@Param('id') id: string): Promise<void> {
-    return this.adminBooksService.delete(id);
-  }
+  // @Delete(':id')
+  // @ApiOperation({ summary: 'Delete a book' })
+  // @ApiParam({ name: 'id', description: 'Book ID' })
+  // @ApiResponse({ status: 200, description: 'Book deleted successfully' })
+  // @ApiResponse({ status: 404, description: 'Book not found' })
+  // async delete(@Param('id') id: string): Promise<void> {
+  //   return this.adminBooksService.delete(id);
+  // }
 }
