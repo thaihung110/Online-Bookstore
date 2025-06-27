@@ -21,6 +21,7 @@ import WhatshotIcon from "@mui/icons-material/Whatshot";
 import EmojiObjectsIcon from "@mui/icons-material/EmojiObjects";
 import MainLayout from "../components/layouts/MainLayout";
 import BookCard from "../components/books/BookCard";
+import ProductCard from "../components/common/ProductCard";
 import {
   Book,
   getFeaturedBooks,
@@ -28,6 +29,7 @@ import {
   getRecommendedBookIds,
   getBooksByIds,
 } from "../api/books";
+import { Product, getMixedFeaturedProducts } from "../api/products";
 import { getCurrentUser } from "../api/auth";
 import { getRecommendedBooksByUsername } from "../api/books";
 
@@ -49,8 +51,11 @@ const HomePage: React.FC = () => {
   const isTablet = useMediaQuery(theme.breakpoints.down("md"));
 
   const [featuredBooks, setFeaturedBooks] = useState<Book[]>([]);
+  const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLoadingProducts, setIsLoadingProducts] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [errorProducts, setErrorProducts] = useState<string | null>(null);
   const [genres, setGenres] = useState<string[]>([]);
   const [loadingGenres, setLoadingGenres] = useState(false);
   const [recommendedBooks, setRecommendedBooks] = useState<Book[]>([]);
@@ -72,7 +77,22 @@ const HomePage: React.FC = () => {
       }
     };
 
+    const loadFeaturedProducts = async () => {
+      try {
+        setIsLoadingProducts(true);
+        setErrorProducts(null);
+        const products = await getMixedFeaturedProducts(12); // Get 12 mixed featured products
+        setFeaturedProducts(products);
+      } catch (err) {
+        setErrorProducts("Failed to load featured products");
+        console.error(err);
+      } finally {
+        setIsLoadingProducts(false);
+      }
+    };
+
     loadFeaturedBooks();
+    loadFeaturedProducts();
   }, []);
 
   useEffect(() => {
@@ -318,10 +338,10 @@ const HomePage: React.FC = () => {
         </Box>
       </Container>
 
-      {/* Featured Books Section */}
+      {/* Featured Products Section */}
       <Container maxWidth="lg" sx={{ mb: 8, px: { xs: 2, md: 3 } }}>
         <Box sx={{ display: "flex", alignItems: "center", mb: 4 }}>
-          <LocalLibraryIcon color="primary" sx={{ fontSize: 32, mr: 2 }} />
+          <AutoStoriesIcon color="primary" sx={{ fontSize: 32, mr: 2 }} />
           <Typography
             component="h2"
             variant="h4"
@@ -334,7 +354,7 @@ const HomePage: React.FC = () => {
               mb: 0,
             }}
           >
-            Featured Books
+            Featured Products
             <Box
               sx={{
                 position: "absolute",
@@ -354,29 +374,29 @@ const HomePage: React.FC = () => {
             color="primary"
             sx={{ fontWeight: 500, display: { xs: "none", sm: "block" } }}
           >
-            View All
+            Browse All
           </Button>
         </Box>
 
-        {isLoading ? (
+        {isLoadingProducts ? (
           <Box sx={{ display: "flex", justifyContent: "center", my: 4 }}>
             <CircularProgress />
           </Box>
-        ) : error ? (
+        ) : errorProducts ? (
           <Box sx={{ textAlign: "center", my: 4 }}>
-            <Typography color="error">{error}</Typography>
+            <Typography color="error">{errorProducts}</Typography>
             <Button variant="outlined" sx={{ mt: 2 }}>
               Try Again
             </Button>
           </Box>
         ) : (
           <Box sx={{ display: "flex", flexWrap: "wrap", mx: -1.5 }}>
-            {featuredBooks.map((book) => (
+            {featuredProducts.map((product) => (
               <Box
-                key={book.id}
-                sx={{ width: { xs: "100%", sm: "50%", md: "33.33%" }, p: 1.5 }}
+                key={`${product.productType}-${product.id}`}
+                sx={{ width: { xs: "100%", sm: "50%", md: "33.33%", lg: "25%" }, p: 1.5 }}
               >
-                <BookCard book={book} />
+                <ProductCard product={product} />
               </Box>
             ))}
           </Box>
@@ -395,7 +415,7 @@ const HomePage: React.FC = () => {
             variant="outlined"
             size="large"
           >
-            View All Books
+            Browse All Products
           </Button>
         </Box>
       </Container>

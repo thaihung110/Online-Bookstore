@@ -32,6 +32,8 @@ import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import PersonIcon from "@mui/icons-material/Person";
 import HomeIcon from "@mui/icons-material/Home";
 import BookIcon from "@mui/icons-material/Book";
+import AlbumIcon from "@mui/icons-material/Album";
+import MovieIcon from "@mui/icons-material/Movie";
 
 import ExitToAppIcon from "@mui/icons-material/ExitToApp";
 import DashboardIcon from "@mui/icons-material/Dashboard";
@@ -94,6 +96,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const drawerItems = [
     { text: "Home", icon: <HomeIcon />, path: "/" },
     { text: "Books", icon: <BookIcon />, path: "/books" },
+    { text: "CDs", icon: <AlbumIcon />, path: "/cds" },
+    { text: "DVDs", icon: <MovieIcon />, path: "/dvds" },
     ...(isAuthenticated
       ? [
           { text: "Dashboard", icon: <DashboardIcon />, path: "/dashboard" },
@@ -243,6 +247,22 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
               sx={{ mx: 1 }}
             >
               Books
+            </Button>
+            <Button
+              component={RouterLink}
+              to="/cds"
+              color="inherit"
+              sx={{ mx: 1 }}
+            >
+              CDs
+            </Button>
+            <Button
+              component={RouterLink}
+              to="/dvds"
+              color="inherit"
+              sx={{ mx: 1 }}
+            >
+              DVDs
             </Button>
           </Box>
 
