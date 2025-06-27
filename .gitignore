@@ -81,3 +81,5 @@ scripts/
 debug-vnpay-config.md
 mongodb-setup-commands.md
 test-vnpay-integration.md
+
+backend/*.http
