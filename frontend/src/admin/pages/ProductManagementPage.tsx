@@ -14,7 +14,7 @@ import { Product, ProductFilters } from "../types/product.types";
 import ProductFilter from "../components/products/ProductFilter";
 // import ProductList from "../components/products/ProductList";
 import ProductDeleteDialog from "../components/products/ProductDeleteDialog";
-// import ProductList from "../components/products/productList";
+import ProductList from "../components/products/ProductList";
 
 // Default filters
 const DEFAULT_FILTERS: ProductFilters = {

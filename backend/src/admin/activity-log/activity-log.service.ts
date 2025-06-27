@@ -34,7 +34,7 @@ export class ProductActivityLogService {
     return this.productActivityLogModel
       .find({ productId })
       .populate('userId', 'email name role')
-      .sort({ createdAt: -1 })
+      .sort({ timestamp: -1 })
       .exec();
   }
 
@@ -79,35 +79,35 @@ export class ProductActivityLogService {
     return this.productActivityLogModel
       .find({ userId })
       .populate('productId', 'title productType')
-      .sort({ createdAt: -1 })
+      .sort({ timestamp: -1 })
       .exec();
   }
 
 
   // dem so luong activity log theo userId trong mo ngay nhat dinh
-  async countActivityByUserIdAndDate(userId: string, date: Date): Promise<number> {
-    const startOfDay = new Date(date);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(date);
-    endOfDay.setHours(23, 59, 59, 999);
+  // async countActivityByUserIdAndDate(userId: string, date: Date): Promise<number> {
+  //   const startOfDay = new Date(date);
+  //   startOfDay.setHours(0, 0, 0, 0);
+  //   const endOfDay = new Date(date);
+  //   endOfDay.setHours(23, 59, 59, 999);
 
-    return this.productActivityLogModel.countDocuments({
-      userId,
-      createdAt: { $gte: startOfDay, $lte: endOfDay }
-    }).exec();
-  }
+  //   return this.productActivityLogModel.countDocuments({
+  //     userId,
+  //     timestamp: { $gte: startOfDay, $lte: endOfDay }
+  //   }).exec();
+  // }
 
   // dem so louong san pham da xoa trong ngay cua mot User
   async countDeletedProductsByUserIdAndDate(userId: string, date: Date): Promise<number> {
     const startOfDay = new Date(date);
     startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(date);
-    endOfDay.setHours(23, 59, 59, 999);
 
     return this.productActivityLogModel.countDocuments({
-      userId,
-      action: ProductActivityType.DELETE,
-      createdAt: { $gte: startOfDay, $lte: endOfDay }
+      userId : new Types.ObjectId(userId),
+      action: "delete",
+      timestamp: { $gte: startOfDay }
     }).exec();
   }
+
+
 }

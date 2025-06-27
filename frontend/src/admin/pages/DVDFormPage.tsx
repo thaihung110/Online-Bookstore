@@ -131,7 +131,7 @@ const DVDFormPage: React.FC = () => {
             runtime: dvdData.runtime || 0, // Runtime in minutes
             studio: dvdData.studio || "",
             subtitles: dvdData.subtitles || "", // List of subtitles available
-            releaseddate: dvdData.releaseddate || new Date().toISOString().split("T")[0], // Default to today
+            releaseddate: dvdData.releaseddate.slice(0,10) || new Date().toISOString().split("T")[0], // Default to today
             filmtype: dvdData.filmtype || "", // New field for film type
 
         });
@@ -163,6 +163,9 @@ const DVDFormPage: React.FC = () => {
       });
     }
   };
+
+
+
 
   // Handle number input changes
   const handleNumberInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {

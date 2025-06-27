@@ -77,13 +77,19 @@ const ProductList: React.FC<ProductListProps> = ({
   };
 
   const handleEditProduct = (id: string, type: string) => {
-    if (type === "BOOK") {
+    // print to debig 
+    console.log(`Editing product with ID: ${id} and type: ${type}`);
+    if (type == "BOOK") {
         navigate(`/admin/books/edit/${id}`);
         }
-    else if (type === "CD") {
+    else if (type == "CD") {
+        // print to debug
+        console.log(`Navigating to edit CD with ID: ${id}`);
         navigate(`/admin/cds/edit/${id}`);
     }
-    else if (type === "DVD") {
+    else if (type == "DVD") {
+        // print to debug
+        console.log(`Navigating to edit DVD with ID: ${id}`);
         navigate(`/admin/dvds/edit/${id}`);
     }
     };
@@ -252,7 +258,7 @@ const ProductList: React.FC<ProductListProps> = ({
                       <Typography variant="body1">{product.title}</Typography>
                     </Box>
                   </TableCell>
-                  {/* <TableCell>{product.author}</TableCell> */}
+                  <TableCell>{product.productType}</TableCell>
                   <TableCell>
                     <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
                         {/* Giá gốc - luôn hiển thị và bị gạch ngang */}

@@ -15,4 +15,4 @@ export { default as BookDeleteDialog } from "./books/BookDeleteDialog";
 
 export { default as ProductDeleteDialog} from "./products/ProductDeleteDialog";
 export { default as ProductFilter } from "./products/ProductFilter";
-// export { default as ProductList } from "./products/ProductList";
+export { default as ProductList } from "./products/ProductList";

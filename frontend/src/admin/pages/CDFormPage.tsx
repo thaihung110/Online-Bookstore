@@ -126,7 +126,7 @@ const CDFormPage: React.FC = () => {
           albumTitle: cdData.albumTitle || "",
           trackList: cdData.trackList || "",
           category: cdData.category || "Pop", // Default to Pop if not set
-          releaseddate: cdData.releaseddate || new Date().toISOString().split("T")[0], // Default to today
+          releaseddate: cdData.releaseddate.slice(0,10) || new Date().toISOString().split("T")[0], // Default to today
           isAvailableRush: cdData.isAvailableRush !== undefined ? cdData.isAvailableRush : true, // Default to true if not set
         });
 

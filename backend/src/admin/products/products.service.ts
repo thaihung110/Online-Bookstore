@@ -13,6 +13,7 @@ import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { ProductActivityLogService } from '../activity-log/activity-log.service';
 import { ProductActivityLog,ProductActivityLogDocument,ProductActivityType } from '../activity-log/schemas/product-activity-log.schema';
+import { start } from 'repl';
 
 export interface ProductFilters {
   page: number;
@@ -166,6 +167,14 @@ export class AdminProductsService<T extends Product, D extends ProductDocument> 
     );
     this.logger.log(`Product with ID ${id} deleted successfully`);
     return;
+  }
+
+
+  async getDeleteCountBYUser(userId: string) {
+    const now = new Date();
+    const deletedProductCount = await this.productActivityLogService.countDeletedProductsByUserIdAndDate(userId, now);
+    
+    return deletedProductCount;
   }
 
 
@@ -328,7 +337,12 @@ export class AdminProductsService<T extends Product, D extends ProductDocument> 
     query.isAvailable = true; // Only fetch available products
 
     if (inStock !== undefined) {
-      query.stock = inStock ? { $gt: 0 } : { $lte: 0 };
+      // query.stock = inStock ? { $gt: 0 };
+      // neu true thi tim gt : 0 neu false thi khong cân thêm và query
+      if (inStock) {
+        query.stock = { $gt: 0 };
+      }
+
     }
 
     // Count total documents
@@ -344,7 +358,7 @@ export class AdminProductsService<T extends Product, D extends ProductDocument> 
       .sort(sort)
       .skip((page - 1) * limit)
       .limit(limit)
-      .select('title coverImage price originalPrice productType createdAt updatedAt isAvailable')
+      .select('title coverImage price originalPrice productType createdAt updatedAt isAvailable stock')
       .exec();
 
     // Process products with async image URL processing

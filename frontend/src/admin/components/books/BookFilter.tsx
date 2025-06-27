@@ -207,7 +207,7 @@ const BookFilter: React.FC<BookFilterProps> = ({
 
         <Grid size={{ xs: 12, md: 4 }}>
           <FormControl fullWidth size="small">
-            <InputLabel id="sort-by-label">Sort By</InputLabel>
+            <InputLabel id="sort-by-label">Sort By T</InputLabel>
             <Select
               labelId="sort-by-label"
               id="sortBy"

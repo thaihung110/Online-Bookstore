@@ -37,7 +37,7 @@ const BookHistoryPage: React.FC = () => {
   return (
     <Box>
       <Typography variant="h4" component="h1" sx={{ mb: 3 }}>
-        Book History
+        Product modification history
       </Typography>
       
       <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>

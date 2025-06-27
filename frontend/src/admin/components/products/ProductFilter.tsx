@@ -217,11 +217,9 @@ const ProductFilter: React.FC<ProductFilterProps> = ({
               onChange={handleSelectChange}
             >
               <MenuItem value="title">Title</MenuItem>
-              <MenuItem value="author">Author</MenuItem>
               <MenuItem value="price">Price</MenuItem>
               <MenuItem value="stockQuantity">Stock</MenuItem>
-              <MenuItem value="publicationDate">Publication Date</MenuItem>
-              <MenuItem value="rating">Rating</MenuItem>
+              {/* <MenuItem value="publicationDate">Publication Date</MenuItem> */}
             </Select>
           </FormControl>
         </Grid>
