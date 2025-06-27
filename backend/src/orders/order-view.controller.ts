@@ -303,11 +303,15 @@ export class OrderViewController {
         `[REFUND] Refund eligibility check passed (${daysSincePayment} days)`,
       );
 
-      // Process VNPay refund
+      // Process VNPay refund (this will also automatically cancel the order and restore stock)
+      console.log(
+        `[REFUND] Calling paymentsService.refundPayment - this will process payment refund AND cancel order automatically...`,
+      );
       const refundResult = await this.paymentsService.refundPayment(payment);
-      console.log(`[REFUND] VNPay refund result:`, refundResult);
+      console.log(`[REFUND] Payment refund result:`, refundResult);
 
       if (!refundResult.success) {
+        console.log(`[REFUND] Payment refund failed, showing error page`);
         const errorHtml = this.generateErrorHTML(
           'Refund failed through payment gateway',
         );
@@ -316,13 +320,9 @@ export class OrderViewController {
         return;
       }
 
-      // Update order status to REFUNDED manually
-      // Note: Since refundOrder method was removed, we'll handle this at the payment level
       console.log(
-        `[REFUND] Payment refund completed, order should be marked as refunded via payment status`,
+        `[REFUND] ✅ Payment refund successful! Order has been automatically canceled and stock restored.`,
       );
-
-      console.log(`[REFUND] Order status updated to REFUNDED`);
 
       // Send refund confirmation email
       try {
@@ -418,21 +418,21 @@ export class OrderViewController {
         `[REFUND] Refund eligibility check passed (${daysSincePayment} days)`,
       );
 
-      // Process VNPay refund
+      // Process VNPay refund (this will also automatically cancel the order and restore stock)
+      console.log(
+        `[REFUND] Calling paymentsService.refundPayment - this will process payment refund AND cancel order automatically...`,
+      );
       const refundResult = await this.paymentsService.refundPayment(payment);
-      console.log(`[REFUND] VNPay refund result:`, refundResult);
+      console.log(`[REFUND] Payment refund result:`, refundResult);
 
       if (!refundResult.success) {
+        console.log(`[REFUND] Payment refund failed`);
         throw new BadRequestException('Refund failed through payment gateway');
       }
 
-      // Update order status to REFUNDED manually
-      // Note: Since refundOrder method was removed, we'll handle this at the payment level
       console.log(
-        `[REFUND] Payment refund completed, order should be marked as refunded via payment status`,
+        `[REFUND] ✅ Payment refund successful! Order has been automatically canceled and stock restored.`,
       );
-
-      console.log(`[REFUND] Order status updated to REFUNDED`);
 
       // Send refund confirmation email
       try {
