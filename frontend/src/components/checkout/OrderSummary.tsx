@@ -17,6 +17,10 @@ import LocalShippingIcon from "@mui/icons-material/LocalShipping";
 import { useCheckoutStore } from "../../store/checkoutStore";
 import { useCartStore } from "../../store/cartStore";
 import { CartItem } from "../../api/cart";
+import {
+  getProductDisplayData,
+  getProductPlaceholder,
+} from "../../utils/productDisplayHelper";
 
 const OrderSummary: React.FC = () => {
   const {
@@ -41,9 +45,9 @@ const OrderSummary: React.FC = () => {
     0
   );
 
-  // Hiển thị địa chỉ định dạng đầy đủ
+  // Display full formatted address
   const formatAddress = (address: any) => {
-    if (!address) return "Chưa có thông tin";
+    if (!address) return "No information available";
 
     return `${address.fullName}, ${address.phoneNumber}, ${address.address}, ${
       address.ward
@@ -52,25 +56,25 @@ const OrderSummary: React.FC = () => {
     }`;
   };
 
-  // Hiển thị thông tin phương thức thanh toán
+  // Display payment method information
   const renderPaymentMethodInfo = () => {
-    if (!paymentMethod) return "Chưa chọn phương thức thanh toán";
+    if (!paymentMethod) return "No payment method selected";
 
     if (paymentMethod === "VNPAY") {
-      return "Thanh toán qua cổng VNPAY";
+      return "Payment via VNPAY gateway";
     }
 
     if (paymentMethod === "COD") {
-      return "Thanh toán khi nhận hàng (COD)";
+      return "Cash on Delivery (COD)";
     }
 
-    return "Chưa có thông tin thanh toán";
+    return "No payment information available";
   };
 
   return (
     <Box>
       <Typography variant="h6" gutterBottom>
-        Xác nhận đơn hàng
+        Order Confirmation
       </Typography>
 
       <Box sx={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
@@ -83,12 +87,12 @@ const OrderSummary: React.FC = () => {
               sx={{ mb: 1 }}
             >
               <LocationOnIcon color="primary" />
-              <Typography variant="subtitle1">Địa chỉ giao hàng</Typography>
+              <Typography variant="subtitle1">Shipping Address</Typography>
             </Stack>
             <Typography variant="body2" sx={{ ml: 4 }}>
               {shippingAddress
                 ? formatAddress(shippingAddress)
-                : "Chưa có thông tin"}
+                : "No information available"}
             </Typography>
           </Paper>
 
@@ -101,12 +105,12 @@ const OrderSummary: React.FC = () => {
                 sx={{ mb: 1 }}
               >
                 <LocationOnIcon color="primary" />
-                <Typography variant="subtitle1">Địa chỉ thanh toán</Typography>
+                <Typography variant="subtitle1">Billing Address</Typography>
               </Stack>
               <Typography variant="body2" sx={{ ml: 4 }}>
                 {billingAddress
                   ? formatAddress(billingAddress)
-                  : "Chưa có thông tin"}
+                  : "No information available"}
               </Typography>
             </Paper>
           )}
@@ -123,9 +127,7 @@ const OrderSummary: React.FC = () => {
               ) : (
                 <LocalShippingIcon color="primary" />
               )}
-              <Typography variant="subtitle1">
-                Phương thức thanh toán
-              </Typography>
+              <Typography variant="subtitle1">Payment Method</Typography>
             </Stack>
             <Typography variant="body2" sx={{ ml: 4 }}>
               {renderPaymentMethodInfo()}
@@ -136,37 +138,46 @@ const OrderSummary: React.FC = () => {
         <Box sx={{ flex: { xs: "1 1 100%", md: "1 1 35%" } }}>
           <Paper variant="outlined" sx={{ p: 2 }}>
             <Typography variant="subtitle1" gutterBottom>
-              Đơn hàng của bạn ({totalQuantity} sản phẩm)
+              Your Order ({totalQuantity} items)
             </Typography>
 
             <List disablePadding>
-              {selectedItems.map((item: CartItem, idx: number) => (
-                <ListItem key={item.book.id + "-" + idx} sx={{ py: 1, px: 0 }}>
-                  <Avatar
-                    src={item.book.coverImage}
-                    alt={item.book.title}
-                    variant="rounded"
-                    sx={{ mr: 2, width: 48, height: 48 }}
-                  />
-                  <ListItemText
-                    primary={item.book.title}
-                    secondary={`Số lượng: ${item.quantity}`}
-                  />
-                  <Typography variant="body2">
-                    ${(item.priceAtAdd * item.quantity).toFixed(2)}
-                  </Typography>
-                </ListItem>
-              ))}
+              {selectedItems.map((item: CartItem, idx: number) => {
+                const productData = getProductDisplayData(item.product);
+                return (
+                  <ListItem
+                    key={item.product.id + "-" + idx}
+                    sx={{ py: 1, px: 0 }}
+                  >
+                    <Avatar
+                      src={
+                        productData.coverImage ||
+                        getProductPlaceholder(productData.productType)
+                      }
+                      alt={productData.title}
+                      variant="rounded"
+                      sx={{ mr: 2, width: 48, height: 48 }}
+                    />
+                    <ListItemText
+                      primary={productData.title}
+                      secondary={`Quantity: ${item.quantity}`}
+                    />
+                    <Typography variant="body2">
+                      ${(item.priceAtAdd * item.quantity).toFixed(2)}
+                    </Typography>
+                  </ListItem>
+                );
+              })}
 
               <Divider sx={{ my: 2 }} />
 
               <ListItem sx={{ py: 1, px: 0 }}>
-                <ListItemText primary="Tạm tính" />
+                <ListItemText primary="Subtotal" />
                 <Typography variant="body1">${subtotal.toFixed(2)}</Typography>
               </ListItem>
 
               <ListItem sx={{ py: 1, px: 0 }}>
-                <ListItemText primary="Phí vận chuyển" />
+                <ListItemText primary="Shipping" />
                 <Typography variant="body1">
                   ${shippingCost.toFixed(2)}
                 </Typography>
@@ -174,7 +185,7 @@ const OrderSummary: React.FC = () => {
 
               {taxAmount > 0 && (
                 <ListItem sx={{ py: 1, px: 0 }}>
-                  <ListItemText primary="Thuế (8%)" />
+                  <ListItemText primary="Tax (8%)" />
                   <Typography variant="body1">
                     ${taxAmount.toFixed(2)}
                   </Typography>
@@ -182,7 +193,7 @@ const OrderSummary: React.FC = () => {
               )}
 
               <ListItem sx={{ py: 1, px: 0 }}>
-                <ListItemText primary="Tổng cộng" />
+                <ListItemText primary="Total" />
                 <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
                   ${total.toFixed(2)}
                 </Typography>
@@ -191,7 +202,7 @@ const OrderSummary: React.FC = () => {
 
             <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 2 }}>
               <Chip
-                label="Đã bao gồm VAT"
+                label="VAT included"
                 color="success"
                 size="small"
                 variant="outlined"

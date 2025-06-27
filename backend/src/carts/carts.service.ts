@@ -58,6 +58,13 @@ export class CartsService {
   ): Promise<CartDocument> {
     const { productId, quantity, isTicked = true } = addItemDto;
 
+    console.log('[CartService] addItem called with:', {
+      userId,
+      productId,
+      quantity,
+      isTicked,
+    });
+
     if (quantity <= 0) {
       throw new BadRequestException('Quantity must be greater than 0');
     }
@@ -67,7 +74,20 @@ export class CartsService {
 
     // Validate product existence
     const product = await this.productModel.findById(productObjectId);
+
+    console.log('[CartService] Product found:', {
+      productId,
+      productExists: !!product,
+      isAvailable: product?.isAvailable,
+      stock: product?.stock,
+    });
+
     if (!product || !product.isAvailable) {
+      console.log('[CartService] Product not found or unavailable:', {
+        productId,
+        productExists: !!product,
+        isAvailable: product?.isAvailable,
+      });
       throw new NotFoundException(
         `Product with ID "${productId}" not found or not available`,
       );
@@ -117,6 +137,11 @@ export class CartsService {
           path: 'items.product',
           model: 'Product',
         });
+
+      console.log(
+        '[CartService] Populated cart with new item:',
+        JSON.stringify(populatedCart, null, 2),
+      );
 
       // Recalculate totals for new cart
       await this.recalculateCartTotals(populatedCart);
@@ -204,6 +229,11 @@ export class CartsService {
         path: 'items.product',
         model: 'Product',
       });
+
+    console.log(
+      '[CartService] Final populated cart:',
+      JSON.stringify(updatedCart, null, 2),
+    );
 
     await this.recalculateCartTotals(updatedCart);
     await updatedCart.save();

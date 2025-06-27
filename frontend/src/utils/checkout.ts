@@ -26,12 +26,12 @@ export const canProceedToCheckout = (
   if (!shippingAddress) {
     return {
       canProceed: false,
-      error: "Vui lòng điền đầy đủ thông tin địa chỉ giao hàng",
+      error: "Please fill in complete shipping address information",
     };
   }
 
   if (!paymentMethod) {
-    return { canProceed: false, error: "Vui lòng chọn phương thức thanh toán" };
+    return { canProceed: false, error: "Please select a payment method" };
   }
 
   return { canProceed: true };
@@ -50,13 +50,13 @@ export const processCheckoutPayment = async (
   paymentMethod: string | null
 ): Promise<{ success: boolean; redirectUrl?: string; error?: string }> => {
   try {
-    // Tạo đơn hàng
+    // Create order
     const order = await placeOrder();
     console.log("Order created:", order);
 
-    // Tạo thanh toán
-    const payment = await createPayment();
-    console.log("Payment created:", payment);
+    // Create payment
+    const paymentResponse = await createPayment();
+    console.log("Payment created:", paymentResponse);
 
     // COD payments are automatically completed when created, no need to process
     if (paymentMethod === "COD") {
@@ -66,17 +66,29 @@ export const processCheckoutPayment = async (
       return { success: true };
     }
 
-    // Xử lý thanh toán (chỉ cho VNPAY)
+    // VNPAY: if redirectUrl is provided from createPayment, use it directly (tab already opened in createPayment)
+    if (paymentMethod === "VNPAY" && paymentResponse.redirectUrl) {
+      console.log(
+        "[DEBUG] VNPAY redirectUrl received from createPayment, payment flow completed"
+      );
+      return {
+        success: true,
+        redirectUrl: paymentResponse.redirectUrl,
+      };
+    }
+
+    // Fallback: Process payment if no redirectUrl from createPayment
+    const payment = paymentResponse.payment || paymentResponse;
     if (!payment || !payment.id) {
-      throw new Error("Không lấy được payment id để xử lý thanh toán");
+      throw new Error("Unable to get payment id for payment processing");
     }
     console.log("[DEBUG] Call processPayment with id:", payment.id);
     const result = await processPayment(payment.id);
     console.log("Payment processed:", result);
 
-    // Nếu là VNPay, mở trang thanh toán VNPay trong tab mới
+    // If VNPay, open VNPay payment page in new tab
     if (paymentMethod === "VNPAY" && result.redirectUrl) {
-      // Mở VNPay trong tab mới
+      // Open VNPay in new tab
       window.open(result.redirectUrl, "_blank", "noopener,noreferrer");
       return {
         success: true,
@@ -84,12 +96,15 @@ export const processCheckoutPayment = async (
       };
     }
 
-    // Nếu thanh toán thành công
+    // If payment successful
     if (result.success) {
       return { success: true };
     }
 
-    return { success: false, error: "Có lỗi xảy ra khi xử lý thanh toán" };
+    return {
+      success: false,
+      error: "An error occurred while processing payment",
+    };
   } catch (err) {
     console.error("Error during checkout:", err);
     return {
@@ -97,7 +112,7 @@ export const processCheckoutPayment = async (
       error:
         err instanceof Error
           ? err.message
-          : "Có lỗi xảy ra khi xử lý thanh toán",
+          : "An error occurred while processing payment",
     };
   }
 };

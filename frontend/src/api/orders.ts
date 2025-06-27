@@ -136,12 +136,21 @@ export interface UpdateOrderRequest {
 export interface CreateOrderFromCartRequest {
   shippingAddress: {
     fullName: string;
-    phone: string;
-    address: string;
+    addressLine1: string;
+    addressLine2?: string;
     city: string;
+    state: string;
+    postalCode: string;
+    country: string;
+    phoneNumber?: string;
   };
-  paymentMethod: string;
-  notes?: string;
+  paymentInfo: {
+    method: PaymentMethod;
+    paymentId?: string;
+    transactionId?: string;
+  };
+  isGift?: boolean;
+  giftMessage?: string;
 }
 
 export interface OrderViewResponse {

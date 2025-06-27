@@ -26,10 +26,17 @@ interface CartState {
 
   // Actions
   loadCart: () => Promise<void>;
-  addItem: (bookId: string, quantity: number, isTicked?: boolean) => Promise<void>;
+  addItem: (
+    bookId: string,
+    quantity: number,
+    isTicked?: boolean
+  ) => Promise<void>;
   updateItemQuantity: (bookId: string, quantity: number) => Promise<void>;
   updateItemSelection: (bookId: string, isTicked: boolean) => Promise<void>;
-  updateItem: (bookId: string, updates: { quantity?: number; isTicked?: boolean }) => Promise<void>;
+  updateItem: (
+    bookId: string,
+    updates: { quantity?: number; isTicked?: boolean }
+  ) => Promise<void>;
   removeItem: (bookId: string) => Promise<void>;
   clearCart: () => Promise<void>;
   validateCart: () => Promise<void>;
@@ -69,17 +76,25 @@ export const useCartStore = create<CartState>()(
         }
       },
 
-      addItem: async (bookId: string, quantity: number, isTicked: boolean = true) => {
+      addItem: async (
+        bookId: string,
+        quantity: number,
+        isTicked: boolean = true
+      ) => {
         try {
-          console.log('[Cart Store] Adding item with bookId:', bookId);
+          console.log("[Cart Store] Adding item with bookId:", bookId);
           set({ isLoading: true, error: null });
 
           // Note: bookId here should be the MongoDB _id, but we need to ensure
           // the calling code passes the correct _id instead of the frontend id
-          const updatedCart = await apiAddToCart({ bookId, quantity, isTicked });
+          const updatedCart = await apiAddToCart({
+            productId: bookId, // API expects productId, but we pass bookId value
+            quantity,
+            isTicked,
+          });
           set({ cart: updatedCart, isLoading: false });
         } catch (error: any) {
-          console.error('[Cart Store] Failed to add item:', error);
+          console.error("[Cart Store] Failed to add item:", error);
           set({
             error:
               error instanceof Error
@@ -92,7 +107,12 @@ export const useCartStore = create<CartState>()(
 
       updateItemQuantity: async (bookId: string, quantity: number) => {
         try {
-          console.log("[Cart Store] updateItemQuantity called with bookId:", bookId, "quantity:", quantity);
+          console.log(
+            "[Cart Store] updateItemQuantity called with bookId:",
+            bookId,
+            "quantity:",
+            quantity
+          );
           set({ isLoading: true, error: null });
 
           // Note: For cart operations, we need to use the MongoDB _id
@@ -101,15 +121,20 @@ export const useCartStore = create<CartState>()(
           let actualBookId = bookId;
 
           if (cart) {
-            const item = cart.items.find((item: any) => item.book.id === bookId);
-            if (item && item.book._id) {
-              actualBookId = item.book._id;
-              console.log("[Cart Store] Found MongoDB _id for update:", actualBookId);
+            const item = cart.items.find(
+              (item: any) => item.product.id === bookId
+            );
+            if (item && item.product._id) {
+              actualBookId = item.product._id;
+              console.log(
+                "[Cart Store] Found MongoDB _id for update:",
+                actualBookId
+              );
             }
           }
 
           const updatedCart = await apiUpdateCartItem({
-            bookId: actualBookId,
+            productId: actualBookId,
             quantity,
           });
           console.log("[Cart Store] API returned updated cart:", updatedCart);
@@ -137,14 +162,22 @@ export const useCartStore = create<CartState>()(
           let actualBookId = bookId;
 
           if (cart) {
-            const item = cart.items.find((item: any) => item.book.id === bookId);
-            if (item && item.book._id) {
-              actualBookId = item.book._id;
-              console.log("[Cart Store] Found MongoDB _id for selection update:", actualBookId);
+            const item = cart.items.find(
+              (item: any) => item.product.id === bookId
+            );
+            if (item && item.product._id) {
+              actualBookId = item.product._id;
+              console.log(
+                "[Cart Store] Found MongoDB _id for selection update:",
+                actualBookId
+              );
             }
           }
 
-          const updatedCart = await apiUpdateCartItemSelection(actualBookId, isTicked);
+          const updatedCart = await apiUpdateCartItemSelection(
+            actualBookId,
+            isTicked
+          );
           set({ cart: updatedCart, isLoading: false });
         } catch (error: any) {
           set({
@@ -157,7 +190,10 @@ export const useCartStore = create<CartState>()(
         }
       },
 
-      updateItem: async (bookId: string, updates: { quantity?: number; isTicked?: boolean }) => {
+      updateItem: async (
+        bookId: string,
+        updates: { quantity?: number; isTicked?: boolean }
+      ) => {
         try {
           set({ isLoading: true, error: null });
 
@@ -166,24 +202,27 @@ export const useCartStore = create<CartState>()(
           let actualBookId = bookId;
 
           if (cart) {
-            const item = cart.items.find((item: any) => item.book.id === bookId);
-            if (item && item.book._id) {
-              actualBookId = item.book._id;
-              console.log("[Cart Store] Found MongoDB _id for item update:", actualBookId);
+            const item = cart.items.find(
+              (item: any) => item.product.id === bookId
+            );
+            if (item && item.product._id) {
+              actualBookId = item.product._id;
+              console.log(
+                "[Cart Store] Found MongoDB _id for item update:",
+                actualBookId
+              );
             }
           }
 
           const updatedCart = await apiUpdateCartItem({
-            bookId: actualBookId,
+            productId: actualBookId,
             ...updates,
           });
           set({ cart: updatedCart, isLoading: false });
         } catch (error: any) {
           set({
             error:
-              error instanceof Error
-                ? error.message
-                : "Failed to update item",
+              error instanceof Error ? error.message : "Failed to update item",
             isLoading: false,
           });
         }
@@ -198,10 +237,15 @@ export const useCartStore = create<CartState>()(
           let actualBookId = bookId;
 
           if (cart) {
-            const item = cart.items.find((item: any) => item.book.id === bookId);
-            if (item && item.book._id) {
-              actualBookId = item.book._id;
-              console.log("[Cart Store] Found MongoDB _id for item removal:", actualBookId);
+            const item = cart.items.find(
+              (item: any) => item.product.id === bookId
+            );
+            if (item && item.product._id) {
+              actualBookId = item.product._id;
+              console.log(
+                "[Cart Store] Found MongoDB _id for item removal:",
+                actualBookId
+              );
             }
           }
 
@@ -238,7 +282,9 @@ export const useCartStore = create<CartState>()(
         } catch (error: any) {
           set({
             error:
-              error instanceof Error ? error.message : "Failed to validate cart",
+              error instanceof Error
+                ? error.message
+                : "Failed to validate cart",
             isValidating: false,
           });
         }
@@ -250,14 +296,14 @@ export const useCartStore = create<CartState>()(
       isInCart: (bookId: string) => {
         const cart = get().cart;
         if (!cart) return false;
-        return cart.items.some((item: CartItem) => item.book.id === bookId);
+        return cart.items.some((item: CartItem) => item.product.id === bookId);
       },
 
       getCartItems: () => {
         const cart = get().cart;
         const items = cart ? cart.items : [];
-        console.log('[Cart Store] getCartItems called, returning:', items);
-        console.log('[Cart Store] Cart object:', cart);
+        console.log("[Cart Store] getCartItems called, returning:", items);
+        console.log("[Cart Store] Cart object:", cart);
         return items;
       },
 

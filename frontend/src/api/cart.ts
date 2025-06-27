@@ -1,63 +1,120 @@
 import api from "./axios";
 import { Book } from "./books"; // Assuming Book type is needed for cart items
+import { Product } from "../types/product.types"; // Import generic Product type
 
-// Transform raw book data from backend to frontend format
-const transformBookData = (bookData: any): Book => {
+// Transform raw product data from backend to frontend format
+const transformProductData = (productData: any): Product => {
+  console.log("[Cart API] Transforming product data:", productData);
+
+  // Handle null/undefined data
+  if (!productData) {
+    console.error("[Cart API] Product data is null/undefined");
+    throw new Error("Product data is missing");
+  }
+
   // Convert _id to id if necessary, but preserve _id for backend operations
-  const id = bookData._id || bookData.id || "";
-  const _id = bookData._id || bookData.id || ""; // Preserve original _id
+  const id = productData._id || productData.id || "";
+  const _id = productData._id || productData.id || ""; // Preserve original _id
 
-  // Ensure numeric values
-  const originalPrice = Number(bookData.originalPrice) || bookData.price;
-  const discountRate = Number(bookData.discountRate) || 0;
-  const price = Number(bookData.price);
-  const rating = bookData.rating
-    ? Number(bookData.rating)
-    : bookData.averageRating
-    ? Number(bookData.averageRating)
-    : undefined;
-  const stock = Number(bookData.stock) || 0;
-  const pageCount = bookData.pageCount ? Number(bookData.pageCount) : undefined;
-
-  // Ensure arrays
-  const genres = Array.isArray(bookData.genres) ? bookData.genres : [];
-
-  return {
+  // Common fields for all product types
+  const baseProduct = {
     id,
     _id, // Include original MongoDB _id
-    title: bookData.title?.trim() || "",
-    author: bookData.author?.trim() || "",
-    description: bookData.description?.trim() || "",
-    originalPrice,
-    discountRate,
-    price,
-    coverImage: bookData.coverImage,
-    isbn: bookData.isbn || "",
-    genres,
-    publisher: bookData.publisher?.trim() || "",
-    publicationYear: bookData.publicationYear || 0,
-    rating,
-    stock,
-    pageCount,
+    productType: productData.productType || "BOOK",
+    title: productData.title?.trim() || "",
+    description: productData.description?.trim() || "",
+    originalPrice:
+      Number(productData.originalPrice) || Number(productData.price) || 0,
+    discountRate: Number(productData.discountRate) || 0,
+    price: Number(productData.price) || 0,
+    coverImage: productData.coverImage,
+    stock: Number(productData.stock) || 0,
+    isAvailable: productData.isAvailable !== false,
+    isFeatured: productData.isFeatured || false,
+    createdAt: productData.createdAt,
+    updatedAt: productData.updatedAt,
   };
+
+  // Handle different product types
+  switch (productData.productType) {
+    case "CD":
+      return {
+        ...baseProduct,
+        productType: "CD" as const,
+        artist: productData.artist?.trim() || "",
+        albumTitle: productData.albumTitle?.trim() || "",
+        trackList: productData.trackList || "",
+        category: productData.category || "",
+        releaseddate: productData.releaseddate || new Date(),
+      };
+
+    case "DVD":
+      return {
+        ...baseProduct,
+        productType: "DVD" as const,
+        director: productData.director?.trim() || "",
+        runtime: Number(productData.runtime) || 0,
+        studio: productData.studio?.trim() || "",
+        subtitles: productData.subtitles || "",
+        releaseddate: productData.releaseddate || new Date(),
+        filmtype: productData.filmtype || "",
+        disctype: productData.disctype || "",
+      };
+
+    case "BOOK":
+    default:
+      // Handle books and fallback for unknown types
+      const rating = productData.rating
+        ? Number(productData.rating)
+        : productData.averageRating
+        ? Number(productData.averageRating)
+        : undefined;
+      const pageCount = productData.pageCount
+        ? Number(productData.pageCount)
+        : undefined;
+      const genres = Array.isArray(productData.genres)
+        ? productData.genres
+        : [];
+
+      return {
+        ...baseProduct,
+        productType: "BOOK" as const,
+        author: productData.author?.trim() || "",
+        isbn: productData.isbn || "",
+        genres,
+        publisher: productData.publisher?.trim() || "",
+        publicationYear: productData.publicationYear || 0,
+        rating,
+        pageCount,
+        language: productData.language || "English",
+        totalRatings: productData.totalRatings || 0,
+        publishedDate: productData.publishedDate,
+        category: productData.category, // For backward compatibility
+        converImage: productData.converImage, // For backward compatibility
+      };
+  }
 };
 
 // Transform cart data from backend to frontend format
 const transformCartData = (cartData: any): Cart => {
+  console.log("[Cart API] Transforming cart data:", cartData);
   return {
     ...cartData,
     items:
-      cartData.items?.map((item: any) => ({
-        ...item,
-        book: transformBookData(item.book),
-      })) || [],
+      cartData.items?.map((item: any) => {
+        console.log("[Cart API] Transforming cart item:", item);
+        return {
+          ...item,
+          product: transformProductData(item.product), // Use generic product transform
+        };
+      }) || [],
   };
 };
 
 // Interface for a cart item
 export interface CartItem {
   _id?: string;
-  book: Book;
+  product: Product; // Use generic Product instead of just Book
   quantity: number;
   priceAtAdd: number;
   isTicked: boolean;
@@ -82,14 +139,14 @@ export interface Cart {
 
 // Request to add an item to the cart
 export interface AddToCartRequest {
-  bookId: string;
+  productId: string;
   quantity: number;
   isTicked?: boolean;
 }
 
 // Request to update item in cart (quantity and/or selection)
 export interface UpdateCartItemRequest {
-  bookId: string;
+  productId: string;
   quantity?: number;
   isTicked?: boolean;
 }
@@ -124,21 +181,24 @@ export const getCart = async (): Promise<Cart> => {
  */
 export const addToCart = async (itemData: AddToCartRequest): Promise<Cart> => {
   try {
+    console.log("[Cart API] Adding item to cart:", itemData);
     const response = await api.post("/carts/items", itemData);
+    console.log("[Cart API] Add to cart response:", response.data);
     return transformCartData(response.data);
   } catch (error) {
     console.error("Error adding item to cart:", error);
+    console.error("Request data was:", itemData);
     throw error;
   }
 };
 
 /**
  * Removes an item from the cart.
- * @param bookId The ID of the book to remove.
+ * @param productId The ID of the product to remove.
  */
-export const removeFromCart = async (bookId: string): Promise<Cart> => {
+export const removeFromCart = async (productId: string): Promise<Cart> => {
   try {
-    const response = await api.delete(`/carts/items/${bookId}`);
+    const response = await api.delete(`/carts/items/${productId}`);
     return transformCartData(response.data);
   } catch (error) {
     console.error("Error removing item from cart:", error);
@@ -160,7 +220,7 @@ export const updateCartItem = async (
       updatePayload.isTicked = itemData.isTicked;
 
     const response = await api.patch(
-      `/carts/items/${itemData.bookId}`,
+      `/carts/items/${itemData.productId}`,
       updatePayload
     );
     return transformCartData(response.data);
@@ -175,7 +235,7 @@ export const updateCartItem = async (
  * @deprecated Use updateCartItem instead for better flexibility
  */
 export const updateCartItemQuantity = async (itemData: {
-  bookId: string;
+  productId: string;
   quantity: number;
 }): Promise<Cart> => {
   return updateCartItem(itemData);
@@ -185,10 +245,10 @@ export const updateCartItemQuantity = async (itemData: {
  * Updates the selection status of an item in the cart.
  */
 export const updateCartItemSelection = async (
-  bookId: string,
+  productId: string,
   isTicked: boolean
 ): Promise<Cart> => {
-  return updateCartItem({ bookId, isTicked });
+  return updateCartItem({ productId, isTicked });
 };
 
 /**
@@ -206,7 +266,7 @@ export const clearCart = async (): Promise<Cart> => {
 
 // Interface for cart validation results
 export interface CartValidationIssue {
-  bookId: string;
+  productId: string;
   type: "stock" | "price" | "unavailable";
   message: string;
   currentStock?: number;

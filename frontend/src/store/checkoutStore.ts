@@ -6,16 +6,18 @@ import {
   getPayment,
   getTransactions,
   CreatePaymentRequest,
+  CreatePaymentResponse,
   Payment,
-  PaymentMethod,
   VNPayDetails,
 } from "../api/payments";
 import {
   createOrder as apiCreateOrder,
   CreateOrderRequest,
   Order as ApiOrder,
-  PaymentMethod as OrderPaymentMethod,
+  PaymentMethod,
   getOrderById,
+  createOrderFromCart,
+  CreateOrderFromCartRequest,
 } from "../api/orders";
 import { useCartStore } from "./cartStore";
 import { Address } from "../utils/checkout";
@@ -52,7 +54,7 @@ interface CheckoutState {
 
   // Thao tác với API
   placeOrder: () => Promise<Order>;
-  createPayment: () => Promise<Payment>;
+  createPayment: () => Promise<CreatePaymentResponse>;
   processPayment: (
     id: string
   ) => Promise<{ redirectUrl?: string; success: boolean }>;
@@ -67,45 +69,43 @@ interface CheckoutState {
   removeCartItem: (id: string) => void;
 }
 
-// Real API order creation - replaces mock implementation
-const createOrder = async (data: {
-  items: { bookId: string; quantity: number; priceAtAdd: number }[];
-  totalAmount: number;
+// Real API order creation using createOrderFromCart - simplified approach
+const createOrderFromCartApi = async (data: {
   shippingAddress: Address;
-  billingAddress?: Address;
   paymentMethod: string;
 }): Promise<Order> => {
   try {
-    console.log("[Checkout Store] Creating order with real API:", data);
+    console.log(
+      "[Checkout Store] Creating order from cart with real API:",
+      data
+    );
 
-    // Map checkout data to API format
-    const orderRequest: CreateOrderRequest = {
-      items: data.items.map((item) => ({
-        bookId: item.bookId,
-        quantity: item.quantity,
-      })),
+    // Map checkout data to API format for CreateOrderFromCartRequest
+    const orderRequest: CreateOrderFromCartRequest = {
       shippingAddress: {
         fullName: data.shippingAddress.fullName,
         addressLine1: data.shippingAddress.address,
-        addressLine2: data.shippingAddress.ward || "", // Use ward as addressLine2
+        addressLine2: data.shippingAddress.ward || "",
         city: data.shippingAddress.city,
-        state: data.shippingAddress.district || "", // Use district as state
+        state: data.shippingAddress.district || "",
         postalCode: data.shippingAddress.zipCode || "",
-        country: "Vietnam", // Default to Vietnam
+        country: "Vietnam",
         phoneNumber: data.shippingAddress.phoneNumber,
       },
       paymentInfo: {
-        method: data.paymentMethod as OrderPaymentMethod, // Keep uppercase format
+        method: data.paymentMethod as PaymentMethod,
       },
       isGift: false,
     };
 
-    // Call real API
-    const apiOrder = await apiCreateOrder(orderRequest);
+    console.log("[Checkout Store] API Request payload:", orderRequest);
+
+    // Call real API - createOrderFromCart automatically uses cart items
+    const apiOrder = await createOrderFromCart(orderRequest);
 
     console.log("[Checkout Store] Order created successfully:", apiOrder);
 
-    // Return the API response directly since we're now using the correct Order type
+    // Return the API response directly
     return apiOrder;
   } catch (error) {
     console.error("[Checkout Store] Order creation failed:", error);
@@ -162,52 +162,13 @@ export const useCheckoutStore = create<CheckoutState>()(
         try {
           set({ isLoading: true, error: null });
 
-          const {
-            shippingAddress,
-            billingAddress,
-            useShippingAsBilling,
-            paymentMethod,
-          } = get();
-          const cartStore = useCartStore.getState();
-          const cartItems = cartStore.getCartItems();
+          const { shippingAddress, paymentMethod } = get();
 
-          console.log("[Checkout Store] Raw cart items from store:", cartItems);
-          console.log("[Checkout Store] Cart items count:", cartItems.length);
-
-          const tickedItems = cartItems.filter(
-            (item) => (item as any).isTicked !== false
-          );
-
-          console.log("[Checkout Store] Ticked items:", tickedItems);
           console.log(
-            "[Checkout Store] Ticked items count:",
-            tickedItems.length
+            "[Checkout Store] Placing order with shipping address:",
+            shippingAddress
           );
-
-          const paymentItems = tickedItems.map((item, index) => {
-            const bookId = item.book._id || item.book.id; // Use original MongoDB _id for backend
-            console.log(`[Checkout Store] Mapping cart item ${index}:`, {
-              fullItem: item,
-              book: item.book,
-              originalBookId: item.book.id,
-              mongoId: item.book._id,
-              usingBookId: bookId,
-              quantity: item.quantity,
-              priceAtAdd: item.priceAtAdd,
-              isTicked: item.isTicked,
-            });
-            return {
-              bookId,
-              quantity: item.quantity,
-              priceAtAdd: item.priceAtAdd,
-            };
-          });
-
-          console.log("[Checkout Store] Final payment items:", paymentItems);
-
-          // Use cart total calculated by backend (single source of truth)
-          const cart = cartStore.cart;
-          const totalAmount = cart?.total || 0;
+          console.log("[Checkout Store] Payment method:", paymentMethod);
 
           if (!shippingAddress) {
             throw new Error("Shipping address is required");
@@ -217,17 +178,9 @@ export const useCheckoutStore = create<CheckoutState>()(
             throw new Error("Payment method is required");
           }
 
-          // Dùng địa chỉ giao hàng làm địa chỉ thanh toán nếu đã chọn
-          const finalBillingAddress = useShippingAsBilling
-            ? shippingAddress
-            : billingAddress;
-
-          // Gọi API tạo đơn hàng với real backend API
-          const order = await createOrder({
-            items: paymentItems,
-            totalAmount,
+          // Gọi API tạo đơn hàng từ cart - backend tự động lấy ticked items từ cart
+          const order = await createOrderFromCartApi({
             shippingAddress,
-            billingAddress: finalBillingAddress,
             paymentMethod,
           });
 
@@ -315,8 +268,8 @@ export const useCheckoutStore = create<CheckoutState>()(
               ...(paymentMethod === "VNPAY"
                 ? {
                     vnpayInfo: {
-                      bankCode: "NCB", // Default bank code
                       orderType: "billpayment",
+                      // Xoá bankCode để user có thể chọn phương thức thanh toán trên VNPAY
                     },
                   }
                 : {}),
@@ -327,10 +280,25 @@ export const useCheckoutStore = create<CheckoutState>()(
           // Log thông tin để debug
           console.log("[Payment] Creating payment request:", paymentRequest);
 
-          const payment = await createPayment(paymentRequest);
+          const paymentResponse = await createPayment(paymentRequest);
 
-          set({ payment, isLoading: false });
-          return payment;
+          // Save payment to store
+          set({ payment: paymentResponse.payment, isLoading: false });
+
+          // If payment method is VNPAY and redirectUrl is provided, open in new tab
+          if (paymentMethod === "VNPAY" && paymentResponse.redirectUrl) {
+            console.log(
+              "[Payment] Opening VNPAY payment URL in new tab:",
+              paymentResponse.redirectUrl
+            );
+            window.open(
+              paymentResponse.redirectUrl,
+              "_blank",
+              "noopener,noreferrer"
+            );
+          }
+
+          return paymentResponse;
         } catch (error) {
           set({
             error:
@@ -438,7 +406,9 @@ export const useCheckoutStore = create<CheckoutState>()(
       // New actions
       removeCartItem: (id: string) =>
         set((state: any) => ({
-          cartItems: state.cartItems.filter((item: any) => item.book.id !== id),
+          cartItems: state.cartItems.filter(
+            (item: any) => item.product.id !== id
+          ),
         })),
     }),
     { name: "checkout-store" }
