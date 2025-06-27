@@ -214,8 +214,6 @@ const App: React.FC = () => {
             <Route path="dvds/add" element = {<DVDFormPage />} />
             <Route path="cds/edit/:id" element={<CDFormPage />} />
             <Route path="dvds/edit/:id" element={<DVDFormPage />} />
-
-            <Route path="products" element={<ProductManagementPage />} />
             
             
             
