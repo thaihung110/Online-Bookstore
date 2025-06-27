@@ -75,6 +75,7 @@ export interface ShippingAddress {
   postalCode: string;
   country: string;
   phoneNumber?: string;
+  email: string;
 }
 
 export interface PaymentInfo {
@@ -143,6 +144,7 @@ export interface CreateOrderFromCartRequest {
     postalCode: string;
     country: string;
     phoneNumber?: string;
+    email: string;
   };
   paymentInfo: {
     method: PaymentMethod;

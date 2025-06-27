@@ -76,6 +76,14 @@ class ShippingAddressDto {
   @IsOptional()
   @IsString()
   phoneNumber?: string;
+
+  @ApiProperty({
+    description: 'Email for shipping notifications',
+    example: 'user@example.com',
+  })
+  @IsString()
+  @IsNotEmpty()
+  email: string;
 }
 
 enum PaymentMethod {

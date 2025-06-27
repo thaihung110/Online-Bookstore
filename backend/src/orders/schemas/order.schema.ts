@@ -60,6 +60,9 @@ export class ShippingAddress {
 
   @Prop()
   phoneNumber: string;
+
+  @Prop({ required: true })
+  email: string;
 }
 
 // Payment information schema - chỉ vnpay và cash

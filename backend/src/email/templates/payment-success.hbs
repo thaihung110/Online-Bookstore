@@ -346,10 +346,20 @@
         >
           <p style='margin: 0 0 8px 0; font-size: 16px;'><strong
             >{{order.shippingAddress.fullName}}</strong></p>
-          <p style='margin: 0 0 8px 0;'>📱 {{order.shippingAddress.phone}}</p>
+          {{#if order.shippingAddress.email}}
+            <p style='margin: 0 0 8px 0;'>📧 {{order.shippingAddress.email}}</p>
+          {{/if}}
+          {{#if order.shippingAddress.phoneNumber}}
+            <p style='margin: 0 0 8px 0;'>📱
+              {{order.shippingAddress.phoneNumber}}</p>
+          {{/if}}
           <p style='margin: 0;'>📍
-            {{order.shippingAddress.address}},
-            {{order.shippingAddress.city}}</p>
+            {{order.shippingAddress.addressLine1}}{{#if
+              order.shippingAddress.addressLine2
+            }}, {{order.shippingAddress.addressLine2}}{{/if}},
+            {{order.shippingAddress.city}},
+            {{order.shippingAddress.state}},
+            {{order.shippingAddress.country}}</p>
         </div>
       </div>
     {{/if}}

@@ -45,6 +45,10 @@ export class EmailController {
           addressLine1: '123 Test Street',
           city: 'Ho Chi Minh City',
           country: 'Vietnam',
+          email: 'testuser@example.com',
+        },
+        user: {
+          email: 'user@example.com',
         },
         createdAt: new Date(),
         receivedAt: new Date(),
@@ -76,7 +80,10 @@ export class EmailController {
       message: result
         ? 'Test email sent successfully'
         : 'Failed to send test email',
-      recipient: 'hungvt0110@outlook.com',
+      recipient:
+        orderData.order?.shippingAddress?.email ||
+        orderData.order?.user?.email ||
+        'hungvt0110@outlook.com',
       orderData: orderData.order,
     };
   }

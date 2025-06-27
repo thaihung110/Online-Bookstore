@@ -91,6 +91,7 @@ const createOrderFromCartApi = async (data: {
         postalCode: data.shippingAddress.zipCode || "",
         country: "Vietnam",
         phoneNumber: data.shippingAddress.phoneNumber,
+        email: data.shippingAddress.email,
       },
       paymentInfo: {
         method: data.paymentMethod as PaymentMethod,
