@@ -11,16 +11,16 @@ import { ApiProperty } from '@nestjs/swagger';
 
 export class AddItemToCartDto {
   @ApiProperty({
-    description: 'The ID of the book to add to the cart',
+    description: 'The ID of the product to add to the cart',
     example: '60d21b4667d0d8992e610c85',
   })
   @IsMongoId()
   @IsNotEmpty()
-  bookId: string;
+  productId: string;
 
   @ApiProperty({
     description:
-      'The quantity of the book to add (will be added to existing quantity if book already in cart)',
+      'The quantity of the product to add (will be added to existing quantity if product already in cart)',
     example: 1,
     minimum: 1,
   })
@@ -41,7 +41,7 @@ export class AddItemToCartDto {
 
 export class UpdateItemInCartDto {
   @ApiProperty({
-    description: 'The quantity of the book to update',
+    description: 'The quantity of the product to update',
     example: 2,
     minimum: 1,
     required: false,

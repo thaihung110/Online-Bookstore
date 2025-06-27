@@ -105,18 +105,40 @@ export interface Transaction {
 /**
  * Tạo thanh toán mới
  * @param data Thông tin thanh toán
+ * @returns Promise<CreatePaymentResponse> - Bao gồm payment object và redirectUrl cho VNPAY
+ *
+ * Flow cho VNPAY:
+ * 1. Gọi API createPayment với paymentMethod: "VNPAY"
+ * 2. Backend tạo payment và trả về redirectUrl đến VNPAY gateway
+ * 3. Frontend tự động mở tab mới với redirectUrl
+ * 4. User thực hiện thanh toán trên VNPAY
+ * 5. VNPAY callback về backend để xử lý kết quả
  */
+export interface CreatePaymentResponse {
+  payment: Payment;
+  redirectUrl?: string; // URL redirect for VNPAY
+}
+
 export const createPayment = async (
   data: CreatePaymentRequest
-): Promise<Payment> => {
+): Promise<CreatePaymentResponse> => {
   try {
+    console.log("[Payment API] Creating payment:", data);
     const response = await api.post("/payments", data);
-    // Nếu response.data có trường payment, trả về payment
+    console.log("[Payment API] Payment created successfully:", response.data);
+
+    // Handle backend response format: { payment: Payment, redirectUrl?: string }
     if (response.data && response.data.payment) {
-      return response.data.payment;
+      return {
+        payment: response.data.payment,
+        redirectUrl: response.data.redirectUrl,
+      };
     }
-    // Nếu không, trả về response.data (giữ tương thích)
-    return response.data;
+
+    // Fallback: treat response.data as payment object (backward compatibility)
+    return {
+      payment: response.data,
+    };
   } catch (error) {
     console.error("Error creating payment:", error);
     throw error;

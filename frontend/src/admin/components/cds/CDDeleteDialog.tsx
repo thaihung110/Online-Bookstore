@@ -1,5 +1,6 @@
 import React from "react";
 import {
+
   Button,
   Dialog,
   DialogActions,
@@ -10,26 +11,32 @@ import {
   Typography,
   CircularProgress,
 } from "@mui/material";
+
 import { CD } from "../../types/cd.types";
 
 interface CDDeleteDialogProps {
   open: boolean;
   cd: CD | null;
+
   loading: boolean;
   onClose: () => void;
   onConfirm: () => void;
+
 }
 
 const CDDeleteDialog: React.FC<CDDeleteDialogProps> = ({
   open,
   cd,
+
   loading,
   onClose,
   onConfirm,
+
 }) => {
   if (!cd) return null;
 
   return (
+
     <Dialog
       open={open}
       onClose={loading ? undefined : onClose}
@@ -76,6 +83,7 @@ const CDDeleteDialog: React.FC<CDDeleteDialogProps> = ({
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose} disabled={loading} color="inherit">
+
           Cancel
         </Button>
         <Button
@@ -83,9 +91,11 @@ const CDDeleteDialog: React.FC<CDDeleteDialogProps> = ({
           color="error"
           variant="contained"
           disabled={loading}
+
           startIcon={
             loading ? <CircularProgress size={20} color="inherit" /> : null
           }
+
         >
           {loading ? "Deleting..." : "Delete"}
         </Button>
@@ -94,4 +104,6 @@ const CDDeleteDialog: React.FC<CDDeleteDialogProps> = ({
   );
 };
 
+
 export default CDDeleteDialog;
+

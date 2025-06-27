@@ -8,23 +8,21 @@ import { Model, Schema as MongooseSchema, Types } from 'mongoose';
 import { Cart, CartDocument, CartItem } from './schemas/cart.schema';
 import { AddItemToCartDto } from './dto/add-item-to-cart.dto';
 import { UsersService } from '../users/users.service';
-import { BooksService } from '../books/books.service';
-import { Book, BookDocument } from '../books/schemas/book.schema';
+import { Product, ProductDocument } from '../products/schemas/product.schema';
 import { calculateOrderTotal } from '../shared/price-calculator';
 
 @Injectable()
 export class CartsService {
   constructor(
     @InjectModel(Cart.name) private cartModel: Model<CartDocument>,
-    @InjectModel(Book.name) private bookModel: Model<BookDocument>,
+    @InjectModel(Product.name) private productModel: Model<ProductDocument>,
     private readonly usersService: UsersService,
-    private readonly booksService: BooksService,
   ) {}
 
   async getCart(userId: string): Promise<CartDocument> {
     let cart = await this.cartModel.findOne({ user: userId }).populate({
-      path: 'items.book',
-      model: 'Book',
+      path: 'items.product',
+      model: 'Product',
     });
 
     if (!cart) {
@@ -42,8 +40,8 @@ export class CartsService {
 
       // Populate the newly created cart
       cart = await this.cartModel.findById(cart._id).populate({
-        path: 'items.book',
-        model: 'Book',
+        path: 'items.product',
+        model: 'Product',
       });
     }
 
@@ -58,33 +56,69 @@ export class CartsService {
     userId: string,
     addItemDto: AddItemToCartDto,
   ): Promise<CartDocument> {
-    const { bookId, quantity, isTicked = true } = addItemDto;
+    const { productId, quantity, isTicked = true } = addItemDto;
+
+    console.log('[CartService] addItem called with:', {
+      userId,
+      productId,
+      quantity,
+      isTicked,
+    });
 
     if (quantity <= 0) {
       throw new BadRequestException('Quantity must be greater than 0');
     }
 
-    // Convert bookId to ObjectId
-    const bookObjectId = new Types.ObjectId(bookId);
+    // Convert productId to ObjectId
+    const productObjectId = new Types.ObjectId(productId);
 
-    // Validate book existence
-    const book = await this.bookModel.findById(bookObjectId);
-    if (!book) {
-      throw new NotFoundException(`Book with ID "${bookId}" not found`);
+    // Validate product existence
+    const product = await this.productModel.findById(productObjectId);
+
+    console.log('[CartService] Product found:', {
+      productId,
+      productExists: !!product,
+      isAvailable: product?.isAvailable,
+      stock: product?.stock,
+    });
+
+    if (!product || !product.isAvailable) {
+      console.log('[CartService] Product not found or unavailable:', {
+        productId,
+        productExists: !!product,
+        isAvailable: product?.isAvailable,
+      });
+      throw new NotFoundException(
+        `Product with ID "${productId}" not found or not available`,
+      );
     }
 
     // Find cart with atomic update capabilities
     const cart = await this.cartModel.findOne({ user: userId });
 
     if (!cart) {
+      // Validate stock for new cart
+      if (product.stock < quantity) {
+        throw new BadRequestException(
+          `Not enough stock. Available: ${product.stock}, Requested: ${quantity}`,
+        );
+      }
+
+      // Reserve stock by decrementing it
+      await this.productModel.findByIdAndUpdate(
+        productObjectId,
+        { $inc: { stock: -quantity } },
+        { new: true },
+      );
+
       // Create new cart with the item
       const newCart = await this.cartModel.create({
         user: userId,
         items: [
           {
-            book: bookObjectId,
+            product: productObjectId,
             quantity: quantity,
-            priceAtAdd: book.price,
+            priceAtAdd: product.price,
             isTicked: isTicked,
           },
         ],
@@ -100,9 +134,14 @@ export class CartsService {
       const populatedCart = await this.cartModel
         .findById(newCart._id)
         .populate({
-          path: 'items.book',
-          model: 'Book',
+          path: 'items.product',
+          model: 'Product',
         });
+
+      console.log(
+        '[CartService] Populated cart with new item:',
+        JSON.stringify(populatedCart, null, 2),
+      );
 
       // Recalculate totals for new cart
       await this.recalculateCartTotals(populatedCart);
@@ -111,9 +150,9 @@ export class CartsService {
       return populatedCart;
     }
 
-    // Find if the book already exists in cart
+    // Find if the product already exists in cart
     const existingItemIndex = cart.items.findIndex(
-      (item) => item.book.toString() === bookObjectId.toString(),
+      (item) => item.product.toString() === productObjectId.toString(),
     );
 
     if (existingItemIndex > -1) {
@@ -121,36 +160,50 @@ export class CartsService {
       const currentQuantity = cart.items[existingItemIndex].quantity;
       const newQuantity = currentQuantity + quantity;
 
-      // Validate stock
-      if (book.stock < newQuantity) {
+      // Validate stock (checking available stock)
+      if (product.stock < quantity) {
         throw new BadRequestException(
-          `Not enough stock. Available: ${book.stock}, Current in cart: ${currentQuantity}, Requested additional: ${quantity}`,
+          `Not enough stock. Available: ${product.stock}, Current in cart: ${currentQuantity}, Requested additional: ${quantity}`,
         );
       }
+
+      // Reserve additional stock
+      await this.productModel.findByIdAndUpdate(
+        productObjectId,
+        { $inc: { stock: -quantity } },
+        { new: true },
+      );
 
       // Update quantity using MongoDB update operators
       await this.cartModel.findOneAndUpdate(
         {
           user: userId,
-          'items.book': bookObjectId,
+          'items.product': productObjectId,
         },
         {
           $inc: {
             'items.$.quantity': quantity,
           },
           $set: {
-            'items.$.priceAtAdd': book.price,
+            'items.$.priceAtAdd': product.price,
           },
         },
         { new: true },
       );
     } else {
       // Validate stock for new item
-      if (book.stock < quantity) {
+      if (product.stock < quantity) {
         throw new BadRequestException(
-          `Not enough stock. Available: ${book.stock}, Requested: ${quantity}`,
+          `Not enough stock. Available: ${product.stock}, Requested: ${quantity}`,
         );
       }
+
+      // Reserve stock for new item
+      await this.productModel.findByIdAndUpdate(
+        productObjectId,
+        { $inc: { stock: -quantity } },
+        { new: true },
+      );
 
       // Add new item using MongoDB update operators
       await this.cartModel.findOneAndUpdate(
@@ -158,9 +211,9 @@ export class CartsService {
         {
           $push: {
             items: {
-              book: bookObjectId,
+              product: productObjectId,
               quantity: quantity,
-              priceAtAdd: book.price,
+              priceAtAdd: product.price,
               isTicked: isTicked,
             },
           },
@@ -173,9 +226,14 @@ export class CartsService {
     const updatedCart = await this.cartModel
       .findOne({ user: userId })
       .populate({
-        path: 'items.book',
-        model: 'Book',
+        path: 'items.product',
+        model: 'Product',
       });
+
+    console.log(
+      '[CartService] Final populated cart:',
+      JSON.stringify(updatedCart, null, 2),
+    );
 
     await this.recalculateCartTotals(updatedCart);
     await updatedCart.save();
@@ -183,9 +241,9 @@ export class CartsService {
     return updatedCart;
   }
 
-  async removeItem(userId: string, bookId: string): Promise<CartDocument> {
-    // Convert bookId to ObjectId for consistent comparison
-    const bookObjectId = new Types.ObjectId(bookId);
+  async removeItem(userId: string, productId: string): Promise<CartDocument> {
+    // Convert productId to ObjectId for consistent comparison
+    const productObjectId = new Types.ObjectId(productId);
 
     // Get cart without population first for accurate comparison
     const cart = await this.cartModel.findOne({ user: userId });
@@ -194,49 +252,52 @@ export class CartsService {
       throw new NotFoundException(`Cart not found`);
     }
 
-    // Check if item exists using toString() comparison
-    const itemExists = cart.items.some(
-      (item) => item.book.toString() === bookObjectId.toString(),
+    // Find the item to get its quantity before removing
+    const itemToRemove = cart.items.find(
+      (item) => item.product.toString() === productObjectId.toString(),
     );
 
-    if (!itemExists) {
-      throw new NotFoundException(`Book with ID "${bookId}" not found in cart`);
+    if (!itemToRemove) {
+      throw new NotFoundException(
+        `Product with ID "${productId}" not found in cart`,
+      );
     }
 
-    // Remove item using MongoDB update operator
-    const result = await this.cartModel.findOneAndUpdate(
-      {
-        user: userId,
-        'items.book': bookObjectId,
-      },
+    // Restore stock back to product
+    await this.productModel.findByIdAndUpdate(
+      productObjectId,
+      { $inc: { stock: itemToRemove.quantity } },
+      { new: true },
+    );
+
+    // Remove the item using MongoDB pull operation
+    await this.cartModel.findOneAndUpdate(
+      { user: userId },
       {
         $pull: {
-          items: {
-            book: bookObjectId,
-          },
+          items: { product: productObjectId },
         },
       },
       { new: true },
     );
 
-    if (!result) {
-      throw new NotFoundException(`Failed to remove item from cart`);
-    }
+    // Return populated cart with recalculated totals
+    const updatedCart = await this.cartModel
+      .findOne({ user: userId })
+      .populate({
+        path: 'items.product',
+        model: 'Product',
+      });
 
-    // Recalculate subtotal
-    await this.recalculateSubtotal(result);
-    await result.save();
+    await this.recalculateCartTotals(updatedCart);
+    await updatedCart.save();
 
-    // Return populated cart
-    return this.cartModel.findById(result._id).populate({
-      path: 'items.book',
-      model: 'Book',
-    });
+    return updatedCart;
   }
 
   async updateItemQuantity(
     userId: string,
-    bookId: string,
+    productId: string,
     quantity: number,
   ): Promise<CartDocument> {
     if (quantity <= 0) {
@@ -245,19 +306,19 @@ export class CartsService {
       );
     }
 
-    // Convert bookId to ObjectId for consistent comparison
-    const bookObjectId = new Types.ObjectId(bookId);
+    // Convert productId to ObjectId for consistent comparison
+    const productObjectId = new Types.ObjectId(productId);
 
-    // Validate book existence and stock
-    const book = await this.bookModel.findById(bookObjectId);
-    if (!book) {
-      throw new NotFoundException(`Book with ID "${bookId}" not found`);
+    // Validate product existence and stock
+    const product = await this.productModel.findById(productObjectId);
+    if (!product) {
+      throw new NotFoundException(`Product with ID "${productId}" not found`);
     }
 
     // Check stock
-    if (book.stock < quantity) {
+    if (product.stock < quantity) {
       throw new BadRequestException(
-        `Not enough stock. Available: ${book.stock}, Requested: ${quantity}`,
+        `Not enough stock. Available: ${product.stock}, Requested: ${quantity}`,
       );
     }
 
@@ -267,25 +328,46 @@ export class CartsService {
       throw new NotFoundException('Cart not found');
     }
 
-    // Check if item exists
-    const itemExists = cart.items.some(
-      (item) => item.book.toString() === bookObjectId.toString(),
+    // Find the item to get current quantity
+    const currentItem = cart.items.find(
+      (item) => item.product.toString() === productObjectId.toString(),
     );
 
-    if (!itemExists) {
-      throw new NotFoundException(`Book with ID "${bookId}" not found in cart`);
+    if (!currentItem) {
+      throw new NotFoundException(
+        `Product with ID "${productId}" not found in cart`,
+      );
+    }
+
+    const currentQuantity = currentItem.quantity;
+    const quantityDifference = quantity - currentQuantity;
+
+    // Check if we have enough stock for the increase
+    if (quantityDifference > 0 && product.stock < quantityDifference) {
+      throw new BadRequestException(
+        `Not enough stock. Available: ${product.stock}, Requested additional: ${quantityDifference}`,
+      );
+    }
+
+    // Update stock based on quantity change
+    if (quantityDifference !== 0) {
+      await this.productModel.findByIdAndUpdate(
+        productObjectId,
+        { $inc: { stock: -quantityDifference } }, // Negative because we reserve when increase
+        { new: true },
+      );
     }
 
     // Update quantity using MongoDB update operator
     const result = await this.cartModel.findOneAndUpdate(
       {
         user: userId,
-        'items.book': bookObjectId,
+        'items.product': productObjectId,
       },
       {
         $set: {
           'items.$.quantity': quantity,
-          'items.$.priceAtAdd': book.price,
+          'items.$.priceAtAdd': product.price,
         },
       },
       { new: true },
@@ -301,13 +383,27 @@ export class CartsService {
 
     // Return populated cart
     return this.cartModel.findById(result._id).populate({
-      path: 'items.book',
-      model: 'Book',
+      path: 'items.product',
+      model: 'Product',
     });
   }
 
   async clearCart(userId: string): Promise<CartDocument> {
     await this.usersService.findById(userId);
+
+    // Get current cart to restore stock before clearing
+    const currentCart = await this.cartModel.findOne({ user: userId });
+
+    if (currentCart && currentCart.items.length > 0) {
+      // Restore stock for all items in cart
+      for (const item of currentCart.items) {
+        await this.productModel.findByIdAndUpdate(
+          item.product,
+          { $inc: { stock: item.quantity } },
+          { new: true },
+        );
+      }
+    }
 
     // Use atomic update for better performance
     const clearedCart = await this.cartModel.findOneAndUpdate(
@@ -326,7 +422,31 @@ export class CartsService {
       { new: true, upsert: true },
     );
 
-    return this.cartModel.findById(clearedCart._id).populate('items.book');
+    return this.cartModel.findById(clearedCart._id).populate('items.product');
+  }
+
+  // Clear cart without restoring stock (used when order is confirmed)
+  async clearCartWithoutStockRestore(userId: string): Promise<CartDocument> {
+    await this.usersService.findById(userId);
+
+    // Use atomic update for better performance - DO NOT restore stock
+    const clearedCart = await this.cartModel.findOneAndUpdate(
+      { user: userId },
+      {
+        items: [],
+        appliedCouponCode: null,
+        appliedGiftCardCode: null,
+        loyaltyPointsToUse: 0,
+        subtotal: 0,
+        shippingCost: 0,
+        taxAmount: 0,
+        total: 0,
+        updatedAt: new Date(),
+      },
+      { new: true, upsert: true },
+    );
+
+    return this.cartModel.findById(clearedCart._id).populate('items.product');
   }
 
   // Helper method to recalculate cart totals using universal price calculator
@@ -364,7 +484,7 @@ export class CartsService {
   async validateCart(userId: string): Promise<{
     isValid: boolean;
     issues: Array<{
-      bookId: string;
+      productId: string;
       type: 'stock' | 'price' | 'unavailable';
       message: string;
       currentStock?: number;
@@ -374,8 +494,8 @@ export class CartsService {
     }>;
   }> {
     const cart = await this.cartModel.findOne({ user: userId }).populate({
-      path: 'items.book',
-      model: 'Book',
+      path: 'items.product',
+      model: 'Product',
     });
 
     if (!cart) {
@@ -385,38 +505,36 @@ export class CartsService {
     const issues = [];
 
     for (const item of cart.items) {
-      const book = item.book as any; // Populated book object
+      const product = item.product as any; // Populated product object
 
-      if (!book) {
+      if (!product) {
         issues.push({
-          bookId: item.book.toString(),
+          productId: item.product.toString(),
           type: 'unavailable' as const,
-          message: 'This book is no longer available',
+          message: 'This product is no longer available',
         });
         continue;
       }
 
-      // Check stock availability
-      if (book.stock < item.quantity) {
+      // Check stock availability (NOTE: stock in cart is already reserved, so we only check if product is out of stock completely)
+      if (!product.isAvailable) {
         issues.push({
-          bookId: book._id.toString(),
-          type: 'stock' as const,
-          message: `Only ${book.stock} items available, but ${item.quantity} requested`,
-          currentStock: book.stock,
-          requestedQuantity: item.quantity,
+          productId: product._id.toString(),
+          type: 'unavailable' as const,
+          message: 'Product is no longer available',
         });
       }
 
       // Check price changes (allow small floating point differences)
-      const priceDifference = Math.abs(book.price - item.priceAtAdd);
+      const priceDifference = Math.abs(product.price - item.priceAtAdd);
       if (priceDifference > 0.01) {
         const priceChange =
-          book.price > item.priceAtAdd ? 'increased' : 'decreased';
+          product.price > item.priceAtAdd ? 'increased' : 'decreased';
         issues.push({
-          bookId: book._id.toString(),
+          productId: product._id.toString(),
           type: 'price' as const,
-          message: `Price has ${priceChange} from $${(item.priceAtAdd / 23000).toFixed(2)} to $${(book.price / 23000).toFixed(2)}`,
-          currentPrice: book.price,
+          message: `Price has ${priceChange} from $${(item.priceAtAdd / 23000).toFixed(2)} to $${(product.price / 23000).toFixed(2)}`,
+          currentPrice: product.price,
           cartPrice: item.priceAtAdd,
         });
       }
@@ -435,24 +553,25 @@ export class CartsService {
       throw new NotFoundException('Cart not found');
     }
 
-    // Group items by bookId and merge quantities
+    // Group items by productId and merge quantities
     const mergedItems = new Map();
 
     for (const item of cart.items) {
-      const bookId = item.book.toString();
+      const productId = item.product.toString();
 
-      if (mergedItems.has(bookId)) {
+      if (mergedItems.has(productId)) {
         // Add quantity to existing item
-        const existing = mergedItems.get(bookId);
+        const existing = mergedItems.get(productId);
         existing.quantity += item.quantity;
         // Keep the latest price
         existing.priceAtAdd = item.priceAtAdd;
       } else {
-        // First occurrence of this bookId
-        mergedItems.set(bookId, {
-          book: item.book,
+        // First occurrence of this productId
+        mergedItems.set(productId, {
+          product: item.product,
           quantity: item.quantity,
           priceAtAdd: item.priceAtAdd,
+          isTicked: item.isTicked,
         });
       }
     }
@@ -464,35 +583,59 @@ export class CartsService {
     await this.recalculateSubtotal(cart);
 
     await cart.save();
-    return this.cartModel.findById(cart._id).populate('items.book');
+    return this.cartModel.findById(cart._id).populate('items.product');
   }
 
   async updateItemInCart(
     userId: string,
-    bookId: string,
+    productId: string,
     updateDto: { quantity?: number; isTicked?: boolean },
   ): Promise<CartDocument> {
-    const bookObjectId = new Types.ObjectId(bookId);
+    const productObjectId = new Types.ObjectId(productId);
 
-    // Use atomic update with MongoDB operators instead of loading and saving
-    const updateFields: any = {};
-
+    // If quantity is being updated, delegate to the proper stock-aware method
     if (updateDto.quantity !== undefined) {
-      if (updateDto.quantity < 1) {
-        throw new BadRequestException('Quantity must be >= 1');
+      console.log(
+        '[CartService] updateItemInCart: quantity update detected, delegating to updateItemQuantity for stock management',
+      );
+
+      // First update the quantity (which handles stock properly)
+      const quantityUpdatedCart = await this.updateItemQuantity(
+        userId,
+        productId,
+        updateDto.quantity,
+      );
+
+      // If only quantity was being updated, return the result
+      if (updateDto.isTicked === undefined) {
+        return quantityUpdatedCart;
       }
-      updateFields['items.$.quantity'] = updateDto.quantity;
+
+      // If isTicked is also being updated, continue with just the isTicked update
+      // Note: quantity has already been updated above
+      updateDto = { isTicked: updateDto.isTicked }; // Remove quantity from updateDto
     }
+
+    // Handle isTicked update only (no stock implications)
+    const updateFields: any = {};
 
     if (updateDto.isTicked !== undefined) {
       updateFields['items.$.isTicked'] = updateDto.isTicked;
     }
 
-    // Perform atomic update
+    // If no fields to update (shouldn't happen), just return current cart
+    if (Object.keys(updateFields).length === 0) {
+      return this.cartModel.findOne({ user: userId }).populate({
+        path: 'items.product',
+        model: 'Product',
+      });
+    }
+
+    // Perform atomic update for isTicked only
     const result = await this.cartModel.findOneAndUpdate(
       {
         user: userId,
-        'items.book': bookObjectId,
+        'items.product': productObjectId,
       },
       {
         $set: updateFields,
@@ -510,8 +653,8 @@ export class CartsService {
 
     // Return populated cart
     return this.cartModel.findById(result._id).populate({
-      path: 'items.book',
-      model: 'Book',
+      path: 'items.product',
+      model: 'Product',
     });
   }
 }

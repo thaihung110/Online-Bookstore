@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import {
   Box,
@@ -74,11 +75,13 @@ interface CDFilterProps {
   filters: CDFilters;
   onFilterChange: (newFilters: Partial<CDFilters>) => void;
   onResetFilters: () => void;
+
 }
 
 const CDFilter: React.FC<CDFilterProps> = ({
   filters,
   onFilterChange,
+
   onResetFilters,
 }) => {
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
@@ -315,3 +318,4 @@ const CDFilter: React.FC<CDFilterProps> = ({
 };
 
 export default CDFilter;
+

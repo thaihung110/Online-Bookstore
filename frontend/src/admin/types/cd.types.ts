@@ -1,3 +1,4 @@
+
 export interface CD {
   _id: string;
   id?: string; // Optional for backward compatibility
@@ -37,10 +38,12 @@ export interface CDFormData {
     category: string; // Thể loại: Pop, Rock, Jazz, Classical, etc.
     releaseddate: string; // Ngày phát hành (dạng chuỗi ISO 8601)
   isAvailableRush: boolean; // New field for rush delivery
+
 }
 
 export interface CDFilters {
   search?: string;
+
   minPrice?: number;
   maxPrice?: number;
   inStock?: boolean;
@@ -57,4 +60,6 @@ export interface CDListResponse {
   page: number;
   limit: number;
   totalPages: number;
+
 }
+

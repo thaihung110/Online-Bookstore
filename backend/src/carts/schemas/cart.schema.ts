@@ -5,8 +5,8 @@ export type CartDocument = Cart & Document;
 
 // Cart item schema
 export class CartItem {
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Book', required: true })
-  book: MongooseSchema.Types.ObjectId;
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Product', required: true })
+  product: MongooseSchema.Types.ObjectId;
 
   @Prop({ required: true, min: 1 })
   quantity: number;

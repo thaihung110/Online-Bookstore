@@ -10,8 +10,10 @@ import { Order, OrderDocument, OrderItem } from './schemas/order.schema';
 import { CreateOrderDto, CreateOrderFromCartDto } from './dto/create-order.dto';
 import { UsersService } from '../users/users.service';
 import { BooksService } from '../books/books.service';
+import { ProductsService } from '../products/products.service';
 import { CartsService } from '../carts/carts.service';
 import { BookDocument } from '../books/schemas/book.schema';
+import { ProductDocument } from '../products/schemas/product.schema';
 import { CartItem } from '../carts/schemas/cart.schema';
 import { UploadService } from '../upload/upload.service';
 import { calculateOrderTotal } from '../shared/price-calculator';
@@ -22,6 +24,7 @@ export class OrdersService {
     @InjectModel(Order.name) private orderModel: Model<OrderDocument>,
     private readonly usersService: UsersService,
     private readonly booksService: BooksService,
+    private readonly productsService: ProductsService,
     private readonly cartsService: CartsService,
     private readonly uploadService: UploadService,
   ) {}
@@ -43,47 +46,54 @@ export class OrdersService {
 
     for (const itemDto of createOrderDto.items) {
       console.log('[Orders Service] Processing item:', itemDto);
-      console.log('[Orders Service] Looking for book with ID:', itemDto.bookId);
-      console.log('[Orders Service] About to call booksService.findOne...');
+      console.log(
+        '[Orders Service] Looking for product with ID:',
+        itemDto.productId,
+      );
+      console.log('[Orders Service] About to call productsService.findOne...');
 
-      let book: BookDocument;
+      let product: ProductDocument;
       try {
-        book = (await this.booksService.findOne(
-          itemDto.bookId,
-        )) as BookDocument;
+        product = (await this.productsService.findOne(
+          itemDto.productId,
+        )) as ProductDocument;
         console.log(
-          '[Orders Service] Successfully found book:',
-          book._id,
-          book.title,
+          '[Orders Service] Successfully found product:',
+          product._id,
+          product.title,
         );
       } catch (error) {
-        console.error('[Orders Service] Error in booksService.findOne:', error);
+        console.error(
+          '[Orders Service] Error in productsService.findOne:',
+          error,
+        );
         throw error;
       }
-      if (!book) {
+      if (!product) {
         throw new NotFoundException(
-          `Book with ID "${itemDto.bookId}" not found.`,
+          `Product with ID "${itemDto.productId}" not found.`,
         );
       }
-      if (book.stock < itemDto.quantity) {
+      if (product.stock < itemDto.quantity) {
         throw new BadRequestException(
-          `Not enough stock for book "${book.title}". Available: ${book.stock}, Requested: ${itemDto.quantity}`,
+          `Not enough stock for product "${product.title}". Available: ${product.stock}, Requested: ${itemDto.quantity}`,
         );
       }
-      // Use the original MongoDB _id, not the processed book.id
-      const bookObjectId = new Types.ObjectId(itemDto.bookId);
+      // Use the original MongoDB _id, not the processed product.id
+      const productObjectId = new Types.ObjectId(itemDto.productId);
       console.log(
-        '[Orders Service] Using book ObjectId:',
-        bookObjectId.toString(),
+        '[Orders Service] Using product ObjectId:',
+        productObjectId.toString(),
       );
 
       processedOrderItems.push({
-        book: bookObjectId as any, // Use original MongoDB _id
+        product: productObjectId as any, // Use original MongoDB _id
+        productType: product.productType || 'Product', // Get actual productType from product
         quantity: itemDto.quantity,
-        price: book.price,
-        discount: book.discountRate || 0,
-        title: book.title,
-        author: book.author,
+        price: product.price || product.originalPrice,
+        discount: 0, // Products don't have discountRate
+        title: product.title,
+        author: '', // Products may not have author
       } as OrderItem);
     }
 
@@ -211,34 +221,15 @@ export class OrdersService {
 
       const savedOrder = await newOrder.save();
 
-      // Decrement stock for each book using original book IDs
-      for (let i = 0; i < processedOrderItems.length; i++) {
-        const item = processedOrderItems[i];
-        const originalBookId = createOrderDto.items[i].bookId; // Use original book ID
-
-        console.log(
-          '[Orders Service] Updating stock for book ID:',
-          originalBookId,
-        );
-
-        const bookToUpdate = (await this.booksService.findOne(
-          originalBookId,
-        )) as BookDocument;
-        const newStock = bookToUpdate.stock - item.quantity;
-        await this.booksService.update(originalBookId, {
-          stock: newStock,
-        });
-
-        console.log(
-          '[Orders Service] Updated stock for book:',
-          originalBookId,
-          'new stock:',
-          newStock,
-        );
-      }
+      // Stock was already reserved when items were added to cart
+      // So we don't need to decrement stock here anymore
+      console.log(
+        '[Orders Service] Stock was already reserved from cart, skipping stock update',
+      );
 
       // Clear the user's cart after successful order creation
-      await this.cartsService.clearCart(userId);
+      // This will NOT restore stock since items are now part of confirmed order
+      await this.cartsService.clearCartWithoutStockRestore(userId);
 
       return savedOrder;
     } catch (error) {
@@ -302,9 +293,9 @@ export class OrdersService {
 
     // Convert cart items to order items format
     const orderItemsDto = tickedItems.map((cartItem) => ({
-      bookId: (cartItem.book as any)._id
-        ? (cartItem.book as any)._id.toString()
-        : cartItem.book.toString(),
+      productId: (cartItem.product as any)._id
+        ? (cartItem.product as any)._id.toString()
+        : cartItem.product.toString(),
       quantity: cartItem.quantity,
     }));
 
@@ -347,7 +338,7 @@ export class OrdersService {
 
     const order = await this.orderModel
       .findById(orderObjectId)
-      .populate('items.book', 'title coverImage')
+      .populate('items.product', 'title coverImage')
       .exec();
 
     if (!order) {
@@ -364,13 +355,13 @@ export class OrdersService {
       );
     }
 
-    // Process cover images for all books in order items
+    // Process cover images for all products in order items
     if (order.items) {
       await Promise.all(
         order.items.map(async (item: any) => {
-          if (item.book && item.book.coverImage) {
-            item.book.coverImage = await this.uploadService.processImageUrl(
-              item.book.coverImage,
+          if (item.product && item.product.coverImage) {
+            item.product.coverImage = await this.uploadService.processImageUrl(
+              item.product.coverImage,
             );
           }
         }),
@@ -580,6 +571,16 @@ export class OrdersService {
     ) {
       throw new BadRequestException(
         `Cannot cancel order with status: ${order.status}`,
+      );
+    }
+
+    // Restore stock for all items in the canceled order
+    for (const item of order.items) {
+      await this.productsService.update(item.product.toString(), {
+        $inc: { stock: item.quantity },
+      } as any);
+      console.log(
+        `[ORDERS] Restored ${item.quantity} stock for product ${item.product}`,
       );
     }
 

@@ -306,6 +306,7 @@ const DVDFormPage: React.FC = () => {
       if (element) {
         element.scrollIntoView({ behavior: "smooth", block: "center" });
       }
+
       return;
     }
 
@@ -375,10 +376,12 @@ const DVDFormPage: React.FC = () => {
     } catch (err) {
       console.error("Failed to save dvd:", err);
       setError("Failed to save dvd. Please try again.");
+
     } finally {
       setSaving(false);
     }
   };
+
 
   // Handle navigation back to dvd list
   const handleBack = () => {
@@ -387,6 +390,7 @@ const DVDFormPage: React.FC = () => {
 
   if (loading) {
     return (
+
       <Box
         sx={{
           display: "flex",
@@ -395,6 +399,7 @@ const DVDFormPage: React.FC = () => {
           height: "50vh",
         }}
       >
+
         <CircularProgress />
       </Box>
     );
@@ -402,6 +407,7 @@ const DVDFormPage: React.FC = () => {
 
   return (
     <Box>
+
       <Box
         sx={{
           display: "flex",
@@ -424,9 +430,11 @@ const DVDFormPage: React.FC = () => {
 
       {error && (
         <Alert severity="error" sx={{ mb: 3 }}>
+
           {error}
         </Alert>
       )}
+
 
       {success && (
         <Alert severity="success" sx={{ mb: 3 }}>
@@ -776,10 +784,13 @@ const DVDFormPage: React.FC = () => {
               }
             </Button>
           </Box>
+
         </Box>
       </Paper>
     </Box>
   );
 };
 
+
 export default DVDFormPage;
+

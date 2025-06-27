@@ -25,11 +25,11 @@ const PaymentMethodSelector: React.FC = () => {
   return (
     <Box>
       <Typography variant="h6" gutterBottom>
-        Phương thức thanh toán
+        Payment Method
       </Typography>
 
       <FormControl component="fieldset">
-        <FormLabel component="legend">Chọn phương thức thanh toán</FormLabel>
+        <FormLabel component="legend">Select payment method</FormLabel>
         <RadioGroup
           aria-label="payment-method"
           name="payment-method"
@@ -55,8 +55,8 @@ const PaymentMethodSelector: React.FC = () => {
                     <Box>
                       <Typography variant="subtitle1">VNPAY</Typography>
                       <Typography variant="body2" color="text.secondary">
-                        Thanh toán qua cổng VNPAY an toàn và bảo mật. Hỗ trợ
-                        nhiều ngân hàng và ví điện tử.
+                        Secure payment through VNPAY gateway. Supports multiple
+                        banks and e-wallets.
                       </Typography>
                     </Box>
                   </Stack>
@@ -81,11 +81,11 @@ const PaymentMethodSelector: React.FC = () => {
                     <LocalShippingIcon color="primary" />
                     <Box>
                       <Typography variant="subtitle1">
-                        Thanh toán khi nhận hàng
+                        Cash on Delivery
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
-                        Thanh toán bằng tiền mặt khi nhận hàng. Không cần thẻ
-                        ngân hàng hay ví điện tử.
+                        Pay with cash when receiving the order. No need for bank
+                        cards or e-wallets.
                       </Typography>
                     </Box>
                   </Stack>

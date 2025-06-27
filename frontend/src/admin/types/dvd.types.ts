@@ -1,3 +1,4 @@
+
 export interface DVD {
   _id: string;
   id?: string; // Optional for backward compatibility
@@ -20,10 +21,12 @@ export interface DVD {
   isAvailableRush: boolean; // Whether the DVD is available for rush delivery
 
 
+
 }
 
 export interface DVDFormData {
   title: string;
+
   originalPrice: number; // Base price before discount
   price: number; // Calculated field
   coverImage?: File | null;
@@ -37,10 +40,12 @@ export interface DVDFormData {
   releaseddate: string; // Release date of the DVD
   filmtype: string; // Type of film (e.g., movie, series)
   isAvailableRush: boolean; // Whether the DVD is available for rush delivery
+
 }
 
 export interface DVDFilters {
   search?: string;
+
   minPrice?: number;
   maxPrice?: number;
   inStock?: boolean;
@@ -53,8 +58,11 @@ export interface DVDFilters {
 
 export interface DVDListResponse {
   books: DVD[];
+
   total: number;
   page: number;
   limit: number;
   totalPages: number;
+
 }
+

@@ -5,8 +5,19 @@ export type OrderDocument = Order & Document;
 
 // Order item schema
 export class OrderItem {
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Book', required: true })
-  book: MongooseSchema.Types.ObjectId;
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    refPath: 'items.productType',
+    required: true,
+  })
+  product: MongooseSchema.Types.ObjectId;
+
+  @Prop({
+    type: String,
+    enum: ['product', 'BOOK', 'CD', 'DVD'],
+    default: 'product',
+  })
+  productType: string;
 
   @Prop({ required: true, min: 1 })
   quantity: number;
@@ -18,10 +29,10 @@ export class OrderItem {
   discount: number;
 
   @Prop()
-  title: string; // Store the book title at the time of purchase
+  title: string; // Store the product title at the time of purchase
 
   @Prop()
-  author: string; // Store the book author at the time of purchase
+  author: string; // Store the product author at the time of purchase (for books)
 }
 
 // Shipping address schema
@@ -49,6 +60,9 @@ export class ShippingAddress {
 
   @Prop()
   phoneNumber: string;
+
+  @Prop({ required: true })
+  email: string;
 }
 
 // Payment information schema - chỉ vnpay và cash

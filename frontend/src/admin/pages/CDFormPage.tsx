@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from "react";
+
 import { useNavigate, useParams } from "react-router-dom";
+
 import {
   Box,
   Typography,
   Paper,
   TextField,
   Button,
+
   Grid,
   FormControl,
   InputLabel,
@@ -301,11 +304,13 @@ const CDFormPage: React.FC = () => {
       if (element) {
         element.scrollIntoView({ behavior: "smooth", block: "center" });
       }
+
       return;
     }
 
     setSaving(true);
     setError(null);
+
     setSuccess(null);
 
     try {
@@ -368,18 +373,22 @@ const CDFormPage: React.FC = () => {
     } catch (err) {
       console.error("Failed to save cd:", err);
       setError("Failed to save cd. Please try again.");
+
     } finally {
       setSaving(false);
     }
   };
 
+
   // Handle navigation back to cd list
   const handleBack = () => {
     navigate("/admin/books");
+
   };
 
   if (loading) {
     return (
+
       <Box
         sx={{
           display: "flex",
@@ -388,6 +397,7 @@ const CDFormPage: React.FC = () => {
           height: "50vh",
         }}
       >
+
         <CircularProgress />
       </Box>
     );
@@ -395,6 +405,7 @@ const CDFormPage: React.FC = () => {
 
   return (
     <Box>
+
       <Box
         sx={{
           display: "flex",
@@ -417,9 +428,11 @@ const CDFormPage: React.FC = () => {
 
       {error && (
         <Alert severity="error" sx={{ mb: 3 }}>
+
           {error}
         </Alert>
       )}
+
 
       {success && (
         <Alert severity="success" sx={{ mb: 3 }}>
@@ -745,10 +758,13 @@ const CDFormPage: React.FC = () => {
               }
             </Button>
           </Box>
+
         </Box>
       </Paper>
     </Box>
   );
 };
 
+
 export default CDFormPage;
+

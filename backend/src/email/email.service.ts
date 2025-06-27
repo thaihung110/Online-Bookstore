@@ -96,8 +96,18 @@ export class EmailService {
         this.configService.get('FRONTEND_URL') || 'http://localhost:3002';
       const apiUrl = 'http://localhost:3001/api';
 
+      // Get recipient email from order shipping address or fallback to user email
+      const recipientEmail =
+        orderData.order?.shippingAddress?.email ||
+        orderData.order?.user?.email ||
+        'hungvt0110@outlook.com'; // Fallback only if no email is found
+
+      this.logger.log(
+        `Sending payment success email to: ${recipientEmail} for order ${orderData.order._id}`,
+      );
+
       const emailData: EmailData = {
-        to: 'hungvt0110@outlook.com', // Fixed recipient as requested
+        to: recipientEmail,
         subject: `✅ Thanh toán thành công - Đơn hàng #${orderData.order.orderNumber || orderData.order._id}`,
         template: 'payment-success',
         data: {
@@ -118,8 +128,18 @@ export class EmailService {
 
   async sendRefundConfirmationEmail(orderData: any): Promise<boolean> {
     try {
+      // Get recipient email from order shipping address or fallback to user email
+      const recipientEmail =
+        orderData.order?.shippingAddress?.email ||
+        orderData.order?.user?.email ||
+        'hungvt0110@outlook.com'; // Fallback only if no email is found
+
+      this.logger.log(
+        `Sending refund confirmation email to: ${recipientEmail} for order ${orderData.order._id}`,
+      );
+
       const emailData: EmailData = {
-        to: 'hungvt0110@outlook.com',
+        to: recipientEmail,
         subject: `💰 Hoàn tiền thành công - Đơn hàng #${orderData.order.orderNumber || orderData.order._id}`,
         template: 'refund-confirmation',
         data: {
@@ -165,7 +185,7 @@ export class EmailService {
       return `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2 style="color: #28a745;">✅ Thanh toán thành công!</h2>
-          <p>Chào bạn,</p>
+          <p>Chào ${data.order?.shippingAddress?.fullName || 'bạn'},</p>
           <p>Đơn hàng <strong>#${data.order.orderNumber || data.order._id}</strong> đã được thanh toán thành công.</p>
           
           <div style="background: #f8f9fa; padding: 20px; margin: 20px 0; border-radius: 5px;">
@@ -176,6 +196,7 @@ export class EmailService {
             <p><strong>Trạng thái:</strong> Đã thanh toán</p>
             <p><strong>Mã giao dịch:</strong> ${data.payment?.transactionId || 'N/A'}</p>
             <p><strong>Ngân hàng:</strong> ${data.payment?.bankCode || 'N/A'}</p>
+            ${data.order?.shippingAddress?.email ? `<p><strong>Email người nhận:</strong> ${data.order.shippingAddress.email}</p>` : ''}
           </div>
 
           <div style="margin: 30px 0;">

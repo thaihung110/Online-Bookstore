@@ -28,6 +28,7 @@ const buildQueryParams = (filters: CDFilters): string => {
   const params = new URLSearchParams();
 
   if (filters.search) params.append("search", filters.search);
+
   if (filters.minPrice !== undefined)
     params.append("minPrice", filters.minPrice.toString());
   if (filters.maxPrice !== undefined)
@@ -42,8 +43,10 @@ const buildQueryParams = (filters: CDFilters): string => {
   params.append("page", filters.page.toString());
   params.append("limit", filters.limit.toString());
 
+
   return params.toString();
 };
+
 
 
 
@@ -159,3 +162,4 @@ export const uploadCDCover = async (
     throw error;
   }
 };
+

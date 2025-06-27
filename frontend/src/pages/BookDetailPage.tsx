@@ -260,100 +260,148 @@ const BookDetailPage: React.FC = () => {
               {currentBook.genres && currentBook.genres.length > 0 && (
                 <Box
                   sx={{
-                    mb: 2,
-                    display: "flex",
-                    flexWrap: "wrap",
-                    gap: 0.75,
-                    alignItems: "center",
+                    mb: 3,
+                    p: 2,
+                    backgroundColor: "grey.50",
+                    borderRadius: 1,
+                    border: "1px solid",
+                    borderColor: "grey.200",
                   }}
                 >
                   <Typography
-                    variant="caption"
-                    color="text.secondary"
-                    sx={{ mr: 0.5 }}
+                    variant="subtitle2"
+                    color="text.primary"
+                    sx={{ mb: 1, fontWeight: 600 }}
                   >
-                    Categories:
+                    Genres
                   </Typography>
-                  {currentBook.genres.map((genre) => (
-                    <Chip
-                      key={genre}
-                      label={genre}
-                      component={RouterLink}
-                      to={`/books?genres=${encodeURIComponent(genre)}`}
-                      clickable
-                      color="info"
-                      variant="outlined"
-                      size="small"
-                    />
-                  ))}
+                  <Box
+                    sx={{
+                      display: "flex",
+                      flexWrap: "wrap",
+                      gap: 0.75,
+                    }}
+                  >
+                    {currentBook.genres.map((genre) => (
+                      <Chip
+                        key={genre}
+                        label={genre}
+                        component={RouterLink}
+                        to={`/books?genres=${encodeURIComponent(genre)}`}
+                        clickable
+                        color="primary"
+                        variant="outlined"
+                        size="small"
+                        sx={{ fontWeight: 500 }}
+                      />
+                    ))}
+                  </Box>
                 </Box>
               )}
 
               <Stack
-                direction="row"
+                direction={{ xs: "column", sm: "row" }}
                 spacing={2}
-                alignItems="center"
-                sx={{ my: 2 }}
+                alignItems={{ xs: "stretch", sm: "center" }}
+                sx={{ my: 3 }}
               >
                 {currentBook.rating !== undefined &&
                   currentBook.rating !== null &&
                   !isNaN(currentBook.rating) &&
                   currentBook.rating > 0 && (
-                    <Box sx={{ display: "flex", alignItems: "center" }}>
-                      <Rating
-                        value={currentBook.rating}
-                        precision={0.5}
-                        readOnly
-                      />
-                      <Typography
-                        variant="body1"
-                        sx={{ ml: 1, color: "text.secondary" }}
-                      >
-                        {safeToFixed(currentBook.rating, 1)}/5
-                      </Typography>
+                    <Box 
+                      sx={{ 
+                        display: "flex", 
+                        alignItems: "center",
+                        p: 2,
+                        backgroundColor: "primary.50",
+                        borderRadius: 1,
+                        border: "1px solid",
+                        borderColor: "primary.200",
+                      }}
+                    >
+                      <Box sx={{ display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
+                        <Box sx={{ display: "flex", alignItems: "center", mb: 0.5 }}>
+                          <Rating
+                            value={currentBook.rating}
+                            precision={0.5}
+                            readOnly
+                            size="medium"
+                          />
+                          <Typography
+                            variant="h6"
+                            sx={{ ml: 1, color: "text.primary", fontWeight: 600 }}
+                          >
+                            {safeToFixed(currentBook.rating, 1)}
+                          </Typography>
+                        </Box>
+                        {currentBook.totalRatings && currentBook.totalRatings > 0 && (
+                          <Typography
+                            variant="body2"
+                            sx={{ color: "text.secondary" }}
+                          >
+                            Based on {currentBook.totalRatings} {currentBook.totalRatings === 1 ? 'review' : 'reviews'}
+                          </Typography>
+                        )}
+                      </Box>
                     </Box>
                   )}
                 {currentBook.rating !== undefined &&
                 currentBook.rating !== null &&
                 !isNaN(currentBook.rating) &&
                 currentBook.price ? (
-                  <Divider orientation="vertical" flexItem />
+                  <Divider 
+                    orientation="vertical" 
+                    flexItem 
+                    sx={{ display: { xs: "none", sm: "block" } }}
+                  />
                 ) : null}
 
                 {/* Hiển thị giá và discount */}
-                <Box>
+                <Box
+                  sx={{
+                    p: 2,
+                    backgroundColor: isOnSale ? "error.50" : "success.50",
+                    borderRadius: 1,
+                    border: "1px solid",
+                    borderColor: isOnSale ? "error.200" : "success.200",
+                    minWidth: { sm: 200 },
+                  }}
+                >
                   {isOnSale ? (
-                    <Stack direction="row" spacing={1} alignItems="center">
-                      <Typography
-                        variant="h4"
-                        color="error.main"
-                        sx={{ fontWeight: "bold" }}
-                      >
-                        ${safeToFixed(priceUsd, 2)}
-                      </Typography>
+                    <Stack direction="column" spacing={1} alignItems="flex-start">
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        <Typography
+                          variant="h4"
+                          color="error.main"
+                          sx={{ fontWeight: "bold" }}
+                        >
+                          ${safeToFixed(priceUsd, 2)}
+                        </Typography>
 
-                      <Chip
-                        label={`-${currentBook.discountRate}%`}
-                        color="error"
-                        size="small"
-                        sx={{ fontWeight: "bold" }}
-                      />
-
+                        <Chip
+                          label={`-${currentBook.discountRate}%`}
+                          color="error"
+                          size="small"
+                          sx={{ fontWeight: "bold" }}
+                        />
+                      </Stack>
+                      
                       <Typography
-                        variant="h6"
+                        variant="body2"
                         color="text.secondary"
                         sx={{
                           textDecoration: "line-through",
                           fontWeight: "medium",
                         }}
                       >
-                        ${safeToFixed(originalPriceUsd, 2)}
+                        Original: ${safeToFixed(originalPriceUsd, 2)}
                       </Typography>
                     </Stack>
                   ) : (
                     <Typography
                       variant="h4"
-                      color="primary.main"
+                      color="success.main"
                       sx={{ fontWeight: "bold" }}
                     >
                       ${safeToFixed(priceUsd, 2)}
@@ -403,6 +451,7 @@ const BookDetailPage: React.FC = () => {
                       ? new Date(currentBook.publishedDate).toLocaleDateString()
                       : `${currentBook.publicationYear}`,
                   },
+                  { label: "Language", value: currentBook.language || "English" },
                   { label: "ISBN-13", value: currentBook.isbn },
                   { label: "Pages", value: currentBook.pageCount || "N/A" },
                 ].map((detail) =>

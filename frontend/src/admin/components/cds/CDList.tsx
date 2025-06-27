@@ -1,16 +1,19 @@
 import React from "react";
 import {
+
   Box,
   Button,
   Chip,
   CircularProgress,
   IconButton,
   Paper,
+
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
+
   TablePagination,
   TableRow,
   TableSortLabel,
@@ -32,10 +35,12 @@ interface CDListProps {
   filters: CDFilters;
   onFilterChange: (newFilters: Partial<CDFilters>) => void;
   onDeleteCD: (cd: CD) => void;
+
 }
 
 const CDList: React.FC<CDListProps> = ({
   cds,
+
   totalCDs,
   loading,
   filters,
@@ -311,3 +316,4 @@ const CDList: React.FC<CDListProps> = ({
 };
 
 export default CDList;
+
