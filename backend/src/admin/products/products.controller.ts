@@ -106,5 +106,41 @@ export class ProductsController {  constructor(
     return this.adminProductsService.delete(userId, id);
   }
 
-  
+
+  @Get('history')
+  @ApiOperation({ summary: 'Get product alter history of user' })
+  async getHistory(@GetUserId() userId: string) {
+    // return {
+    //   history: [
+    //     {
+    //       action: 'create',
+    //       timestamp: new Date().toISOString(),
+    //       productName: 'Product A',
+    //     },
+    //     {
+    //       action: 'update',
+    //       timestamp: new Date().toISOString(),
+    //       productName: 'Product B',
+    //     },
+    //     {
+    //       action: 'delete',
+    //       timestamp: new Date().toISOString(),
+    //       productName: 'Product B',
+    //     },
+
+    //     {
+    //       action: 'delete',
+    //       timestamp: new Date().toISOString(),
+    //       productName: 'Product D',
+    //     },
+    //     {
+    //       action: 'delete',
+    //       timestamp: new Date().toISOString(),
+    //       productName: 'Product E',
+    //     },
+    //   ]
+    // }
+
+    return this.adminProductsService.findHistory(userId);
+  }
 }

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
+
 import { 
   ProductActivityLog, 
   ProductActivityLogDocument,
@@ -36,6 +37,43 @@ export class ProductActivityLogService {
       .sort({ createdAt: -1 })
       .exec();
   }
+
+  async findByUserId(userId: string) {
+  const history = await this.productActivityLogModel.aggregate([
+    { $match: { userId: new Types.ObjectId(userId) } },
+    {
+      $lookup: {
+        from: 'products',
+        localField: 'productId',
+        foreignField: '_id',
+        as: 'product'
+      }
+    },
+    { $unwind: '$product' },
+    {
+      $project: {
+        title: '$product.title',
+        action: 1,
+        timestamp: 1,
+        _id: 0  // Loại bỏ _id nếu không cần
+      }
+    },
+    { $sort: { timestamp: -1 } },
+    // doi ten trong title thanh productName
+    {
+      $addFields: {
+        productName: '$title'
+      }
+    },
+    {
+      $project: {
+        title: 0  // Loại bỏ trường title nếu không cần
+      }
+    }
+  ]).exec();
+  
+  return history;
+}
 
   async findActivityByUserId(userId: string): Promise<ProductActivityLog[]> {
     return this.productActivityLogModel

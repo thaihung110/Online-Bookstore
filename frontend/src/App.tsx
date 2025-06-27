@@ -5,6 +5,7 @@ import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import DashboardPage from "./pages/DashboardPage";
+import DatabaseHistory from "./admin/pages/DatabaseHistory";
 import BooksPage from "./pages/BooksPage";
 import BookDetailPage from "./pages/BookDetailPage";
 import CartPage from "./pages/CartPage";
@@ -200,6 +201,7 @@ const App: React.FC = () => {
             <Route index element={<AdminDashboardPage />} />
             <Route path="books" element={<BookManagementPage />} />
             <Route path="books/add" element={<BookFormPage />} />
+            <Route path="books/history" element={<DatabaseHistory />} />
             <Route path="books/edit/:id" element={<BookFormPage />} />
             <Route path="users" element={<UserManagementPage />} />
             <Route path="users/add" element={<UserFormPage />} />

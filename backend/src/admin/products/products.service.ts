@@ -66,6 +66,17 @@ export class AdminProductsService<T extends Product, D extends ProductDocument> 
     };
   }
 
+
+  async findHistory(userId: string) {
+    const history = await this.productActivityLogService.findByUserId(userId);
+    if (!history || history.length === 0) {
+      throw new NotFoundException(`No activity history found for user ID ${userId}`);
+    }
+    // Process each history item to include product details
+    return history;
+    
+  }
+
   // Create a new product
   async create(userId: string, createProductDto: CreateProductDto): Promise<T> {
     // Handle coverImageUrl field - use it as coverImage if coverImage is not provided

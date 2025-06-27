@@ -157,6 +157,31 @@ const BookManagementPage: React.FC = () => {
         onDeleteBook={handleDeleteClick}
       />
 
+
+{/* View History Button - Add this section */}
+      <Box 
+        sx={{ 
+          display: "flex", 
+          justifyContent: "center", 
+          mt: 3, 
+          mb: 2 
+        }}
+      >
+        <Button
+          variant="outlined"
+          color="primary"
+          onClick={() => navigate("/admin/books/history")}
+          sx={{
+            px: 4,
+            py: 1.5,
+            fontSize: "1rem",
+            fontWeight: 500,
+          }}
+        >
+          View History
+        </Button>
+      </Box>
+
       {/* Delete Confirmation Dialog */}
       <BookDeleteDialog
         open={deleteDialogOpen}
@@ -165,6 +190,9 @@ const BookManagementPage: React.FC = () => {
         onClose={handleCloseDeleteDialog}
         onConfirm={handleConfirmDelete}
       />
+      
+
+
     </Box>
   );
 };
