@@ -78,14 +78,15 @@ const CDFormPage: React.FC = () => {
     title: "",
     artist: "",
     originalPrice: 0,
-    discountRate: 0,
     stock: 0,
+    price: 0, // Calculated field
     coverImage: null,
     coverImageUrl: "",
     albumTitle: "",
     trackList: "",
     category: "Pop", // Default category
-    releasedDate: new Date().toISOString().split("T")[0], // Default to today
+    releaseddate: new Date().toISOString().split("T")[0], // Default to today
+    isAvailableRush: true, // New field for rush delivery
   });
 
   // Validation state
@@ -117,15 +118,16 @@ const CDFormPage: React.FC = () => {
         setFormData({
           title: cdData.title || "",
           originalPrice: cdData.originalPrice || 0,
-          discountRate: cdData.discountRate || 0,
+          price: cdData.price || 0,
           stock: cdData.stock || 0,
           coverImageUrl: cdData.coverImage || "",
 
           artist: cdData.artist || "",
-            albumTitle: cdData.albumTitle || "",
-            trackList: cdData.trackList || "",
-            category: cdData.category || "Pop", // Default to Pop if not set
-            releasedDate: cdData.releasedDate || new Date().toISOString().split("T")[0], // Default to today
+          albumTitle: cdData.albumTitle || "",
+          trackList: cdData.trackList || "",
+          category: cdData.category || "Pop", // Default to Pop if not set
+          releaseddate: cdData.releaseddate || new Date().toISOString().split("T")[0], // Default to today
+          isAvailableRush: cdData.isAvailableRush !== undefined ? cdData.isAvailableRush : true, // Default to true if not set
         });
 
         // Set preview URL for existing image
@@ -189,6 +191,23 @@ const CDFormPage: React.FC = () => {
   };
 
 
+  const handleRushDeliveryChange = (e: SelectChangeEvent<string>) => {
+    const value = e.target.value === "true";
+    setFormData((prev) => ({ 
+      ...prev, 
+      isAvailableRush: value 
+    }));
+  
+    // Clear error if exists
+    if (errors.isAvailableRush) {
+      setErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors.isAvailableRush;
+        return newErrors;
+      });
+    }
+  };
+
 
   // Handle file selection (only preview, don't upload yet)
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -248,9 +267,13 @@ const CDFormPage: React.FC = () => {
       newErrors.originalPrice = "Original price must be greater than 0";
     }
 
-    // Discount rate validation
-    if (formData.discountRate < 0 || formData.discountRate > 100) {
-      newErrors.discountRate = "Discount rate must be between 0 and 100";
+    if (formData.price <= 0) {
+      newErrors.originalPrice = "Original price must be greater than 0";
+    }
+
+
+    if( (formData.price / formData.originalPrice) < 0.3 || (formData.price / formData.originalPrice) > 1.5) {
+      newErrors.originalPrice = "Price must be between 30% and 150% of the original price";
     }
 
     // Stock quantity validation
@@ -323,7 +346,7 @@ const CDFormPage: React.FC = () => {
         setFormData({
           title: "",
           originalPrice: 0,
-          discountRate: 0,
+          price: 0, // Reset price
           stock: 0,
           coverImage: null,
           coverImageUrl: "",
@@ -331,7 +354,8 @@ const CDFormPage: React.FC = () => {
             albumTitle:  "",
             trackList:  "",
             category: "Pop", // Default to Pop if not set
-            releasedDate:new Date().toISOString().split("T")[0], // Default to today
+            releaseddate:new Date().toISOString().split("T")[0], // Default to today
+          isAvailableRush: true, // Reset rush delivery option
         });
         setSelectedFile(null);
         setPreviewUrl("");
@@ -339,7 +363,7 @@ const CDFormPage: React.FC = () => {
 
       // Navigate back to cd list after a short delay
       setTimeout(() => {
-        navigate("/admin/cds");
+        navigate("/admin/books");
       }, 1500);
     } catch (err) {
       console.error("Failed to save cd:", err);
@@ -351,7 +375,7 @@ const CDFormPage: React.FC = () => {
 
   // Handle navigation back to cd list
   const handleBack = () => {
-    navigate("/admin/cds");
+    navigate("/admin/books");
   };
 
   if (loading) {
@@ -489,9 +513,9 @@ const CDFormPage: React.FC = () => {
                   <TextField
                     fullWidth
                     label="Released Date"
-                    name="releasedDate"
+                    name="releaseddate"
                     type="date"
-                    value={formData.releasedDate}
+                    value={formData.releaseddate}
                     onChange={handleInputChange}
                     InputLabelProps={{ shrink: true }}
                   />
@@ -544,13 +568,29 @@ const CDFormPage: React.FC = () => {
                 </Grid>
 
                 <Grid size={6}>
+                  <FormControl fullWidth>
+                    <InputLabel id="rush-delivery-label">Rush Delivery</InputLabel>
+                    <Select
+                      labelId="rush-delivery-label"
+                      name="isAvailableRush"
+                      value={formData.isAvailableRush ? "true" : "false"}
+                      onChange={handleRushDeliveryChange}
+                      label="Rush Delivery"
+                    >
+                      <MenuItem value="true">Available</MenuItem>
+                      <MenuItem value="false">Not Available</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+
+                {/* <Grid size={6}>
                   <TextField
                     fullWidth
                     required
                     label="Discount Rate (%)"
                     name="discountRate"
                     type="number"
-                    value={formData.discountRate === 0 ? "" : formData.discountRate}
+                    value={formData}
                     onChange={handleNumberInputChange}
                     InputProps={{
                       endAdornment: <Typography sx={{ ml: 1 }}>%</Typography>,
@@ -577,6 +617,25 @@ const CDFormPage: React.FC = () => {
                         backgroundColor: theme.palette.grey[100],
                       },
                     }}
+                  />
+                </Grid> */}
+
+
+                <Grid size={6}>
+                  <TextField
+                    fullWidth
+                    required
+                    label="Price"
+                    name="price"
+                    type="number"
+                    value={formData.price === 0 ? "" : formData.price}
+                    onChange={handleNumberInputChange}
+                    InputProps={{
+                      startAdornment: <Typography sx={{ mr: 1 }}>$</Typography>,
+                      inputProps: { min: 0, step: 0.01 },
+                    }}
+                    error={!!errors.price}
+                    helperText={errors.price || "The final price after any discounts"}
                   />
                 </Grid>
               </Grid>

@@ -9,14 +9,15 @@ import {
 } from "@mui/material";
 import { Add as AddIcon } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
-import { getBooks, deleteBook } from "../api/bookApi";
-import { Book, BookFilters } from "../types/book.types";
-import BookFilter from "../components/books/BookFilter";
-import BookList from "../components/books/BookList";
-import BookDeleteDialog from "../components/books/BookDeleteDialog";
+import { getProducts, deleteProduct } from "../api/productApi";
+import { Product, ProductFilters } from "../types/product.types";
+import ProductFilter from "../components/products/ProductFilter";
+// import ProductList from "../components/products/ProductList";
+import ProductDeleteDialog from "../components/products/ProductDeleteDialog";
+// import ProductList from "../components/products/productList";
 
 // Default filters
-const DEFAULT_FILTERS: BookFilters = {
+const DEFAULT_FILTERS: ProductFilters = {
   page: 1,
   limit: 10,
   search: "",
@@ -24,46 +25,46 @@ const DEFAULT_FILTERS: BookFilters = {
   sortOrder: "asc",
 };
 
-const BookManagementPage: React.FC = () => {
+const ProductManagementPage: React.FC = () => {
   const navigate = useNavigate();
 
-  // State for books and pagination
-  const [books, setBooks] = useState<Book[]>([]);
-  const [totalBooks, setTotalBooks] = useState(0);
+  // State for products and pagination
+  const [products, setProducts] = useState<Product[]>([]);
+  const [totalProducts, setTotalProducts] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // State for filters
-  const [filters, setFilters] = useState<BookFilters>(DEFAULT_FILTERS);
+  const [filters, setFilters] = useState<ProductFilters>(DEFAULT_FILTERS);
 
   // State for delete confirmation dialog
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [bookToDelete, setBookToDelete] = useState<Book | null>(null);
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
-  // Load books on component mount and when filters change
-  const loadBooks = useCallback(async () => {
+  // Load products on component mount and when filters change
+  const loadProducts = useCallback(async () => {
     setLoading(true);
     setError(null);
 
     try {
-      const response = await getBooks(filters);
-      setBooks(response.books);
-      setTotalBooks(response.total);
+      const response = await getProducts(filters);
+      setProducts(response.products);
+      setTotalProducts(response.total);
     } catch (err) {
-      console.error("Failed to load books:", err);
-      setError("Failed to load books. Please try again.");
+      console.error("Failed to load products:", err);
+      setError("Failed to load products. Please try again.");
     } finally {
       setLoading(false);
     }
   }, [filters]);
 
   useEffect(() => {
-    loadBooks();
-  }, [loadBooks]);
+    loadProducts();
+  }, [loadProducts]);
 
   // Handle filter changes
-  const handleFilterChange = (newFilters: Partial<BookFilters>) => {
+  const handleFilterChange = (newFilters: Partial<ProductFilters>) => {
     setFilters((prevFilters) => ({
       ...prevFilters,
       ...newFilters,
@@ -75,7 +76,7 @@ const BookManagementPage: React.FC = () => {
     setFilters(DEFAULT_FILTERS);
   };
 
-  // Handle add book
+  // Handle add product
   const handleAddBook = () => {
     navigate("/admin/books/add");
   };
@@ -89,32 +90,32 @@ const BookManagementPage: React.FC = () => {
     navigate("/admin/dvds/add");
   }
 
-  // Handle delete book
-  const handleDeleteClick = (book: Book) => {
-    setBookToDelete(book);
+//   Handle delete product
+  const handleDeleteClick = (product: Product) => {
+    setProductToDelete(product);
     setDeleteDialogOpen(true);
   };
 
   const handleCloseDeleteDialog = () => {
     setDeleteDialogOpen(false);
-    setBookToDelete(null);
+    setProductToDelete(null);
   };
 
   const handleConfirmDelete = async () => {
-    if (!bookToDelete) return;
+    if (!productToDelete) return;
 
     setDeleteLoading(true);
 
     try {
-      await deleteBook(bookToDelete._id);
+      await deleteProduct(productToDelete._id);
       setDeleteDialogOpen(false);
-      setBookToDelete(null);
+      setProductToDelete(null);
 
-      // Refresh the book list
-      loadBooks();
+      // Refresh the product list
+      loadProducts();
     } catch (err) {
-      console.error("Failed to delete book:", err);
-      setError("Failed to delete book. Please try again.");
+      console.error("Failed to delete product:", err);
+      setError("Failed to delete product. Please try again.");
     } finally {
       setDeleteLoading(false);
     }
@@ -131,7 +132,7 @@ const BookManagementPage: React.FC = () => {
         }}
       >
         <Typography variant="h4" component="h1">
-          Book Management
+          Product Management
         </Typography>
         <Button
           variant="contained"
@@ -171,20 +172,20 @@ const BookManagementPage: React.FC = () => {
       )}
 
       {/* Filters */}
-      <BookFilter
+      <ProductFilter
         filters={filters}
         onFilterChange={handleFilterChange}
         onResetFilters={handleResetFilters}
       />
 
-      {/* Book List */}
-      <BookList
-        books={books}
-        totalBooks={totalBooks}
+      {/* Product List */}
+      <ProductList
+        products={products}
+        totalProducts={totalProducts}
         loading={loading}
         filters={filters}
         onFilterChange={handleFilterChange}
-        onDeleteBook={handleDeleteClick}
+        onDeleteProduct={handleDeleteClick}
       />
 
 
@@ -213,9 +214,9 @@ const BookManagementPage: React.FC = () => {
       </Box>
 
       {/* Delete Confirmation Dialog */}
-      <BookDeleteDialog
+      <ProductDeleteDialog
         open={deleteDialogOpen}
-        book={bookToDelete}
+        product={productToDelete}
         loading={deleteLoading}
         onClose={handleCloseDeleteDialog}
         onConfirm={handleConfirmDelete}
@@ -227,4 +228,4 @@ const BookManagementPage: React.FC = () => {
   );
 };
 
-export default BookManagementPage;
+export default ProductManagementPage;

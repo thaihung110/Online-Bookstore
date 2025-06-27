@@ -13,7 +13,8 @@ export interface CD {
     albumTitle: string; // Tên album
     trackList: string; // Danh sách bài hát
     category: string; // Thể loại: Pop, Rock, Jazz, Classical, etc.
-    releasedDate: string; // Ngày phát hành (dạng chuỗi ISO 8601)
+    releaseddate: string; // Ngày phát hành (dạng chuỗi ISO 8601)
+    isAvailableRush: boolean; // New field for rush delivery
 }
 
 
@@ -25,10 +26,8 @@ export interface CD {
 
 export interface CDFormData {
   title: string;
-  
-  
+  price: number;
   originalPrice: number; // Base price before discount
-  discountRate: number; // Percentage discount (0-100)
   coverImage?: File | null;
   coverImageUrl?: string;
   stock: number;
@@ -36,7 +35,8 @@ export interface CDFormData {
     albumTitle: string; // Tên album
     trackList: string; // Danh sách bài hát
     category: string; // Thể loại: Pop, Rock, Jazz, Classical, etc.
-    releasedDate: string; // Ngày phát hành (dạng chuỗi ISO 8601)
+    releaseddate: string; // Ngày phát hành (dạng chuỗi ISO 8601)
+  isAvailableRush: boolean; // New field for rush delivery
 }
 
 export interface CDFilters {

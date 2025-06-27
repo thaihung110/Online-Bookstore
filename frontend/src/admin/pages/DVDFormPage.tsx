@@ -26,41 +26,23 @@ import {
   ArrowBack as ArrowBackIcon,
   CloudUpload as CloudUploadIcon,
 } from "@mui/icons-material";
-import { BookFormData } from "../types/book.types";
-import { getBook, createBook, updateBook, uploadBookCover } from "../api/bookApi";
+import { DVDFormData } from "../types/dvd.types";
+import { getDVD, createDVD, updateDVD, uploadDVDCover } from "../api/dvdApi";
 
-// Available book genres
-const AVAILABLE_GENRES = [
-  "Fiction",
-  "Non-fiction",
-  "Mystery",
-  "Thriller",
-  "Science Fiction",
-  "Fantasy",
-  "Romance",
-  "Biography",
-  "History",
-  "Self-help",
-  "Business",
-  "Cooking",
-  "Travel",
-  "Science",
-  "Technology",
-  "Philosophy",
-  "Poetry",
-  "Drama",
-  "Children",
-  "Young Adult",
-  "Dystopian",
-  "Classic",
-  "Horror",
-  "Adventure",
-  "Comics",
-  "Art",
-  "Religion",
-  "Sports",
-  "Music",
-  "Educational",
+// Available dvd genres
+const AVAILABLE_CATEGORY = [
+    "Pop",
+    "Rock",
+    "Hip-Hop",
+    "Jazz",
+    "Classical",
+    "Country",
+    "Electronic",
+    "R&B",
+    "Reggae",
+    "Blues",
+    "Folk",
+    "Latin",
 ];
 
 // Available languages
@@ -80,7 +62,7 @@ const AVAILABLE_LANGUAGES = [
   "Vietnamese",
 ];
 
-const BookFormPage: React.FC = () => {
+const DVDFormPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const theme = useTheme();
@@ -92,42 +74,24 @@ const BookFormPage: React.FC = () => {
   };
 
   // Form state
-  // const [formData, setFormData] = useState<BookFormData>({
-  //   title: "",
-  //   author: "",
-  //   description: "",
-  //   originalPrice: 0,
-  //   discountRate: 0,
-  //   isbn: "",
-  //   publicationYear: new Date().getFullYear(),
-  //   publisher: "",
-  //   pageCount: 0,
-  //   genres: [],
-  //   language: "English",
-  //   stock: 0,
-  //   coverImage: null,
-  //   coverImageUrl: "",
-  // });
-
-const [formData, setFormData] = useState<BookFormData>({
+  const [formData, setFormData] = useState<DVDFormData>({
     title: "",
-    author: "",
-    description: "",
     originalPrice: 0,
-    price: 0, // Calculated field
-    isbn: "",
-    publicationYear: new Date().getFullYear(),
-    publisher: "",
-    pageCount: 0,
-    genres: [],
-    language: "English",
     stock: 0,
+    price: 0, // Calculated field
     coverImage: null,
     coverImageUrl: "",
     isAvailableRush: true, // New field for rush delivery
+    disctype: "",
+    director: "",
+    runtime: 0, // Runtime in minutes
+    studio: "",
+    subtitles: "", // List of subtitles available
+    releaseddate: new Date().toISOString().split("T")[0], // Default to today
+    filmtype:"",
+
+
   });
-
-
 
   // Validation state
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -144,46 +108,45 @@ const [formData, setFormData] = useState<BookFormData>({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string>("");
 
-  // Load book data if in edit mode
+  // Load dvd data if in edit mode
   useEffect(() => {
-    const loadBook = async () => {
+    const loadDVD = async () => {
       if (!isEditMode) return;
 
       try {
         setLoading(true);
-        const bookData = await getBook(id);
+        const dvdData = await getDVD(id);
 
 
 
         setFormData({
-          title: bookData.title || "",
-          author: bookData.author || "",
-          description: bookData.description || "",
-          originalPrice: bookData.originalPrice || 0,
-          // price: calculateCurrentPrice(bookData.originalPrice, bookData.discountRate),
-          price: bookData.price || 0, // Use price directly if available
-          isbn: bookData.isbn || "",
-          publicationYear: bookData.publicationYear || new Date().getFullYear(),
-          publisher: bookData.publisher || "",
-          pageCount: bookData.pageCount || 0,
-          genres: bookData.genres || [],
-          language: bookData.language || "English",
-          stock: bookData.stock || 0,
-          coverImageUrl: bookData.coverImage || "",
-          isAvailableRush: bookData.isAvailableRush !== undefined ? bookData.isAvailableRush : true, // Default to true if not set
+          title: dvdData.title || "",
+          originalPrice: dvdData.originalPrice || 0,
+          price: dvdData.price || 0,
+          stock: dvdData.stock || 0,
+          coverImageUrl: dvdData.coverImage || "",
+          isAvailableRush: dvdData.isAvailableRush !== undefined ? dvdData.isAvailableRush : true, // Default to true if not set
+        disctype: dvdData.disctype || "",
+            director: dvdData.director || "",
+            runtime: dvdData.runtime || 0, // Runtime in minutes
+            studio: dvdData.studio || "",
+            subtitles: dvdData.subtitles || "", // List of subtitles available
+            releaseddate: dvdData.releaseddate || new Date().toISOString().split("T")[0], // Default to today
+            filmtype: dvdData.filmtype || "", // New field for film type
+
         });
 
         // Set preview URL for existing image
-        setPreviewUrl(bookData.coverImage || "");
+        setPreviewUrl(dvdData.coverImage || "");
       } catch (err) {
-        console.error("Failed to load book:", err);
-        setError("Failed to load book data. Please try again.");
+        console.error("Failed to load dvd:", err);
+        setError("Failed to load dvd data. Please try again.");
       } finally {
         setLoading(false);
       }
     };
 
-    loadBook();
+    loadDVD();
   }, [id, isEditMode]);
 
   // Handle form input changes
@@ -234,6 +197,23 @@ const [formData, setFormData] = useState<BookFormData>({
   };
 
 
+  const handleRushDeliveryChange = (e: SelectChangeEvent<string>) => {
+    const value = e.target.value === "true";
+    setFormData((prev) => ({ 
+      ...prev, 
+      isAvailableRush: value 
+    }));
+  
+    // Clear error if exists
+    if (errors.isAvailableRush) {
+      setErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors.isAvailableRush;
+        return newErrors;
+      });
+    }
+  };
+
 
   // Handle file selection (only preview, don't upload yet)
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -273,24 +253,6 @@ const [formData, setFormData] = useState<BookFormData>({
     }
   };
 
-
-  const handleRushDeliveryChange = (e: SelectChangeEvent<string>) => {
-  const value = e.target.value === "true";
-  setFormData((prev) => ({ 
-    ...prev, 
-    isAvailableRush: value 
-  }));
-
-  // Clear error if exists
-  if (errors.isAvailableRush) {
-    setErrors((prev) => {
-      const newErrors = { ...prev };
-      delete newErrors.isAvailableRush;
-      return newErrors;
-    });
-  }
-};
-
   // Validate form
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -299,61 +261,21 @@ const [formData, setFormData] = useState<BookFormData>({
     if (!formData.title.trim()) {
       newErrors.title = "Title is required";
     }
+   
 
-    // Author validation
-    if (!formData.author.trim()) {
-      newErrors.author = "Author is required";
-    }
-
-    // Description validation
-    if (!formData.description.trim()) {
-      newErrors.description = "Description is required";
-    }
 
     // Original price validation
     if (formData.originalPrice <= 0) {
       newErrors.originalPrice = "Original price must be greater than 0";
     }
 
-    // Discount rate validation
-    // if (formData.discountRate < 0 || formData.discountRate > 100) {
-    //   newErrors.discountRate = "Discount rate must be between 0 and 100";
-    // }
-
-    // ISBN validation
-    if (!formData.isbn.trim()) {
-      newErrors.isbn = "ISBN is required";
-    } else if (
-      !/^(?:\d[- ]?){13}$|^(?:\d[- ]?){10}$/.test(
-        formData.isbn.replace(/[- ]/g, "")
-      )
-    ) {
-      newErrors.isbn = "ISBN must be a valid 10 or 13 digit number";
+    if (formData.price <= 0) {
+      newErrors.originalPrice = "Original price must be greater than 0";
     }
 
-    // Publication year validation
-    if (!formData.publicationYear) {
-      newErrors.publicationYear = "Publication year is required";
-    } else {
-      const currentYear = new Date().getFullYear();
-      if (formData.publicationYear < 1000 || formData.publicationYear > currentYear + 5) {
-        newErrors.publicationYear = `Publication year must be between 1000 and ${currentYear + 5}`;
-      }
-    }
 
-    // Publisher validation
-    if (!formData.publisher.trim()) {
-      newErrors.publisher = "Publisher is required";
-    }
-
-    // Page count validation
-    if (formData.pageCount <= 0) {
-      newErrors.pageCount = "Page count must be greater than 0";
-    }
-
-    // Genres validation
-    if (formData.genres.length === 0) {
-      newErrors.genres = "Select at least one genre";
+    if( (formData.price / formData.originalPrice) < 0.3 || (formData.price / formData.originalPrice) > 1.5) {
+      newErrors.originalPrice = "Price must be between 30% and 150% of the original price";
     }
 
     // Stock quantity validation
@@ -361,10 +283,10 @@ const [formData, setFormData] = useState<BookFormData>({
       newErrors.stock = "Stock quantity cannot be negative";
     }
 
-    // Cover image validation for new books
-    if (!isEditMode && !selectedFile && !previewUrl) {
-      newErrors.coverImage = "Cover image is required";
-    }
+    // // Cover image validation for new dvds
+    // if (!isEditMode && !selectedFile && !previewUrl) {
+    //   newErrors.coverImage = "Cover image is required";
+    // }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -395,7 +317,7 @@ const [formData, setFormData] = useState<BookFormData>({
       if (selectedFile) {
         setUploading(true);
         try {
-          const s3Key = await uploadBookCover(selectedFile, (progress) => {
+          const s3Key = await uploadDVDCover(selectedFile, (progress) => {
             setUploadProgress(progress);
           });
 
@@ -404,8 +326,6 @@ const [formData, setFormData] = useState<BookFormData>({
             ...finalFormData,
             coverImage: null, // Remove file object
             coverImageUrl: s3Key, // Use S3 key
-            // tinh price = originalPrice * (1 - discountRate / 100)
-            // price: calculateCurrentPrice(finalFormData.originalPrice, finalFormData.discountRate),
           };
         } catch (uploadError) {
           console.error("Failed to upload image:", uploadError);
@@ -418,48 +338,46 @@ const [formData, setFormData] = useState<BookFormData>({
       }
 
       if (isEditMode) {
-        await updateBook(id, finalFormData);
-        setSuccess("Book updated successfully");
+        await updateDVD(id, finalFormData);
+        setSuccess("DVD updated successfully");
       } else {
-        await createBook(finalFormData);
-        setSuccess("Book created successfully");
+        await createDVD(finalFormData);
+        setSuccess("DVD created successfully");
 
         // Clear form data on successful creation
         setFormData({
           title: "",
-          author: "",
-          description: "",
           originalPrice: 0,
-          // discountRate: 0,
-          price: 0, // Reset calculated price
-          isbn: "",
-          publicationYear: new Date().getFullYear(),
-          publisher: "",
-          pageCount: 0,
-          genres: [],
-          language: "English",
+          price: 0, // Reset price
           stock: 0,
           coverImage: null,
           coverImageUrl: "",
           isAvailableRush: true, // Reset rush delivery option
+            disctype: "",
+            director: "",
+            runtime: 0, // Reset runtime
+            studio: "",
+            subtitles: "", // Reset subtitles
+            releaseddate: new Date().toISOString().split("T")[0], // Reset to today
+            filmtype: "", // Reset film type
         });
         setSelectedFile(null);
         setPreviewUrl("");
       }
 
-      // Navigate back to book list after a short delay
+      // Navigate back to dvd list after a short delay
       setTimeout(() => {
         navigate("/admin/books");
       }, 1500);
     } catch (err) {
-      console.error("Failed to save book:", err);
-      setError("Failed to save book. Please try again.");
+      console.error("Failed to save dvd:", err);
+      setError("Failed to save dvd. Please try again.");
     } finally {
       setSaving(false);
     }
   };
 
-  // Handle navigation back to book list
+  // Handle navigation back to dvd list
   const handleBack = () => {
     navigate("/admin/books");
   };
@@ -490,14 +408,14 @@ const [formData, setFormData] = useState<BookFormData>({
         }}
       >
         <Typography variant="h4" component="h1">
-          {isEditMode ? "Edit Book" : "Add New Book"}
+          {isEditMode ? "Edit DVD" : "Add New DVD"}
         </Typography>
         <Button
           variant="outlined"
           startIcon={<ArrowBackIcon />}
           onClick={handleBack}
         >
-          Back to Books
+          Back to DVD
         </Button>
       </Box>
 
@@ -519,7 +437,7 @@ const [formData, setFormData] = useState<BookFormData>({
             {/* Left Column */}
             <Grid size={{ xs: 12, md: 8 }}>
               <Typography variant="h6" gutterBottom>
-                Book Information
+                DVD Information
               </Typography>
               <Divider sx={{ mb: 3 }} />
 
@@ -537,141 +455,103 @@ const [formData, setFormData] = useState<BookFormData>({
                   />
                 </Grid>
 
-                <Grid size={12}>
-                  <TextField
-                    fullWidth
-                    required
-                    label="Author"
-                    name="author"
-                    value={formData.author}
-                    onChange={handleInputChange}
-                    error={!!errors.author}
-                    helperText={errors.author}
-                  />
-                </Grid>
+                
 
-                <Grid size={12}>
-                  <TextField
-                    fullWidth
-                    required
-                    label="Description"
-                    name="description"
-                    value={formData.description}
-                    onChange={handleInputChange}
-                    multiline
-                    rows={4}
-                    error={!!errors.description}
-                    helperText={errors.description}
-                  />
-                </Grid>
 
+        
+               
+            
                 <Grid size={6}>
                   <TextField
                     fullWidth
                     required
-                    label="ISBN"
-                    name="isbn"
-                    value={formData.isbn}
+                    label="Director"
+                    name="director"
+                    value={formData.director}
                     onChange={handleInputChange}
-                    error={!!errors.isbn}
-                    helperText={errors.isbn}
+                    error={!!errors.director}
+                    helperText={errors.director}
                   />
                 </Grid>
-
                 <Grid size={6}>
                   <TextField
                     fullWidth
                     required
-                    label="Publication Year"
-                    name="publicationYear"
+                    label="Runtime (minutes)"
+                    name="runtime"
                     type="number"
-                    value={formData.publicationYear === 0 ? "" : formData.publicationYear}
+                    value={formData.runtime === 0 ? "" : formData.runtime}
                     onChange={handleNumberInputChange}
-                    InputProps={{ inputProps: { min: 1000, max: new Date().getFullYear() + 5 } }}
-                    error={!!errors.publicationYear}
-                    helperText={errors.publicationYear || "Enter the year the book was published"}
+                    InputProps={{ inputProps: { min: 0 } }}
+                    error={!!errors.runtime}
+                    helperText={errors.runtime || "Duration in minutes"}
                   />
                 </Grid>
-
                 <Grid size={6}>
                   <TextField
                     fullWidth
                     required
-                    label="Publisher"
-                    name="publisher"
-                    value={formData.publisher}
+                    label="Studio"
+                    name="studio"
+                    value={formData.studio}
                     onChange={handleInputChange}
-                    error={!!errors.publisher}
-                    helperText={errors.publisher}
+                    error={!!errors.studio}
+                    helperText={errors.studio}
                   />
                 </Grid>
-
                 <Grid size={6}>
                   <TextField
                     fullWidth
                     required
-                    label="Page Count"
-                    name="pageCount"
-                    type="number"
-                    value={formData.pageCount === 0 ? "" : formData.pageCount}
-                    onChange={handleNumberInputChange}
-                    InputProps={{ inputProps: { min: 1 } }}
-                    error={!!errors.pageCount}
-                    helperText={errors.pageCount}
+                    label="Film Type"
+                    name="filmtype"
+                    value={formData.filmtype}
+                    onChange={handleInputChange}
+                    error={!!errors.filmtype}
+                    helperText={errors.filmtype || "e.g. Feature Film, Documentary"}
+                  />
+                </Grid>
+                <Grid size={6}>
+                  <TextField
+                    fullWidth
+                    required
+                    label="Disc Type"
+                    name="disctype"
+                    value={formData.disctype}
+                    onChange={handleInputChange}
+                    error={!!errors.disctype}
+                    helperText={errors.disctype || "e.g. DVD, Blu-ray"}
+                  />
+                </Grid>
+                <Grid size={6}>
+                  <TextField
+                    fullWidth
+                    required
+                    label="Released Date"
+                    name="releaseddate"
+                    type="date"
+                    value={formData.releaseddate}
+                    onChange={handleInputChange}
+                    InputLabelProps={{ shrink: true }}
+                    error={!!errors.releaseddate}
+                    helperText={errors.releaseddate || "Release date of the DVD"}
+                  />
+                </Grid>
+                <Grid size={6}>
+                  <TextField
+                    fullWidth
+                    label="Subtitles (comma separated)"
+                    name="subtitles"
+                    value={formData.subtitles}
+                    onChange={handleInputChange}
+                    error={!!errors.subtitles}
+                    helperText={errors.subtitles || "Available subtitles (e.g. English, Spanish)"}
                   />
                 </Grid>
 
-                <Grid size={12}>
-                  <FormControl fullWidth error={!!errors.genres}>
-                    <InputLabel id="genres-label">Genres</InputLabel>
-                    <Select
-                      labelId="genres-label"
-                      multiple
-                      required
-                      name="genres"
-                      value={formData.genres}
-                      onChange={handleSelectChange}
-                      input={<OutlinedInput label="Genres" />}
-                      renderValue={(selected) => (
-                        <Box
-                          sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}
-                        >
-                          {(selected as string[]).map((value) => (
-                            <Chip key={value} label={value} />
-                          ))}
-                        </Box>
-                      )}
-                    >
-                      {AVAILABLE_GENRES.map((genre) => (
-                        <MenuItem key={genre} value={genre}>
-                          {genre}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                    {errors.genres && (
-                      <FormHelperText>{errors.genres}</FormHelperText>
-                    )}
-                  </FormControl>
-                </Grid>
+                
 
-                <Grid size={6}>
-                  <FormControl fullWidth>
-                    <InputLabel id="language-label">Language</InputLabel>
-                    <Select
-                      labelId="language-label"
-                      name="language"
-                      value={formData.language}
-                      onChange={handleSelectChange}
-                      label="Language"
-                    >
-                      {AVAILABLE_LANGUAGES.map((language) => (
-                        <MenuItem key={language} value={language}>
-                          {language}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </Grid>
+                
 
                 <Grid size={6}>
                   <TextField
@@ -715,7 +595,6 @@ const [formData, setFormData] = useState<BookFormData>({
                   />
                 </Grid>
 
-                {/* them tickbox chon isAvailableRush = true hoac false */}
                 <Grid size={6}>
                   <FormControl fullWidth>
                     <InputLabel id="rush-delivery-label">Rush Delivery</InputLabel>
@@ -739,7 +618,7 @@ const [formData, setFormData] = useState<BookFormData>({
                     label="Discount Rate (%)"
                     name="discountRate"
                     type="number"
-                    value={formData.discountRate === 0 ? "" : formData.discountRate}
+                    value={formData}
                     onChange={handleNumberInputChange}
                     InputProps={{
                       endAdornment: <Typography sx={{ ml: 1 }}>%</Typography>,
@@ -750,9 +629,9 @@ const [formData, setFormData] = useState<BookFormData>({
                       errors.discountRate || "Percentage discount (0-100%)"
                     }
                   />
-                </Grid> */}
+                </Grid>
 
-                {/* <Grid size={6}>
+                <Grid size={6}>
                   <TextField
                     fullWidth
                     label="Current Price (Calculated)"
@@ -769,7 +648,7 @@ const [formData, setFormData] = useState<BookFormData>({
                   />
                 </Grid> */}
 
-                {/* nguoi dung nhap vao price */}
+
                 <Grid size={6}>
                   <TextField
                     fullWidth
@@ -819,7 +698,7 @@ const [formData, setFormData] = useState<BookFormData>({
                   <Box
                     component="img"
                     src={previewUrl || formData.coverImageUrl}
-                    alt="Book cover preview"
+                    alt="DVD cover preview"
                     sx={{
                       maxWidth: "100%",
                       maxHeight: 300,
@@ -889,8 +768,8 @@ const [formData, setFormData] = useState<BookFormData>({
                 : saving
                 ? "Saving..."
                 : isEditMode
-                ? "Update Book"
-                : "Add Book"
+                ? "Update DVD"
+                : "Add DVD"
               }
             </Button>
           </Box>
@@ -900,4 +779,4 @@ const [formData, setFormData] = useState<BookFormData>({
   );
 };
 
-export default BookFormPage;
+export default DVDFormPage;

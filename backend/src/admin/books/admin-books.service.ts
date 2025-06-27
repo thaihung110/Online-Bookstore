@@ -32,7 +32,7 @@ export interface BookFilters extends ProductFilters{
   sortOrder?: 'asc' | 'desc';
 }
 
-export interface BookListResponse {
+export interface BookListResponse{
   books: Book[];
   total: number;
   page: number;

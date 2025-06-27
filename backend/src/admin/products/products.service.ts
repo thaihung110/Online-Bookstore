@@ -295,67 +295,69 @@ export class AdminProductsService<T extends Product, D extends ProductDocument> 
 
 
   // Find all products with filtering
-  // async findAll(filters: ProductFilters): Promise<ProductListResponse> {
-  //   const {
-  //     page = 1,
-  //     limit = 10,
-  //     search,
-  //     minPrice,
-  //     maxPrice,
-  //     inStock,
-  //     sortBy = 'createdAt',
-  //     sortOrder = 'desc',
-  //   } = filters;
+  async findAllGeneral(filters: ProductFilters): Promise<ProductListResponse> {
+    const {
+      page = 1,
+      limit = 10,
+      search,
+      minPrice,
+      maxPrice,
+      inStock,
+      sortBy = 'createdAt',
+      sortOrder = 'desc',
+    } = filters;
 
-  //   const query: any = {};
+    const query: any = {};
 
-  //   // Apply filters
-  //   if (search) {
-  //     query.$or = [
-  //       { title: { $regex: search, $options: 'i' } },
-  //     ];
-  //   }
+    // Apply filters
+    if (search) {
+      query.$or = [
+        { title: { $regex: search, $options: 'i' } },
+      ];
+    }
 
-  //   if (minPrice !== undefined || maxPrice !== undefined) {
-  //     query.price = {};
-  //     if (minPrice !== undefined) {
-  //       query.price.$gte = minPrice;
-  //     }
-  //     if (maxPrice !== undefined) {
-  //       query.price.$lte = maxPrice;
-  //     }
-  //   }
+    if (minPrice !== undefined || maxPrice !== undefined) {
+      query.price = {};
+      if (minPrice !== undefined) {
+        query.price.$gte = minPrice;
+      }
+      if (maxPrice !== undefined) {
+        query.price.$lte = maxPrice;
+      }
+    }
+    query.isAvailable = true; // Only fetch available products
 
-  //   if (inStock !== undefined) {
-  //     query.stock = inStock ? { $gt: 0 } : { $lte: 0 };
-  //   }
+    if (inStock !== undefined) {
+      query.stock = inStock ? { $gt: 0 } : { $lte: 0 };
+    }
 
-  //   // Count total documents
-  //   const total = await this.productModel.countDocuments(query);
+    // Count total documents
+    const total = await this.productModel.countDocuments(query);
 
-  //   // Build sort object
-  //   const sort: any = {};
-  //   sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
+    // Build sort object
+    const sort: any = {};
+    sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
 
-  //   // Fetch paginated products
-  //   const products = await this.productModel
-  //     .find(query)
-  //     .sort(sort)
-  //     .skip((page - 1) * limit)
-  //     .limit(limit)
-  //     .exec();
+    // Fetch paginated products
+    const products = await this.productModel
+      .find(query)
+      .sort(sort)
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .select('title coverImage price originalPrice productType createdAt updatedAt isAvailable')
+      .exec();
 
-  //   // Process products with async image URL processing
-  //   const processedProducts = await Promise.all(
-  //     products.map(product => this.processProductData(product))
-  //   );
+    // Process products with async image URL processing
+    const processedProducts = await Promise.all(
+      products.map(product => this.processProductData(product))
+    );
 
-  //   return {
-  //     products: processedProducts,
-  //     total,
-  //     page,
-  //     limit,
-  //     totalPages: Math.ceil(total / limit),
-  //   };
-  // }
+    return {
+      products: processedProducts,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
 }

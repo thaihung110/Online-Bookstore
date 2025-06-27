@@ -18,6 +18,7 @@ export interface Book {
   rating: number;
   createdAt: string;
   updatedAt: string;
+  isAvailableRush: boolean;
 }
 
 // export interface BookFormData {
@@ -53,6 +54,7 @@ export interface BookFormData {
   genres: string[];
   language: string;
   stock: number;
+  isAvailableRush: boolean; // New field for rush delivery
 }
 
 export interface BookFilters {
