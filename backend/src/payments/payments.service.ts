@@ -685,11 +685,25 @@ export class PaymentsService {
   // Xử lý hoàn tiền
   async refundPayment(payment: PaymentDocument): Promise<{ success: boolean }> {
     try {
+      console.log(
+        `[PAYMENTS REFUND] Starting refund process for payment: ${payment._id}`,
+      );
+      console.log(
+        `[PAYMENTS REFUND] Order ID: ${payment.orderId}, Amount: ${payment.amount}`,
+      );
+
       if (payment.status !== PaymentStatus.COMPLETED) {
+        console.log(
+          `[PAYMENTS REFUND] ERROR: Payment status is ${payment.status}, must be COMPLETED`,
+        );
         throw new BadRequestException(
           'Chỉ có thể hoàn tiền cho thanh toán đã hoàn thành',
         );
       }
+
+      console.log(
+        `[PAYMENTS REFUND] Payment validation passed, proceeding with refund...`,
+      );
 
       this.paymentLoggingService.logPaymentFlow(PaymentLogType.REFUND_REQUEST, {
         paymentId: payment._id.toString(),
@@ -697,13 +711,23 @@ export class PaymentsService {
         amount: payment.amount,
       });
 
+      let refundResult = { success: false };
+
       if (payment.paymentMethod === PaymentMethod.VNPAY) {
-        const refundResult = await this.vnpayService.refund(payment);
+        console.log(`[PAYMENTS REFUND] Processing VNPay refund...`);
+        refundResult = await this.vnpayService.refund(payment);
+        console.log(
+          `[PAYMENTS REFUND] VNPay refund result: ${refundResult.success}`,
+        );
 
         if (refundResult.success) {
+          console.log(
+            `[PAYMENTS REFUND] VNPay refund successful, updating payment status...`,
+          );
           payment.status = PaymentStatus.REFUNDED;
           payment.refundedAt = new Date();
           await payment.save();
+          console.log(`[PAYMENTS REFUND] Payment status updated to REFUNDED`);
 
           await this.logAndCreateTransaction(
             payment._id.toString(),
@@ -723,26 +747,68 @@ export class PaymentsService {
             },
           );
         }
+      } else {
+        console.log(
+          `[PAYMENTS REFUND] Processing non-VNPay refund (${payment.paymentMethod})...`,
+        );
+        // For other payment methods, just mark as refunded
+        payment.status = PaymentStatus.REFUNDED;
+        payment.refundedAt = new Date();
+        await payment.save();
+        console.log(
+          `[PAYMENTS REFUND] Payment status updated to REFUNDED for ${payment.paymentMethod}`,
+        );
 
-        return refundResult;
+        await this.logAndCreateTransaction(
+          payment._id.toString(),
+          `REFUND_${Date.now()}`,
+          payment.amount,
+          TransactionType.REFUND,
+          TransactionStatus.SUCCESS,
+          PaymentGateway.BANK,
+        );
+
+        refundResult = { success: true };
       }
 
-      // For other payment methods, just mark as refunded
-      payment.status = PaymentStatus.REFUNDED;
-      payment.refundedAt = new Date();
-      await payment.save();
+      // If payment refund was successful, cancel the corresponding order to restore stock
+      if (refundResult.success) {
+        console.log(
+          `[PAYMENTS REFUND] Payment refund successful, proceeding to cancel order...`,
+        );
+        try {
+          console.log(
+            `[PAYMENTS REFUND] Calling ordersService.cancelOrder for order: ${payment.orderId}`,
+          );
+          await this.ordersService.cancelOrder(
+            payment.orderId,
+            `Order refunded - Payment ${payment._id} refunded on ${new Date().toISOString()}`,
+          );
+          console.log(
+            `[PAYMENTS REFUND] ✅ Order ${payment.orderId} successfully canceled and stock restored`,
+          );
+        } catch (orderError) {
+          console.error(
+            `[PAYMENTS REFUND] ❌ Failed to cancel order ${payment.orderId}:`,
+            orderError,
+          );
+          console.error(
+            `[PAYMENTS REFUND] Payment was refunded but order cancellation failed!`,
+          );
+          // Log the error but don't fail the refund since payment was successful
+          this.logger.error(
+            `Failed to cancel order ${payment.orderId} after successful payment refund: ${orderError.message}`,
+            orderError.stack,
+          );
+        }
+      }
 
-      await this.logAndCreateTransaction(
-        payment._id.toString(),
-        `REFUND_${Date.now()}`,
-        payment.amount,
-        TransactionType.REFUND,
-        TransactionStatus.SUCCESS,
-        PaymentGateway.BANK,
+      console.log(
+        `[PAYMENTS REFUND] Refund process completed. Final result: ${refundResult.success}`,
       );
-
-      return { success: true };
+      return refundResult;
     } catch (error) {
+      console.error(`[PAYMENTS REFUND] ERROR during refund process:`, error);
       this.paymentLoggingService.logPaymentFlow(PaymentLogType.PAYMENT_ERROR, {
         paymentId: payment._id.toString(),
         orderId: payment.orderId,

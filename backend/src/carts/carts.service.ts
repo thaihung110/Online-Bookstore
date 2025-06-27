@@ -593,21 +593,45 @@ export class CartsService {
   ): Promise<CartDocument> {
     const productObjectId = new Types.ObjectId(productId);
 
-    // Use atomic update with MongoDB operators instead of loading and saving
-    const updateFields: any = {};
-
+    // If quantity is being updated, delegate to the proper stock-aware method
     if (updateDto.quantity !== undefined) {
-      if (updateDto.quantity < 1) {
-        throw new BadRequestException('Quantity must be >= 1');
+      console.log(
+        '[CartService] updateItemInCart: quantity update detected, delegating to updateItemQuantity for stock management',
+      );
+
+      // First update the quantity (which handles stock properly)
+      const quantityUpdatedCart = await this.updateItemQuantity(
+        userId,
+        productId,
+        updateDto.quantity,
+      );
+
+      // If only quantity was being updated, return the result
+      if (updateDto.isTicked === undefined) {
+        return quantityUpdatedCart;
       }
-      updateFields['items.$.quantity'] = updateDto.quantity;
+
+      // If isTicked is also being updated, continue with just the isTicked update
+      // Note: quantity has already been updated above
+      updateDto = { isTicked: updateDto.isTicked }; // Remove quantity from updateDto
     }
+
+    // Handle isTicked update only (no stock implications)
+    const updateFields: any = {};
 
     if (updateDto.isTicked !== undefined) {
       updateFields['items.$.isTicked'] = updateDto.isTicked;
     }
 
-    // Perform atomic update
+    // If no fields to update (shouldn't happen), just return current cart
+    if (Object.keys(updateFields).length === 0) {
+      return this.cartModel.findOne({ user: userId }).populate({
+        path: 'items.product',
+        model: 'Product',
+      });
+    }
+
+    // Perform atomic update for isTicked only
     const result = await this.cartModel.findOneAndUpdate(
       {
         user: userId,
