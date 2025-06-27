@@ -9,6 +9,8 @@ import { BooksModule } from './books';
 import { ProductsModule } from './products/products.module';
 import { CartsModule } from './carts';
 import { OrdersModule } from './orders';
+import { CDsModule } from './cds';
+import { DVDsModule } from './dvds';
 
 import { PaymentsModule } from './payments/payments.module';
 import { AdminModule } from './admin/admin.module';
@@ -76,6 +78,8 @@ import { RecommendProxyMiddleware } from './proxy/recommend-proxy.middleware';
     AdminModule,
     UploadModule,
     EmailModule,
+    CDsModule,
+    DVDsModule,
   ],
   controllers: [AppController],
   providers: [

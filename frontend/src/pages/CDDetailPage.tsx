@@ -1,11 +1,10 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import {
   Container,
   Box,
   Typography,
   Paper,
   Button,
-  Rating,
   Chip,
   Divider,
   CircularProgress,
@@ -18,62 +17,52 @@ import { useParams, useNavigate, Link as RouterLink } from "react-router-dom";
 import { useTheme } from "@mui/material/styles";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
-
 import PaymentIcon from "@mui/icons-material/Payment";
+import AlbumIcon from "@mui/icons-material/Album";
 
 import MainLayout from "../components/layouts/MainLayout";
-import { useBookStore } from "../store/bookStore";
+import { useCDStore } from "../store/cdStore";
 import { useCartStore } from "../store/cartStore";
 
-import { buyNow } from "../utils/checkout";
-import { Book } from "../api/books";
-
-const BookDetailPage: React.FC = () => {
+const CDDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const theme = useTheme();
 
   const {
-    currentBook,
-    fetchBookById,
-    isLoading: bookLoading,
-    error: bookError,
-  } = useBookStore();
+    selectedCD,
+    fetchCDById,
+    isLoading: cdLoading,
+    error: cdError,
+  } = useCDStore();
   const { addItem, isInCart } = useCartStore();
-
 
   useEffect(() => {
     if (id) {
-      fetchBookById(id);
+      fetchCDById(id);
     }
     // Scroll to top when component mounts or ID changes
     window.scrollTo(0, 0);
-  }, [id, fetchBookById]);
+  }, [id, fetchCDById]);
 
   const handleAddToCart = () => {
-    if (currentBook) {
-      const bookId = currentBook._id || currentBook.id; // Use MongoDB _id for backend
-      console.log('[BookDetailPage] Adding to cart with bookId:', bookId, 'book:', currentBook);
-      addItem(bookId, 1);
+    if (selectedCD) {
+      const productId = selectedCD._id || selectedCD.id; // Use MongoDB _id for backend
+      console.log('[CDDetailPage] Adding to cart with productId:', productId, 'cd:', selectedCD);
+      addItem(productId, 1);
     }
   };
 
-  // Adapter cho buyNow
-  const addItemAdapter = (book: Book, quantity: number = 1) => {
-    const bookId = book._id || book.id; // Use MongoDB _id for backend
-    console.log('[BookDetailPage] Buy now with bookId:', bookId, 'book:', book);
-    return addItem(bookId, quantity);
-  };
-
   const handleBuyNow = async () => {
-    if (currentBook) {
+    if (selectedCD) {
       try {
-        // Nếu chưa có trong cart thì thêm vào
-        const frontendId = currentBook.id; // Use frontend id for isInCart check
+        // If not in cart, add it first
+        const frontendId = selectedCD.id; // Use frontend id for isInCart check
         if (!isInCart(frontendId)) {
-          await addItemAdapter(currentBook, 1);
+          const productId = selectedCD._id || selectedCD.id;
+          await addItem(productId, 1);
         }
-        // Luôn set localStorage trước khi chuyển trang
+        // Set localStorage before navigating to cart
         const selected = { [frontendId]: true };
         localStorage.setItem("cart-selected-items", JSON.stringify(selected));
         localStorage.setItem("cart-buynow-id", frontendId);
@@ -84,13 +73,11 @@ const BookDetailPage: React.FC = () => {
     }
   };
 
-
-
   const handleGoBack = () => {
     navigate(-1);
   };
 
-  if (bookLoading) {
+  if (cdLoading) {
     return (
       <MainLayout>
         <Container maxWidth="lg" sx={{ py: 4 }}>
@@ -109,7 +96,7 @@ const BookDetailPage: React.FC = () => {
     );
   }
 
-  if (bookError || !currentBook) {
+  if (cdError || !selectedCD) {
     return (
       <MainLayout>
         <Container maxWidth="lg" sx={{ py: 4 }}>
@@ -122,8 +109,8 @@ const BookDetailPage: React.FC = () => {
               Back to Results
             </Button>
             <Alert severity="error" sx={{ mt: 2 }}>
-              {bookError ||
-                "Sorry, the book you are looking for could not be found."}
+              {cdError ||
+                "Sorry, the CD you are looking for could not be found."}
             </Alert>
           </Box>
         </Container>
@@ -131,41 +118,50 @@ const BookDetailPage: React.FC = () => {
     );
   }
 
-  // Log thông tin sách để debug
-  console.log("Book detail data:", currentBook);
+  // Log CD data for debug
+  console.log("CD detail data:", selectedCD);
 
   // Placeholder image if no cover is available
   const coverImage =
-    currentBook.coverImage ||
-    "https://via.placeholder.com/400x600?text=No+Image+Available";
+    selectedCD.coverImage ||
+    "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjRjVGNUY1Ii8+CjxjaXJjbGUgY3g9IjEwMCIgY3k9IjEwMCIgcj0iODAiIGZpbGw9IiNDQ0NDQ0MiLz4KPGNpcmNsZSBjeD0iMTAwIiBjeT0iMTAwIiByPSIxNSIgZmlsbD0iI0Y1RjVGNSIvPgo8dGV4dCB4PSIxMDAiIHk9IjE1MCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzk5OTk5OSIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjEyIj5ObyBJbWFnZTwvdGV4dD4KPC9zdmc+";
 
-  // Kiểm tra xem sách có đang giảm giá không với xử lý an toàn
+  // Check if CD is on sale
   const hasDiscountRate =
-    currentBook.discountRate !== undefined && currentBook.discountRate !== null;
-  const isOnSale = hasDiscountRate && currentBook.discountRate > 0;
+    selectedCD.discountRate !== undefined && selectedCD.discountRate !== null;
+  const isOnSale = hasDiscountRate && selectedCD.discountRate > 0;
 
-  // Đảm bảo có originalPrice hoặc fallback về price
+  // Ensure original price or fallback to price
   const originalPrice =
-    currentBook.originalPrice !== undefined
-      ? currentBook.originalPrice
-      : currentBook.price;
+    selectedCD.originalPrice !== undefined
+      ? selectedCD.originalPrice
+      : selectedCD.price;
 
-  // Debug: Log giá trị đầu vào
+  // Debug: Log price values
   console.log(
-    "BookDetailPage:",
-    currentBook.title,
+    "CDDetailPage:",
+    selectedCD.title,
     "price:",
-    currentBook.price,
+    selectedCD.price,
     "originalPrice:",
     originalPrice
   );
-  // Không chuyển đổi giá nữa, chỉ hiển thị trực tiếp
-  const priceUsd = currentBook.price;
+
+  const priceUsd = selectedCD.price;
   const originalPriceUsd = originalPrice;
 
   // Helper safe format
   const safeToFixed = (val: any, digits = 2) =>
     typeof val === "number" && !isNaN(val) ? val.toFixed(digits) : "N/A";
+
+  // Format release date
+  const formatReleaseDate = (date: string | Date) => {
+    try {
+      return new Date(date).toLocaleDateString();
+    } catch {
+      return String(date);
+    }
+  };
 
   return (
     <MainLayout>
@@ -195,7 +191,7 @@ const BookDetailPage: React.FC = () => {
                 <Box
                   component="img"
                   src={coverImage}
-                  alt={currentBook.title}
+                  alt={selectedCD.title}
                   sx={{
                     width: "100%",
                     maxWidth: 320,
@@ -215,9 +211,9 @@ const BookDetailPage: React.FC = () => {
                     size="large"
                     startIcon={<ShoppingCartIcon />}
                     onClick={handleAddToCart}
-                    disabled={isInCart(currentBook.id)}
+                    disabled={isInCart(selectedCD.id)}
                   >
-                    {isInCart(currentBook.id)
+                    {isInCart(selectedCD.id)
                       ? "Already in Cart"
                       : "Add to Cart"}
                   </Button>
@@ -231,7 +227,6 @@ const BookDetailPage: React.FC = () => {
                   >
                     Buy Now
                   </Button>
-
                 </Stack>
               </Box>
             </Box>
@@ -243,165 +238,94 @@ const BookDetailPage: React.FC = () => {
                 gutterBottom
                 sx={{ fontWeight: 700, lineHeight: 1.2 }}
               >
-                {currentBook.title}
+                {selectedCD.title}
               </Typography>
               <Typography variant="h5" color="text.secondary" sx={{ mb: 1 }}>
                 By:{" "}
                 <MuiLink
                   component={RouterLink}
-                  to={`/books?author=${encodeURIComponent(currentBook.author)}`}
+                  to={`/cds?artist=${encodeURIComponent(selectedCD.artist)}`}
                   underline="hover"
                   color="inherit"
                 >
-                  {currentBook.author}
+                  {selectedCD.artist}
                 </MuiLink>
               </Typography>
 
-              {currentBook.genres && currentBook.genres.length > 0 && (
+              <Typography variant="h6" color="text.secondary" sx={{ mb: 2, fontStyle: "italic" }}>
+                Album: {selectedCD.albumTitle}
+              </Typography>
+
+              {selectedCD.category && (
                 <Box
                   sx={{
-                    mb: 3,
-                    p: 2,
-                    backgroundColor: "grey.50",
-                    borderRadius: 1,
-                    border: "1px solid",
-                    borderColor: "grey.200",
+                    mb: 2,
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: 0.75,
+                    alignItems: "center",
                   }}
                 >
                   <Typography
-                    variant="subtitle2"
-                    color="text.primary"
-                    sx={{ mb: 1, fontWeight: 600 }}
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{ mr: 0.5 }}
                   >
-                    Genres
+                    Category:
                   </Typography>
-                  <Box
-                    sx={{
-                      display: "flex",
-                      flexWrap: "wrap",
-                      gap: 0.75,
-                    }}
-                  >
-                    {currentBook.genres.map((genre) => (
-                      <Chip
-                        key={genre}
-                        label={genre}
-                        component={RouterLink}
-                        to={`/books?genres=${encodeURIComponent(genre)}`}
-                        clickable
-                        color="primary"
-                        variant="outlined"
-                        size="small"
-                        sx={{ fontWeight: 500 }}
-                      />
-                    ))}
-                  </Box>
+                  <Chip
+                    label={selectedCD.category}
+                    component={RouterLink}
+                    to={`/cds?categories=${encodeURIComponent(selectedCD.category)}`}
+                    clickable
+                    color="info"
+                    variant="outlined"
+                    size="small"
+                    icon={<AlbumIcon />}
+                  />
                 </Box>
               )}
 
               <Stack
-                direction={{ xs: "column", sm: "row" }}
+                direction="row"
                 spacing={2}
-                alignItems={{ xs: "stretch", sm: "center" }}
-                sx={{ my: 3 }}
+                alignItems="center"
+                sx={{ my: 2 }}
               >
-                {currentBook.rating !== undefined &&
-                  currentBook.rating !== null &&
-                  !isNaN(currentBook.rating) &&
-                  currentBook.rating > 0 && (
-                    <Box 
-                      sx={{ 
-                        display: "flex", 
-                        alignItems: "center",
-                        p: 2,
-                        backgroundColor: "primary.50",
-                        borderRadius: 1,
-                        border: "1px solid",
-                        borderColor: "primary.200",
-                      }}
-                    >
-                      <Box sx={{ display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
-                        <Box sx={{ display: "flex", alignItems: "center", mb: 0.5 }}>
-                          <Rating
-                            value={currentBook.rating}
-                            precision={0.5}
-                            readOnly
-                            size="medium"
-                          />
-                          <Typography
-                            variant="h6"
-                            sx={{ ml: 1, color: "text.primary", fontWeight: 600 }}
-                          >
-                            {safeToFixed(currentBook.rating, 1)}
-                          </Typography>
-                        </Box>
-                        {currentBook.totalRatings && currentBook.totalRatings > 0 && (
-                          <Typography
-                            variant="body2"
-                            sx={{ color: "text.secondary" }}
-                          >
-                            Based on {currentBook.totalRatings} {currentBook.totalRatings === 1 ? 'review' : 'reviews'}
-                          </Typography>
-                        )}
-                      </Box>
-                    </Box>
-                  )}
-                {currentBook.rating !== undefined &&
-                currentBook.rating !== null &&
-                !isNaN(currentBook.rating) &&
-                currentBook.price ? (
-                  <Divider 
-                    orientation="vertical" 
-                    flexItem 
-                    sx={{ display: { xs: "none", sm: "block" } }}
-                  />
-                ) : null}
-
-                {/* Hiển thị giá và discount */}
-                <Box
-                  sx={{
-                    p: 2,
-                    backgroundColor: isOnSale ? "error.50" : "success.50",
-                    borderRadius: 1,
-                    border: "1px solid",
-                    borderColor: isOnSale ? "error.200" : "success.200",
-                    minWidth: { sm: 200 },
-                  }}
-                >
+                {/* Display price and discount */}
+                <Box>
                   {isOnSale ? (
-                    <Stack direction="column" spacing={1} alignItems="flex-start">
-                      <Stack direction="row" spacing={1} alignItems="center">
-                        <Typography
-                          variant="h4"
-                          color="error.main"
-                          sx={{ fontWeight: "bold" }}
-                        >
-                          ${safeToFixed(priceUsd, 2)}
-                        </Typography>
-
-                        <Chip
-                          label={`-${currentBook.discountRate}%`}
-                          color="error"
-                          size="small"
-                          sx={{ fontWeight: "bold" }}
-                        />
-                      </Stack>
-                      
+                    <Stack direction="row" spacing={1} alignItems="center">
                       <Typography
-                        variant="body2"
+                        variant="h4"
+                        color="error.main"
+                        sx={{ fontWeight: "bold" }}
+                      >
+                        ${safeToFixed(priceUsd, 2)}
+                      </Typography>
+
+                      <Chip
+                        label={`-${selectedCD.discountRate}%`}
+                        color="error"
+                        size="small"
+                        sx={{ fontWeight: "bold" }}
+                      />
+
+                      <Typography
+                        variant="h6"
                         color="text.secondary"
                         sx={{
                           textDecoration: "line-through",
                           fontWeight: "medium",
                         }}
                       >
-                        Original: ${safeToFixed(originalPriceUsd, 2)}
+                        ${safeToFixed(originalPriceUsd, 2)}
                       </Typography>
                     </Stack>
                   ) : (
                     <Typography
                       variant="h4"
-                      color="success.main"
+                      color="primary.main"
                       sx={{ fontWeight: "bold" }}
                     >
                       ${safeToFixed(priceUsd, 2)}
@@ -417,7 +341,7 @@ const BookDetailPage: React.FC = () => {
                 gutterBottom
                 sx={{ fontWeight: "medium" }}
               >
-                Book Description
+                Album Description
               </Typography>
               <Box
                 sx={{
@@ -430,7 +354,33 @@ const BookDetailPage: React.FC = () => {
                   whiteSpace: "pre-wrap",
                 }}
               >
-                {currentBook.description || "No description available."}
+                {selectedCD.description || "No description available."}
+              </Box>
+
+              <Divider sx={{ my: 3 }} />
+
+              <Typography
+                variant="h6"
+                gutterBottom
+                sx={{ fontWeight: "medium" }}
+              >
+                Track List
+              </Typography>
+              <Box
+                sx={{
+                  maxHeight: 200,
+                  overflowY: "auto",
+                  pr: 1,
+                  mb: 3,
+                  typography: "body1",
+                  lineHeight: 1.75,
+                  whiteSpace: "pre-wrap",
+                  bgcolor: "grey.50",
+                  p: 2,
+                  borderRadius: 1,
+                }}
+              >
+                {selectedCD.trackList || "Track list not available."}
               </Box>
 
               <Divider sx={{ my: 3 }} />
@@ -444,16 +394,14 @@ const BookDetailPage: React.FC = () => {
               </Typography>
               <Box sx={{ maxWidth: { xs: "100%", sm: 600 } }}>
                 {[
-                  { label: "Publisher", value: currentBook.publisher },
+                  { label: "Artist", value: selectedCD.artist },
+                  { label: "Album Title", value: selectedCD.albumTitle },
+                  { label: "Category", value: selectedCD.category },
                   {
-                    label: "Published Date",
-                    value: currentBook.publishedDate
-                      ? new Date(currentBook.publishedDate).toLocaleDateString()
-                      : `${currentBook.publicationYear}`,
+                    label: "Release Date",
+                    value: selectedCD.releaseddate ? formatReleaseDate(selectedCD.releaseddate) : "N/A",
                   },
-                  { label: "Language", value: currentBook.language || "English" },
-                  { label: "ISBN-13", value: currentBook.isbn },
-                  { label: "Pages", value: currentBook.pageCount || "N/A" },
+                  { label: "Stock", value: selectedCD.stock || "N/A" },
                 ].map((detail) =>
                   detail.value ? (
                     <Box
@@ -484,4 +432,4 @@ const BookDetailPage: React.FC = () => {
   );
 };
 
-export default BookDetailPage;
+export default CDDetailPage;

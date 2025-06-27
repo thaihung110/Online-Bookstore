@@ -8,6 +8,10 @@ import DashboardPage from "./pages/DashboardPage";
 import BooksPage from "./pages/BooksPage";
 import BookDetailPage from "./pages/BookDetailPage";
 import CartPage from "./pages/CartPage";
+import CDsPage from "./pages/CDsPage";
+import CDDetailPage from "./pages/CDDetailPage";
+import DVDsPage from "./pages/DVDsPage";
+import DVDDetailPage from "./pages/DVDDetailPage";
 
 import ProtectedRoute from "./routes/ProtectedRoute";
 import { useAuthStore } from "./store/authStore";
@@ -29,6 +33,10 @@ import {
   UserFormPage,
   OrdersManagementPage,
   PromotionsManagementPage,
+  CDManagementPage,
+  CDFormPage,
+  DVDManagementPage,
+  DVDFormPage,
 } from "./admin/pages";
 import AdminProtectedRoute from "./admin/components/layout/AdminProtectedRoute";
 import AdminLayout from "./admin/components/layout/AdminLayout";
@@ -168,6 +176,10 @@ const App: React.FC = () => {
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/books" element={<BooksPage />} />
           <Route path="/books/:id" element={<BookDetailPage />} />
+          <Route path="/cds" element={<CDsPage />} />
+          <Route path="/cds/:id" element={<CDDetailPage />} />
+          <Route path="/dvds" element={<DVDsPage />} />
+          <Route path="/dvds/:id" element={<DVDDetailPage />} />
           <Route path="/cart" element={<CartPage />} />
           <Route path="/api-test" element={<TestApiComponent />} />
           <Route path="/checkout" element={<CheckoutPage />} />
@@ -201,6 +213,12 @@ const App: React.FC = () => {
             <Route path="books" element={<BookManagementPage />} />
             <Route path="books/add" element={<BookFormPage />} />
             <Route path="books/edit/:id" element={<BookFormPage />} />
+            <Route path="cds" element={<CDManagementPage />} />
+            <Route path="cds/add" element={<CDFormPage />} />
+            <Route path="cds/edit/:id" element={<CDFormPage />} />
+            <Route path="dvds" element={<DVDManagementPage />} />
+            <Route path="dvds/add" element={<DVDFormPage />} />
+            <Route path="dvds/edit/:id" element={<DVDFormPage />} />
             <Route path="users" element={<UserManagementPage />} />
             <Route path="users/add" element={<UserFormPage />} />
             <Route path="users/edit/:id" element={<UserFormPage />} />

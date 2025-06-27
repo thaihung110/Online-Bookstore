@@ -262,6 +262,28 @@ const NavigationBar: React.FC = () => {
             </ListItemIcon>
             <ListItemText primary="Browse Books" />
           </ListItemButton>
+
+          <ListItemButton
+            component={RouterLink}
+            to="/cds"
+            onClick={handleMobileMenuToggle}
+          >
+            <ListItemIcon>
+              <SearchIcon />
+            </ListItemIcon>
+            <ListItemText primary="Browse CDs" />
+          </ListItemButton>
+
+          <ListItemButton
+            component={RouterLink}
+            to="/dvds"
+            onClick={handleMobileMenuToggle}
+          >
+            <ListItemIcon>
+              <SearchIcon />
+            </ListItemIcon>
+            <ListItemText primary="Browse DVDs" />
+          </ListItemButton>
         </List>
       </Box>
     </Drawer>
@@ -332,6 +354,22 @@ const NavigationBar: React.FC = () => {
               sx={{ mx: 1 }}
             >
               Browse Books
+            </Button>
+            <Button
+              component={RouterLink}
+              to="/cds"
+              color="inherit"
+              sx={{ mx: 1 }}
+            >
+              Browse CDs
+            </Button>
+            <Button
+              component={RouterLink}
+              to="/dvds"
+              color="inherit"
+              sx={{ mx: 1 }}
+            >
+              Browse DVDs
             </Button>
           </Box>
 
