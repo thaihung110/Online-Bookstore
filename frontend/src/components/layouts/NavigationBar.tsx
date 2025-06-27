@@ -143,7 +143,7 @@ const NavigationBar: React.FC = () => {
         <List>
           <ListItem sx={{ justifyContent: "center", pt: 2, pb: 2 }}>
             <Typography variant="h6" sx={{ fontWeight: "bold" }}>
-              Online Bookstore
+              AIMS
             </Typography>
           </ListItem>
 
@@ -316,7 +316,7 @@ const NavigationBar: React.FC = () => {
                 textDecoration: "none",
               }}
             >
-              BOOKSTORE
+              AIMS
             </Typography>
           </Box>
 
@@ -341,7 +341,7 @@ const NavigationBar: React.FC = () => {
                 letterSpacing: ".1rem",
               }}
             >
-              BOOKSTORE
+              AIMS
             </Typography>
           </Box>
 
