@@ -29,11 +29,7 @@ import {
   processCheckoutPayment,
 } from "../utils/checkout";
 
-const steps = [
-  "Địa chỉ giao hàng",
-  "Phương thức thanh toán",
-  "Xác nhận đơn hàng",
-];
+const steps = ["Shipping Address", "Payment Method", "Order Confirmation"];
 
 const CheckoutPage: React.FC = () => {
   const navigate = useNavigate();
@@ -57,7 +53,7 @@ const CheckoutPage: React.FC = () => {
     severity: "info" as "info" | "success" | "error",
   });
 
-  // Kiểm tra giỏ hàng có trống không
+  // Check if cart is empty
   useEffect(() => {
     const cartItems = getCartItems();
     if (cartItems.length === 0) {
@@ -65,9 +61,9 @@ const CheckoutPage: React.FC = () => {
     }
   }, [getCartItems, navigate]);
 
-  // Xử lý chuyển đến bước tiếp theo
+  // Handle proceed to next step
   const handleNext = async () => {
-    // Kiểm tra giá trị bắt buộc trước khi tiến hành checkout
+    // Check required values before proceeding to checkout
     if (activeStep === 0 || activeStep === 1) {
       const { canProceed, error } = canProceedToCheckout(
         shippingAddress,
@@ -86,7 +82,7 @@ const CheckoutPage: React.FC = () => {
     }
 
     if (activeStep === steps.length - 1) {
-      // Xử lý thanh toán khi đến bước cuối cùng
+      // Handle payment when reaching final step
       const result = await processCheckoutPayment(
         placeOrder,
         createPayment,
@@ -97,35 +93,35 @@ const CheckoutPage: React.FC = () => {
       if (!result.success) {
         setSnackbar({
           open: true,
-          message: result.error || "Có lỗi xảy ra khi xử lý thanh toán",
+          message: result.error || "An error occurred while processing payment",
           severity: "error",
         });
         return;
       }
 
-      // Nếu cần chuyển hướng đến cổng thanh toán (VNPAY)
+      // If need to redirect to payment gateway (VNPAY)
       if (result.redirectUrl) {
-        // Mở VNPay trong tab mới
+        // Open VNPay in new tab
         window.open(result.redirectUrl, "_blank", "noopener,noreferrer");
-        // Chuyển đến trang xác nhận đơn hàng
+        // Navigate to order confirmation page
         navigate("/order-confirmation");
         return;
       }
 
-      // Nếu thanh toán thành công, chuyển đến trang xác nhận
+      // If payment successful, navigate to confirmation page
       navigate("/order-confirmation");
     } else {
-      // Chuyển đến bước tiếp theo
+      // Proceed to next step
       setActiveStep(activeStep + 1);
     }
   };
 
-  // Xử lý quay lại bước trước
+  // Handle go back to previous step
   const handleBack = () => {
     setActiveStep(activeStep - 1);
   };
 
-  // Xử lý đóng snackbar
+  // Handle close snackbar
   const handleCloseSnackbar = () => {
     setSnackbar({ ...snackbar, open: false });
   };
@@ -135,7 +131,7 @@ const CheckoutPage: React.FC = () => {
       <Container maxWidth="lg" sx={{ py: 4 }}>
         <Paper elevation={3} sx={{ p: { xs: 2, sm: 3, md: 4 } }}>
           <Typography variant="h4" gutterBottom align="center">
-            Thanh toán
+            Checkout
           </Typography>
 
           <Stepper activeStep={activeStep} sx={{ mb: 4 }} alternativeLabel>
@@ -175,7 +171,7 @@ const CheckoutPage: React.FC = () => {
                   onClick={handleBack}
                   sx={{ mr: 1 }}
                 >
-                  Quay lại
+                  Back
                 </Button>
 
                 <Button
@@ -184,7 +180,7 @@ const CheckoutPage: React.FC = () => {
                   onClick={handleNext}
                   disabled={isLoading}
                 >
-                  {activeStep === steps.length - 1 ? "Thanh toán" : "Tiếp theo"}
+                  {activeStep === steps.length - 1 ? "Pay Now" : "Next"}
                 </Button>
               </Box>
             </Box>

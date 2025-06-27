@@ -74,8 +74,8 @@ export class CreatePaymentDto {
         district: 'District 1',
       },
       vnpayInfo: {
-        bankCode: 'NCB',
         orderType: 'billpayment',
+        // bankCode: 'NCB', // Optional - xoá để user chọn phương thức thanh toán trên VNPAY
       },
     },
   })

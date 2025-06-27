@@ -15,11 +15,12 @@ import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import HomeIcon from "@mui/icons-material/Home";
 import ShoppingBagIcon from "@mui/icons-material/ShoppingBag";
 import ReceiptIcon from "@mui/icons-material/Receipt";
+import RefreshIcon from "@mui/icons-material/Refresh";
 import MainLayout from "../components/layouts/MainLayout";
 import { useCheckoutStore } from "../store/checkoutStore";
 import { useCartStore } from "../store/cartStore";
 import { formatCurrency, formatDate } from "../utils/format";
-import { getPayment } from "../api/payments";
+import { getPayment, getPaymentByOrderId } from "../api/payments";
 
 const OrderConfirmationPage: React.FC = () => {
   const navigate = useNavigate();
@@ -34,32 +35,185 @@ const OrderConfirmationPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Check for payment ID in URL query params (for VNPAY redirects)
+  // Handle VNPAY callback and save orderId to localStorage
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+
+    // Check if this is a VNPAY callback (has vnp_ResponseCode)
+    const vnpResponseCode = searchParams.get("vnp_ResponseCode");
+    const vnpTxnRef = searchParams.get("vnp_TxnRef"); // This is the payment ID
+    const vnpOrderInfo = searchParams.get("vnp_OrderInfo");
+
+    if (vnpResponseCode && vnpTxnRef) {
+      console.log("[VNPAY Callback] Processing VNPAY callback");
+      console.log("[VNPAY Callback] Response Code:", vnpResponseCode);
+      console.log("[VNPAY Callback] Transaction Ref:", vnpTxnRef);
+      console.log("[VNPAY Callback] Order Info:", vnpOrderInfo);
+
+      // Extract orderId from order info if available
+      if (vnpOrderInfo) {
+        const orderIdMatch = vnpOrderInfo.match(/#([a-f0-9]{24})/);
+        if (orderIdMatch) {
+          const extractedOrderId = orderIdMatch[1];
+          console.log("[VNPAY Callback] Extracted orderId:", extractedOrderId);
+
+          // Save orderId to localStorage for persistence
+          localStorage.setItem("completedOrderId", extractedOrderId);
+          localStorage.setItem(
+            "completedOrderTimestamp",
+            Date.now().toString()
+          );
+        }
+      }
+
+      // Fetch payment data using payment ID (vnp_TxnRef)
+      setIsLoading(true);
+      getPaymentFromStore(vnpTxnRef)
+        .then(() => {
+          console.log("[VNPAY Callback] Payment data fetched successfully");
+        })
+        .catch((err) => {
+          setError(
+            "Unable to load payment information. Please try again later."
+          );
+          console.error("[VNPAY Callback] Error fetching payment:", err);
+        })
+        .finally(() => setIsLoading(false));
+
+      return; // Don't run the regular payment polling logic
+    }
+  }, [location, getPaymentFromStore]);
+
+  // Load order from localStorage if no current order/payment data
+  useEffect(() => {
+    const completedOrderId = localStorage.getItem("completedOrderId");
+    const completedOrderTimestamp = localStorage.getItem(
+      "completedOrderTimestamp"
+    );
+
+    // Only load from localStorage if we don't have current data and timestamp is recent (within 1 hour)
+    if (completedOrderId && completedOrderTimestamp && !order && !payment) {
+      const timestamp = parseInt(completedOrderTimestamp);
+      const oneHour = 60 * 60 * 1000;
+
+      if (Date.now() - timestamp < oneHour) {
+        console.log(
+          "[Order Persistence] Loading order from localStorage:",
+          completedOrderId
+        );
+        setIsLoading(true);
+
+        // Fetch order and payment data
+        Promise.all([
+          useCheckoutStore
+            .getState()
+            .getOrder(completedOrderId)
+            .catch(() => null),
+          getPaymentByOrderId(completedOrderId)
+            .then((payment: any) => {
+              if (payment) {
+                return getPaymentFromStore(payment.id);
+              }
+              return null;
+            })
+            .catch(() => null),
+        ])
+          .then(() => {
+            console.log("[Order Persistence] Order and payment data loaded");
+          })
+          .catch((err) => {
+            console.error(
+              "[Order Persistence] Error loading persisted order:",
+              err
+            );
+            // Clear invalid localStorage data
+            localStorage.removeItem("completedOrderId");
+            localStorage.removeItem("completedOrderTimestamp");
+          })
+          .finally(() => setIsLoading(false));
+      } else {
+        // Clear expired localStorage data
+        localStorage.removeItem("completedOrderId");
+        localStorage.removeItem("completedOrderTimestamp");
+      }
+    }
+  }, [order, payment, getPaymentFromStore]);
+
+  // Check for payment ID in URL query params (for VNPAY redirects) with polling
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
     const paymentId = searchParams.get("paymentId");
 
+    if (!paymentId) return;
+
+    let pollInterval: NodeJS.Timeout;
+
     const fetchPaymentStatus = async () => {
-      if (paymentId) {
-        try {
-          setIsLoading(true);
-          setError(null);
-          await getPaymentFromStore(paymentId);
-          setIsLoading(false);
-        } catch (err) {
-          setIsLoading(false);
-          setError("Không thể tải thông tin thanh toán. Vui lòng thử lại sau.");
-          console.error("Error fetching payment:", err);
-        }
+      try {
+        setError(null);
+        await getPaymentFromStore(paymentId);
+      } catch (err) {
+        setError("Unable to load payment information. Please try again later.");
+        console.error("Error fetching payment:", err);
       }
     };
 
-    if (paymentId) {
-      fetchPaymentStatus();
-    }
+    // Initial fetch
+    setIsLoading(true);
+    fetchPaymentStatus().then(() => setIsLoading(false));
+
+    // Start polling if payment is still pending
+    const startPolling = () => {
+      pollInterval = setInterval(async () => {
+        console.log("[Payment Polling] Checking payment status...");
+        await fetchPaymentStatus();
+
+        // Check current payment status from store
+        const currentPayment = useCheckoutStore.getState().payment;
+        const currentOrder = useCheckoutStore.getState().order;
+
+        // Stop polling if payment is completed or failed
+        if (
+          currentPayment?.status === "COMPLETED" ||
+          currentPayment?.status === "FAILED" ||
+          currentOrder?.status === "RECEIVED"
+        ) {
+          console.log(
+            "[Payment Polling] Payment completed or failed, stopping polling"
+          );
+          clearInterval(pollInterval);
+        }
+      }, 3000); // Poll every 3 seconds
+    };
+
+    // Start polling after initial fetch
+    const startPollingTimer = setTimeout(() => {
+      const currentPayment = useCheckoutStore.getState().payment;
+      const currentOrder = useCheckoutStore.getState().order;
+
+      // Only start polling if payment is still pending
+      if (
+        currentPayment?.status === "PENDING" &&
+        currentOrder?.status !== "RECEIVED"
+      ) {
+        console.log("[Payment Polling] Starting payment status polling...");
+        startPolling();
+      }
+    }, 2000); // Wait 2 seconds after initial fetch
+
+    // Cleanup
+    return () => {
+      if (pollInterval) {
+        console.log("[Payment Polling] Cleaning up polling interval");
+        clearInterval(pollInterval);
+      }
+      if (startPollingTimer) {
+        clearTimeout(startPollingTimer);
+      }
+    };
   }, [location, getPaymentFromStore]);
 
-  // Xóa giỏ hàng khi đơn hàng đã hoàn thành
+  // Clear cart when order is completed and save order to localStorage
   useEffect(() => {
     // Clear cart for successful payments OR when we have a valid order (CASH case)
     const shouldClearCart =
@@ -77,6 +231,16 @@ const OrderConfirmationPage: React.FC = () => {
         payment?.paymentMethod
       );
       clearCart();
+
+      // Save successful order to localStorage for persistence
+      if (order?._id) {
+        localStorage.setItem("completedOrderId", order._id);
+        localStorage.setItem("completedOrderTimestamp", Date.now().toString());
+        console.log(
+          "[Order Confirmation] Saved order to localStorage:",
+          order._id
+        );
+      }
     }
 
     // Cleanup khi unmount - delay reset to allow user to stay on success page
@@ -95,7 +259,7 @@ const OrderConfirmationPage: React.FC = () => {
   //   }
   // }, [order, payment, navigate, location.search]);
 
-  // Tạo ID đơn hàng giả lập nếu chưa có
+  // Create fallback order ID if not available
   const orderId =
     order?._id ||
     payment?.orderId ||
@@ -134,7 +298,7 @@ const OrderConfirmationPage: React.FC = () => {
           >
             <CircularProgress size={60} />
             <Typography variant="h6" sx={{ mt: 3 }}>
-              Đang tải thông tin thanh toán...
+              Loading payment information...
             </Typography>
           </Box>
         </Container>
@@ -191,12 +355,12 @@ const OrderConfirmationPage: React.FC = () => {
                   }}
                 >
                   {isCashOrder
-                    ? "🎉 Đặt hàng thành công!"
+                    ? "🎉 Order placed successfully!"
                     : isOrderReceived
-                    ? "🎉 Số tiền của bạn đã được thanh toán!"
+                    ? "🎉 Your payment has been processed!"
                     : isVNPaySuccessful
-                    ? "🎉 Thanh toán thành công!"
-                    : "🎉 Đặt hàng thành công!"}
+                    ? "🎉 Payment successful!"
+                    : "🎉 Order placed successfully!"}
                 </Typography>
                 <Typography
                   variant="h6"
@@ -208,12 +372,12 @@ const OrderConfirmationPage: React.FC = () => {
                   }}
                 >
                   {isCashOrder
-                    ? "Cảm ơn bạn đã đặt hàng. Đơn hàng của bạn đã được xác nhận và đang được xử lý. Bạn sẽ thanh toán khi nhận hàng."
+                    ? "Thank you for your order. Your order has been confirmed and is being processed. You will pay upon delivery."
                     : isOrderReceived
-                    ? "Cảm ơn bạn đã thanh toán. Đơn hàng của bạn đã được xác nhận và đang được chuẩn bị giao hàng."
+                    ? "Thank you for your payment. Your order has been confirmed and is being prepared for shipping."
                     : isVNPaySuccessful
-                    ? "Cảm ơn bạn đã thanh toán qua VNPay. Đơn hàng của bạn đã được xác nhận và đang được xử lý."
-                    : "Cảm ơn bạn đã đặt hàng. Đơn hàng của bạn đã được xác nhận và đang được xử lý."}
+                    ? "Thank you for your payment via VNPay. Your order has been confirmed and is being processed."
+                    : "Thank you for your order. Your order has been confirmed and is being processed."}
                 </Typography>
               </>
             ) : isPaymentFailed ? (
@@ -238,15 +402,15 @@ const OrderConfirmationPage: React.FC = () => {
                   gutterBottom
                   sx={{ fontWeight: "bold", color: "error.main" }}
                 >
-                  Thanh toán thất bại
+                  Payment Failed
                 </Typography>
                 <Typography
                   variant="h6"
                   color="text.secondary"
                   sx={{ maxWidth: 600, mx: "auto" }}
                 >
-                  Có lỗi xảy ra trong quá trình thanh toán. Vui lòng thử lại
-                  hoặc chọn phương thức thanh toán khác.
+                  An error occurred during payment processing. Please try again
+                  or choose a different payment method.
                 </Typography>
               </>
             ) : (
@@ -276,15 +440,14 @@ const OrderConfirmationPage: React.FC = () => {
                   gutterBottom
                   sx={{ fontWeight: "bold", color: "warning.main" }}
                 >
-                  Đang xử lý thanh toán
+                  Processing Payment
                 </Typography>
                 <Typography
                   variant="h6"
                   color="text.secondary"
-                  sx={{ maxWidth: 600, mx: "auto" }}
+                  sx={{ maxWidth: 600, mx: "auto", mb: 3 }}
                 >
-                  Thanh toán của bạn đang được xử lý. Vui lòng chờ trong giây
-                  lát.
+                  Your payment is being processed. Please wait a moment.
                 </Typography>
               </>
             )}
@@ -298,7 +461,7 @@ const OrderConfirmationPage: React.FC = () => {
               gutterBottom
               sx={{ fontWeight: "bold", mb: 3 }}
             >
-              📋 Thông tin đơn hàng
+              📋 Order Information
             </Typography>
 
             <Paper
@@ -321,7 +484,7 @@ const OrderConfirmationPage: React.FC = () => {
                     color="text.secondary"
                     sx={{ fontWeight: 500 }}
                   >
-                    Mã đơn hàng:
+                    Order ID:
                   </Typography>
                   <Typography
                     variant="body1"
@@ -350,7 +513,7 @@ const OrderConfirmationPage: React.FC = () => {
                     color="text.secondary"
                     sx={{ fontWeight: 500 }}
                   >
-                    Ngày đặt hàng:
+                    Order Date:
                   </Typography>
                   <Typography variant="body1" fontWeight="medium">
                     {formatDate(orderDate)}
@@ -369,7 +532,7 @@ const OrderConfirmationPage: React.FC = () => {
                     color="text.secondary"
                     sx={{ fontWeight: 500 }}
                   >
-                    Phương thức thanh toán:
+                    Payment Method:
                   </Typography>
                   <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                     {payment?.paymentMethod === "VNPAY"
@@ -381,8 +544,8 @@ const OrderConfirmationPage: React.FC = () => {
                       {payment?.paymentMethod === "VNPAY"
                         ? "VNPAY"
                         : payment?.paymentMethod === "COD"
-                        ? "Thanh toán khi nhận hàng (COD)"
-                        : "Thẻ ngân hàng"}
+                        ? "Cash on Delivery (COD)"
+                        : "Bank Card"}
                     </Typography>
                   </Box>
                 </Box>
@@ -399,7 +562,7 @@ const OrderConfirmationPage: React.FC = () => {
                     color="text.secondary"
                     sx={{ fontWeight: 500 }}
                   >
-                    Trạng thái:
+                    Status:
                   </Typography>
                   <Box
                     sx={{
@@ -419,15 +582,15 @@ const OrderConfirmationPage: React.FC = () => {
                   >
                     {isPaymentSuccessful
                       ? isCashOrder
-                        ? "✅ Đặt hàng thành công - COD"
+                        ? "✅ Order Successful - COD"
                         : isOrderReceived
-                        ? "✅ Đơn hàng đã được thanh toán"
+                        ? "✅ Order Paid"
                         : isVNPaySuccessful
-                        ? "✅ Thanh toán thành công - VNPAY"
-                        : "✅ Đặt hàng thành công"
+                        ? "✅ Payment Successful - VNPAY"
+                        : "✅ Order Successful"
                       : isPaymentFailed
-                      ? "❌ Thanh toán thất bại"
-                      : "⏳ Đang xử lý"}
+                      ? "❌ Payment Failed"
+                      : "⏳ Processing"}
                   </Box>
                 </Box>
 
@@ -441,7 +604,7 @@ const OrderConfirmationPage: React.FC = () => {
                   }}
                 >
                   <Typography variant="h6" sx={{ fontWeight: "bold" }}>
-                    💰 Tổng thanh toán:
+                    💰 Total Payment:
                   </Typography>
                   <Typography
                     variant="h5"
@@ -471,6 +634,48 @@ const OrderConfirmationPage: React.FC = () => {
               mt: 5,
             }}
           >
+            {/* Show refresh button for pending payments */}
+            {isPaymentPending && (
+              <Button
+                variant="outlined"
+                size="large"
+                startIcon={<RefreshIcon />}
+                onClick={async () => {
+                  const searchParams = new URLSearchParams(location.search);
+                  const paymentId = searchParams.get("paymentId");
+                  if (paymentId) {
+                    setIsLoading(true);
+                    try {
+                      await getPaymentFromStore(paymentId);
+                      console.log("[Manual Refresh] Payment status refreshed");
+                    } catch (err) {
+                      console.error("Error refreshing payment:", err);
+                    } finally {
+                      setIsLoading(false);
+                    }
+                  }
+                }}
+                disabled={isLoading}
+                sx={{
+                  px: 4,
+                  py: 1.5,
+                  fontWeight: "bold",
+                  fontSize: "1rem",
+                  borderRadius: "25px",
+                  borderWidth: 2,
+                  color: "#ff9800",
+                  borderColor: "#ff9800",
+                  "&:hover": {
+                    background: "linear-gradient(45deg, #ff9800, #ffb74d)",
+                    color: "white",
+                    borderColor: "#ff9800",
+                  },
+                }}
+              >
+                Refresh Status
+              </Button>
+            )}
+
             <Button
               variant="contained"
               size="large"
@@ -478,7 +683,9 @@ const OrderConfirmationPage: React.FC = () => {
               to="/books"
               startIcon={<ShoppingBagIcon />}
               onClick={() => {
-                // Reset checkout store when user manually navigates away
+                // Clear localStorage and reset checkout store when user manually navigates away
+                localStorage.removeItem("completedOrderId");
+                localStorage.removeItem("completedOrderTimestamp");
                 resetCheckout();
               }}
               sx={{
@@ -496,7 +703,7 @@ const OrderConfirmationPage: React.FC = () => {
                 },
               }}
             >
-              🛍️ Tiếp tục mua sắm
+              🛍️ Continue Shopping
             </Button>
 
             <Button
@@ -506,7 +713,9 @@ const OrderConfirmationPage: React.FC = () => {
               to="/"
               startIcon={<HomeIcon />}
               onClick={() => {
-                // Reset checkout store when user manually navigates away
+                // Clear localStorage and reset checkout store when user manually navigates away
+                localStorage.removeItem("completedOrderId");
+                localStorage.removeItem("completedOrderTimestamp");
                 resetCheckout();
               }}
               sx={{
@@ -527,37 +736,8 @@ const OrderConfirmationPage: React.FC = () => {
                 },
               }}
             >
-              🏠 Về trang chủ
+              🏠 Back to Home
             </Button>
-
-            {isPaymentSuccessful && (
-              <Button
-                variant="contained"
-                size="large"
-                sx={{
-                  px: 4,
-                  py: 1.5,
-                  background: "linear-gradient(45deg, #ff9800, #ffb74d)",
-                  fontWeight: "bold",
-                  fontSize: "1rem",
-                  borderRadius: "25px",
-                  boxShadow: "0 4px 15px rgba(255, 152, 0, 0.3)",
-                  "&:hover": {
-                    background: "linear-gradient(45deg, #f57c00, #ff9800)",
-                    boxShadow: "0 6px 20px rgba(255, 152, 0, 0.4)",
-                    transform: "translateY(-2px)",
-                  },
-                }}
-                onClick={() => {
-                  // TODO: Implement order tracking
-                  alert(
-                    `Theo dõi đơn hàng #${orderId.slice(-8).toUpperCase()}`
-                  );
-                }}
-              >
-                📦 Theo dõi đơn hàng
-              </Button>
-            )}
           </Box>
         </Paper>
       </Container>

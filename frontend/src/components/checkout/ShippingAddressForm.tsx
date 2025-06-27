@@ -43,7 +43,7 @@ const ShippingAddressForm: React.FC = () => {
     zipCode: "",
   });
 
-  // Đưa dữ liệu từ store vào form khi component được render
+  // Load data from store to form when component renders
   useEffect(() => {
     if (shippingAddress) {
       setFormData(shippingAddress);
@@ -53,21 +53,21 @@ const ShippingAddressForm: React.FC = () => {
     }
   }, [shippingAddress, billingAddress]);
 
-  // Xử lý thay đổi input trường giao hàng
+  // Handle shipping input changes
   const handleShippingChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     const updatedData = { ...formData, [name]: value };
     setFormData(updatedData);
     setShippingAddress(updatedData);
 
-    // Nếu sử dụng cùng địa chỉ cho hóa đơn, cập nhật dữ liệu hóa đơn
+    // If using same address for billing, update billing data
     if (useShippingAsBilling) {
       setBillingData(updatedData);
       setBillingAddress(updatedData);
     }
   };
 
-  // Xử lý thay đổi input trường hóa đơn
+  // Handle billing input changes
   const handleBillingChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     const updatedData = { ...billingData, [name]: value };
@@ -75,7 +75,7 @@ const ShippingAddressForm: React.FC = () => {
     setBillingAddress(updatedData);
   };
 
-  // Xử lý thay đổi checkbox "Dùng địa chỉ giao hàng làm địa chỉ thanh toán"
+  // Handle "Use shipping address as billing address" checkbox change
   const handleUseShippingAsBillingChange = (
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
@@ -91,7 +91,7 @@ const ShippingAddressForm: React.FC = () => {
   return (
     <Box>
       <Typography variant="h6" gutterBottom>
-        Địa chỉ giao hàng
+        Shipping Address
       </Typography>
 
       <Box sx={{ flexGrow: 1 }}>
@@ -101,7 +101,7 @@ const ShippingAddressForm: React.FC = () => {
               required
               id="fullName"
               name="fullName"
-              label="Họ và tên"
+              label="Full Name"
               fullWidth
               variant="outlined"
               value={formData.fullName}
@@ -114,7 +114,7 @@ const ShippingAddressForm: React.FC = () => {
               required
               id="phoneNumber"
               name="phoneNumber"
-              label="Số điện thoại"
+              label="Phone Number"
               fullWidth
               variant="outlined"
               value={formData.phoneNumber}
@@ -140,7 +140,7 @@ const ShippingAddressForm: React.FC = () => {
               required
               id="address"
               name="address"
-              label="Địa chỉ"
+              label="Address"
               fullWidth
               variant="outlined"
               value={formData.address}
@@ -154,7 +154,7 @@ const ShippingAddressForm: React.FC = () => {
                 required
                 id="city"
                 name="city"
-                label="Tỉnh/Thành phố"
+                label="City/Province"
                 fullWidth
                 variant="outlined"
                 value={formData.city}
@@ -167,7 +167,7 @@ const ShippingAddressForm: React.FC = () => {
                 required
                 id="district"
                 name="district"
-                label="Quận/Huyện"
+                label="District"
                 fullWidth
                 variant="outlined"
                 value={formData.district}
@@ -180,7 +180,7 @@ const ShippingAddressForm: React.FC = () => {
                 required
                 id="ward"
                 name="ward"
-                label="Phường/Xã"
+                label="Ward"
                 fullWidth
                 variant="outlined"
                 value={formData.ward}
@@ -193,7 +193,7 @@ const ShippingAddressForm: React.FC = () => {
             <TextField
               id="zipCode"
               name="zipCode"
-              label="Mã bưu điện"
+              label="Postal Code"
               fullWidth
               variant="outlined"
               value={formData.zipCode}
@@ -210,7 +210,7 @@ const ShippingAddressForm: React.FC = () => {
                   onChange={handleUseShippingAsBillingChange}
                 />
               }
-              label="Dùng địa chỉ giao hàng làm địa chỉ thanh toán"
+              label="Use shipping address as billing address"
             />
           </Box>
         </Box>
@@ -221,7 +221,7 @@ const ShippingAddressForm: React.FC = () => {
           <Divider sx={{ my: 3 }} />
 
           <Typography variant="h6" gutterBottom>
-            Địa chỉ thanh toán
+            Billing Address
           </Typography>
 
           <Box sx={{ flexGrow: 1 }}>
@@ -231,7 +231,7 @@ const ShippingAddressForm: React.FC = () => {
                   required
                   id="billing-fullName"
                   name="fullName"
-                  label="Họ và tên"
+                  label="Full Name"
                   fullWidth
                   variant="outlined"
                   value={billingData.fullName}
@@ -244,7 +244,7 @@ const ShippingAddressForm: React.FC = () => {
                   required
                   id="billing-phoneNumber"
                   name="phoneNumber"
-                  label="Số điện thoại"
+                  label="Phone Number"
                   fullWidth
                   variant="outlined"
                   value={billingData.phoneNumber}
@@ -270,7 +270,7 @@ const ShippingAddressForm: React.FC = () => {
                   required
                   id="billing-address"
                   name="address"
-                  label="Địa chỉ"
+                  label="Address"
                   fullWidth
                   variant="outlined"
                   value={billingData.address}
@@ -284,7 +284,7 @@ const ShippingAddressForm: React.FC = () => {
                     required
                     id="billing-city"
                     name="city"
-                    label="Tỉnh/Thành phố"
+                    label="City/Province"
                     fullWidth
                     variant="outlined"
                     value={billingData.city}
@@ -297,7 +297,7 @@ const ShippingAddressForm: React.FC = () => {
                     required
                     id="billing-district"
                     name="district"
-                    label="Quận/Huyện"
+                    label="District"
                     fullWidth
                     variant="outlined"
                     value={billingData.district}
@@ -310,7 +310,7 @@ const ShippingAddressForm: React.FC = () => {
                     required
                     id="billing-ward"
                     name="ward"
-                    label="Phường/Xã"
+                    label="Ward"
                     fullWidth
                     variant="outlined"
                     value={billingData.ward}
@@ -323,7 +323,7 @@ const ShippingAddressForm: React.FC = () => {
                 <TextField
                   id="billing-zipCode"
                   name="zipCode"
-                  label="Mã bưu điện"
+                  label="Postal Code"
                   fullWidth
                   variant="outlined"
                   value={billingData.zipCode}

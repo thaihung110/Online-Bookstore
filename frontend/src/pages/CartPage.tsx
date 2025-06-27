@@ -26,6 +26,10 @@ import { useCartStore } from "../store/cartStore";
 import { CartItem } from "../api/cart";
 import { vndToUsd } from "../utils/currency";
 import CartValidationAlert from "../components/cart/CartValidationAlert";
+import {
+  getProductDisplayData,
+  getProductPlaceholder,
+} from "../utils/productDisplayHelper";
 
 const CartItemRow: React.FC<{
   item: CartItem;
@@ -33,8 +37,9 @@ const CartItemRow: React.FC<{
   const { updateItemQuantity, updateItemSelection, removeItem, isLoading } =
     useCartStore();
 
-  // Lấy id đúng cho book (sau khi transform, chỉ có id)
-  const bookId = item.book.id;
+  // Get product display data and use consistent id
+  const productData = getProductDisplayData(item.product);
+  const productId = item.product.id;
 
   // State tạm cho số lượng nhập vào (kiểu string để cho phép rỗng)
   const [inputQty, setInputQty] = useState<string>(item.quantity.toString());
@@ -44,17 +49,17 @@ const CartItemRow: React.FC<{
     console.log(
       "CartItemRow: item.quantity changed to:",
       item.quantity,
-      "for book:",
-      bookId
+      "for product:",
+      productId
     );
     console.log("CartItemRow: updating inputQty to:", item.quantity.toString());
     setInputQty(item.quantity.toString());
-  }, [item.quantity, bookId]);
+  }, [item.quantity, productId]);
 
   // Debug: Log when component re-renders
   console.log(
-    "CartItemRow render - bookId:",
-    bookId,
+    "CartItemRow render - productId:",
+    productId,
     "quantity:",
     item.quantity,
     "inputQty:",
@@ -62,8 +67,8 @@ const CartItemRow: React.FC<{
   );
 
   const handleUpdateQuantity = (qty: number) => {
-    if (qty > 0 && qty <= (item.book.stock || 0)) {
-      updateItemQuantity(bookId, qty);
+    if (qty > 0 && qty <= (productData.stock || 0)) {
+      updateItemQuantity(productId, qty);
     }
   };
 
@@ -78,7 +83,7 @@ const CartItemRow: React.FC<{
   const handleInputBlur = () => {
     const qty = parseInt(inputQty, 10);
     // Nếu input rỗng hoặc không hợp lệ, reset về số lượng cũ
-    if (!inputQty || isNaN(qty) || qty < 1 || qty > (item.book.stock || 0)) {
+    if (!inputQty || isNaN(qty) || qty < 1 || qty > (productData.stock || 0)) {
       setInputQty(item.quantity.toString());
       return;
     }
@@ -91,7 +96,7 @@ const CartItemRow: React.FC<{
     if (e.key === "Enter") {
       const val = (e.target as HTMLInputElement).value;
       const qty = parseInt(val, 10);
-      if (!val || isNaN(qty) || qty < 1 || qty > (item.book.stock || 0)) {
+      if (!val || isNaN(qty) || qty < 1 || qty > (productData.stock || 0)) {
         setInputQty(item.quantity.toString());
         return;
       }
@@ -103,21 +108,21 @@ const CartItemRow: React.FC<{
 
   const handleIncrement = () => {
     console.log("CartItemRow: handleIncrement clicked");
-    console.log("CartItemRow: bookId:", bookId);
+    console.log("CartItemRow: productId:", productId);
     console.log("CartItemRow: current quantity:", item.quantity);
-    console.log("CartItemRow: stock:", item.book.stock);
+    console.log("CartItemRow: stock:", productData.stock);
     console.log(
       "CartItemRow: can increment?",
-      item.quantity < (item.book.stock || 0)
+      item.quantity < (productData.stock || 0)
     );
 
-    if (item.quantity < (item.book.stock || 0)) {
+    if (item.quantity < (productData.stock || 0)) {
       console.log(
         "CartItemRow: calling updateItemQuantity with:",
-        bookId,
+        productId,
         item.quantity + 1
       );
-      updateItemQuantity(bookId, item.quantity + 1);
+      updateItemQuantity(productId, item.quantity + 1);
     } else {
       console.log("CartItemRow: cannot increment - at max stock");
     }
@@ -125,27 +130,28 @@ const CartItemRow: React.FC<{
 
   const handleDecrement = () => {
     if (item.quantity > 1) {
-      updateItemQuantity(bookId, item.quantity - 1);
+      updateItemQuantity(productId, item.quantity - 1);
     }
   };
 
   const handleRemove = () => {
-    console.log("CartItemRow remove bookId:", bookId);
-    removeItem(bookId);
+    console.log("CartItemRow remove productId:", productId);
+    removeItem(productId);
   };
 
   const handleSelectionChange = (checked: boolean) => {
     console.log(
-      "CartItemRow selection change bookId:",
-      bookId,
+      "CartItemRow selection change productId:",
+      productId,
       "checked:",
       checked
     );
-    updateItemSelection(bookId, checked);
+    updateItemSelection(productId, checked);
   };
 
-  // Placeholder image if no cover is available
-  const coverImage = item.book.coverImage || "/placeholder-book.jpg";
+  // Get appropriate cover image and placeholder
+  const coverImage =
+    productData.coverImage || getProductPlaceholder(productData.productType);
 
   // Chuyển đổi giá sang USD
   const priceUsd = vndToUsd(item.priceAtAdd);
@@ -163,10 +169,12 @@ const CartItemRow: React.FC<{
         <CardMedia
           component="img"
           image={coverImage}
-          alt={item.book.title}
+          alt={productData.title}
           sx={{ width: "100%", height: "100%", objectFit: "contain" }}
           onError={(e) => {
-            e.currentTarget.src = "/placeholder-book.jpg";
+            e.currentTarget.src = getProductPlaceholder(
+              productData.productType
+            );
           }}
         />
       </Box>
@@ -182,7 +190,7 @@ const CartItemRow: React.FC<{
         <Box>
           <Typography
             component={RouterLink}
-            to={`/books/${item.book.id}`}
+            to={productData.link}
             variant="subtitle1"
             sx={{
               textDecoration: "none",
@@ -190,10 +198,10 @@ const CartItemRow: React.FC<{
               fontWeight: "medium",
             }}
           >
-            {item.book.title}
+            {productData.title}
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            by {item.book.author}
+            by {productData.author}
           </Typography>
         </Box>
 
@@ -240,7 +248,7 @@ const CartItemRow: React.FC<{
               InputProps={{
                 inputProps: {
                   min: 1,
-                  max: item.book.stock || 1,
+                  max: item.product.stock || 1,
                   style: { textAlign: "center", width: "30px" },
                 },
               }}
@@ -252,7 +260,7 @@ const CartItemRow: React.FC<{
             <IconButton
               size="small"
               onClick={handleIncrement}
-              disabled={item.quantity >= (item.book.stock || 0) || isLoading}
+              disabled={item.quantity >= (item.product.stock || 0) || isLoading}
             >
               <AddIcon />
             </IconButton>
@@ -286,7 +294,7 @@ const CartPage: React.FC = () => {
         try {
           // Update all items to be unselected first, then select only the buy now item
           for (const item of cart.items) {
-            const id = item.book.id;
+            const id = item.product.id;
             const shouldBeSelected = id === buyNowId;
             if (item.isTicked !== shouldBeSelected) {
               await updateItemSelection(id, shouldBeSelected);
@@ -430,8 +438,8 @@ const CartPage: React.FC = () => {
                   ) {
                     // This would need to be implemented to auto-fix quantities
                     console.log(
-                      "Auto-fixing stock issue for book:",
-                      issue.bookId
+                      "Auto-fixing stock issue for product:",
+                      issue.productId
                     );
                   }
                 });
@@ -458,7 +466,7 @@ const CartPage: React.FC = () => {
                 </Box>
               )}
               {cart?.items.map((item, index) => {
-                const id = item.book.id;
+                const id = item.product.id;
                 // Use a more unique key that includes the item's position and book ID
                 const uniqueKey = `${id}-${index}-${item.quantity}-${item.isTicked}`;
                 console.log(

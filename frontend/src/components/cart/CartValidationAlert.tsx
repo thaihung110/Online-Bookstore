@@ -43,7 +43,9 @@ const CartValidationAlert: React.FC<CartValidationAlertProps> = ({
 
   const stockIssues = issues.filter((issue) => issue.type === "stock");
   const priceIssues = issues.filter((issue) => issue.type === "price");
-  const unavailableIssues = issues.filter((issue) => issue.type === "unavailable");
+  const unavailableIssues = issues.filter(
+    (issue) => issue.type === "unavailable"
+  );
 
   const getIssueIcon = (type: string) => {
     switch (type) {
@@ -80,8 +82,11 @@ const CartValidationAlert: React.FC<CartValidationAlertProps> = ({
     if (issue.currentPrice && issue.cartPrice) {
       const currentPriceUsd = vndToUsd(issue.currentPrice);
       const cartPriceUsd = vndToUsd(issue.cartPrice);
-      const priceChange = issue.currentPrice > issue.cartPrice ? "increased" : "decreased";
-      return `Price has ${priceChange} from $${cartPriceUsd.toFixed(2)} to $${currentPriceUsd.toFixed(2)}`;
+      const priceChange =
+        issue.currentPrice > issue.cartPrice ? "increased" : "decreased";
+      return `Price has ${priceChange} from $${cartPriceUsd.toFixed(
+        2
+      )} to $${currentPriceUsd.toFixed(2)}`;
     }
     return issue.message;
   };
@@ -113,10 +118,11 @@ const CartValidationAlert: React.FC<CartValidationAlertProps> = ({
       }
     >
       <AlertTitle>{getTitle()}</AlertTitle>
-      
+
       {!expanded && (
         <Typography variant="body2">
-          {unavailableIssues.length > 0 && `${unavailableIssues.length} unavailable, `}
+          {unavailableIssues.length > 0 &&
+            `${unavailableIssues.length} unavailable, `}
           {stockIssues.length > 0 && `${stockIssues.length} stock issues, `}
           {priceIssues.length > 0 && `${priceIssues.length} price changes`}
           {". Click to expand for details."}
@@ -126,13 +132,13 @@ const CartValidationAlert: React.FC<CartValidationAlertProps> = ({
       <Collapse in={expanded}>
         <List dense sx={{ mt: 1 }}>
           {issues.map((issue, index) => (
-            <ListItem key={`${issue.bookId}-${index}`} sx={{ pl: 0 }}>
+            <ListItem key={`${issue.productId}-${index}`} sx={{ pl: 0 }}>
               <ListItemIcon sx={{ minWidth: 36 }}>
                 {getIssueIcon(issue.type)}
               </ListItemIcon>
               <ListItemText
                 primary={
-                  issue.type === "price" 
+                  issue.type === "price"
                     ? formatPriceMessage(issue)
                     : issue.message
                 }
