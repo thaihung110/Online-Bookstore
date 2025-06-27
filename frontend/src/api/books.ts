@@ -1,5 +1,4 @@
 import api from "./axios";
-import recommendApi from "./axiosRecommend";
 import { useMemo } from "react";
 
 export interface Book {
@@ -363,25 +362,6 @@ export const getAllGenres = async (): Promise<string[]> => {
   }
 };
 
-// Lấy danh sách recommended book_id cho user
-export const getRecommendedBookIds = async (
-  userId: string,
-  topK: number = 6
-): Promise<string[]> => {
-  try {
-    const response = await api.get(`/recommend/books/${userId}`, {
-      params: { top_k: topK },
-    });
-    if (!Array.isArray(response.data)) {
-      throw new Error("Invalid response format for recommended books");
-    }
-    return response.data;
-  } catch (error) {
-    console.error("Error in getRecommendedBookIds API call:", error);
-    return [];
-  }
-};
-
 // Lấy chi tiết nhiều sách theo list id
 export const getBooksByIds = async (ids: string[]): Promise<Book[]> => {
   if (!ids || ids.length === 0) return [];
@@ -407,29 +387,5 @@ export const getBooksByIds = async (ids: string[]): Promise<Book[]> => {
       }
     }
     return results;
-  }
-};
-
-// Lấy danh sách sách recommend theo username
-export const getRecommendedBooksByUsername = async (
-  username: string,
-  topK: number = 6
-): Promise<Book[]> => {
-  try {
-    const response = await recommendApi.get(
-      `/recommend/books/username/${encodeURIComponent(username)}`,
-      {
-        params: { top_k: topK },
-      }
-    );
-    if (!Array.isArray(response.data)) {
-      throw new Error(
-        "Invalid response format for recommended books by username"
-      );
-    }
-    return response.data.map(transformBookData);
-  } catch (error) {
-    console.error("Error in getRecommendedBooksByUsername API call:", error);
-    return [];
   }
 };

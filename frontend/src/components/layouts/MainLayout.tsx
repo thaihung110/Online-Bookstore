@@ -120,7 +120,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       >
         <LocalLibraryIcon sx={{ fontSize: 40, mb: 1 }} />
         <Typography variant="h6" component="div">
-          Online Bookstore
+          AIMS
         </Typography>
       </Box>
       <Divider />
@@ -221,7 +221,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                 display: { xs: "none", sm: "block" },
               }}
             >
-              Online Bookstore
+              AIMS
             </Typography>
           </Box>
 
@@ -437,7 +437,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                     fontWeight: 700,
                   }}
                 >
-                  Online Bookstore
+                  AIMS
                 </Typography>
               </Box>
               <Typography variant="body2" color="text.secondary" paragraph>
@@ -533,7 +533,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           </Box>
           <Divider sx={{ my: 3 }} />
           <Typography variant="body2" color="text.secondary" align="center">
-            © {new Date().getFullYear()} Online Bookstore. All rights reserved.
+            © {new Date().getFullYear()} AIMS. All rights reserved.
           </Typography>
         </Container>
       </Box>
