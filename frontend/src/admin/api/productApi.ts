@@ -1,10 +1,10 @@
 import axios from "axios";
 import {
-  DVD,
-  DVDFilters,
-  DVDFormData,
-  DVDListResponse,
-} from "../types/dvd.types";
+  Product,
+  ProductFilters,
+  ProductFormData,
+  ProductListResponse,
+} from "../types/product.types";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:3001/api";
 
@@ -23,12 +23,11 @@ const getAuthHeaders = () => {
   };
 };
 
-// Function to convert DVDFilters to query params
-const buildQueryParams = (filters: DVDFilters): string => {
+// Function to convert ProductFilters to query params
+const buildQueryParams = (filters: ProductFilters): string => {
   const params = new URLSearchParams();
 
   if (filters.search) params.append("search", filters.search);
-
   if (filters.minPrice !== undefined)
     params.append("minPrice", filters.minPrice.toString());
   if (filters.maxPrice !== undefined)
@@ -43,44 +42,42 @@ const buildQueryParams = (filters: DVDFilters): string => {
   params.append("page", filters.page.toString());
   params.append("limit", filters.limit.toString());
 
-
   return params.toString();
 };
 
 
 
-
-// Get all dvds with filters
-export const getDVDs = async (
-  filters: DVDFilters
-): Promise<DVDListResponse> => {
-  const response = await axios.get(`${API_URL}/admin/dvds?${buildQueryParams(filters)}`, getAuthHeaders());
+// Get all products with filters
+export const getProducts = async (
+  filters: ProductFilters
+): Promise<ProductListResponse> => {
+  const response = await axios.get(`${API_URL}/admin/products/general-info?${buildQueryParams(filters)}`, getAuthHeaders());
   return response.data;
 };
 
-// Get a single dvd by ID
-export const getDVD = async (id: string): Promise<DVD> => {
-  const response = await axios.get(`${API_URL}/admin/dvds/${id}`, getAuthHeaders());
-  return response.data;
-};
+// // Get a single product by ID
+// export const getProduct = async (id: string): Promise<Product> => {
+//   const response = await axios.get(`${API_URL}/admin/products/${id}`, getAuthHeaders());
+//   return response.data;
+// };
 
-// Create a new dvd
-export const createDVD = async (dvdData: DVDFormData): Promise<DVD> => {
-  const response = await axios.post(`${API_URL}/admin/dvds`, dvdData, getAuthHeaders());
-  return response.data;
-};
+// // Create a new product
+// export const createProduct = async (productData: ProductFormData): Promise<Product> => {
+//   const response = await axios.post(`${API_URL}/admin/products`, productData, getAuthHeaders());
+//   return response.data;
+// };
 
-// Update an existing dvd
-export const updateDVD = async (
-  id: string,
-  dvdData: DVDFormData
-): Promise<DVD> => {
-  const response = await axios.put(`${API_URL}/admin/dvds/${id}`, dvdData, getAuthHeaders());
-  return response.data;
-};
+// // Update an existing product
+// export const updateProduct = async (
+//   id: string,
+//   productData: ProductFormData
+// ): Promise<Product> => {
+//   const response = await axios.put(`${API_URL}/admin/products/${id}`, productData, getAuthHeaders());
+//   return response.data;
+// };
 
-// Delete a dvd
-export const deleteDVD = async (id: string): Promise<void> => {
+// Delete a product
+export const deleteProduct = async (id: string): Promise<void> => {
   await axios.delete(`${API_URL}/admin/products/one/${id}`, getAuthHeaders());
 };
 
@@ -96,14 +93,14 @@ export interface UploadPresignedUrlResponse {
   expiresIn: number;
 }
 
-// Get presigned URL for uploading dvd cover image
+// Get presigned URL for uploading product cover image
 export const getUploadPresignedUrl = async (
   fileName: string,
   contentType: string
 ): Promise<UploadPresignedUrlResponse> => {
   try {
     const response = await axios.post(
-      `${API_URL}/admin/dvds/upload-presigned-url`,
+      `${API_URL}/admin/products/upload-presigned-url`,
       { fileName, contentType },
       getAuthHeaders()
     );
@@ -141,7 +138,7 @@ export const uploadToR2 = async (
 };
 
 // Complete upload flow: get presigned URL and upload file
-export const uploadDVDCover = async (
+export const uploadProductCover = async (
   file: File,
   onProgress?: (progress: number) => void
 ): Promise<string> => {
@@ -155,11 +152,10 @@ export const uploadDVDCover = async (
     // Step 2: Upload file to R2
     await uploadToR2(file, uploadUrl, onProgress);
 
-    // Step 3: Return S3 key for saving with dvd data
+    // Step 3: Return S3 key for saving with product data
     return s3Key;
   } catch (error) {
-    console.error("Failed to upload dvd cover:", error);
+    console.error("Failed to upload product cover:", error);
     throw error;
   }
 };
-

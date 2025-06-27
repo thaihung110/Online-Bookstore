@@ -1,6 +1,5 @@
 import React from "react";
 import {
-
   Button,
   Dialog,
   DialogActions,
@@ -11,53 +10,47 @@ import {
   Typography,
   CircularProgress,
 } from "@mui/material";
+import { Product } from "../../types/product.types";
 
-import { CD } from "../../types/cd.types";
-
-interface CDDeleteDialogProps {
+interface ProductDeleteDialogProps {
   open: boolean;
-  cd: CD | null;
-
+  product: Product | null;
   loading: boolean;
   onClose: () => void;
   onConfirm: () => void;
-
 }
 
-const CDDeleteDialog: React.FC<CDDeleteDialogProps> = ({
+const ProductDeleteDialog: React.FC<ProductDeleteDialogProps> = ({
   open,
-  cd,
-
+  product,
   loading,
   onClose,
   onConfirm,
-
 }) => {
-  if (!cd) return null;
+  if (!product) return null;
 
   return (
-
     <Dialog
       open={open}
       onClose={loading ? undefined : onClose}
-      aria-labelledby="delete-cd-dialog-title"
+      aria-labelledby="delete-product-dialog-title"
       maxWidth="sm"
       fullWidth
     >
-      <DialogTitle id="delete-cd-dialog-title">
-        Delete CD Confirmation
+      <DialogTitle id="delete-product-dialog-title">
+        Delete Product Confirmation
       </DialogTitle>
       <DialogContent>
         <DialogContentText>
-          Are you sure you want to delete the following cd? This action cannot
+          Are you sure you want to delete the following product? This action cannot
           be undone.
         </DialogContentText>
         <Box sx={{ mt: 2, display: "flex", alignItems: "center" }}>
-          {cd.coverImage && (
+          {product.coverImage && (
             <Box
               component="img"
-              src={cd.coverImage}
-              alt={cd.title}
+              src={product.coverImage}
+              alt={product.title}
               sx={{
                 width: 60,
                 height: 90,
@@ -66,24 +59,19 @@ const CDDeleteDialog: React.FC<CDDeleteDialogProps> = ({
                 borderRadius: 1,
               }}
               onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
-                e.currentTarget.src = "/placeholder-cd.png";
+                e.currentTarget.src = "/placeholder-product.png";
               }}
             />
           )}
           <Box>
             <Typography variant="h6" component="h3">
-              {cd.title}
+              {product.title}
             </Typography>
-            <Typography variant="body2" color="text.secondary">
-              by {cd.artist}
-            </Typography>
-            {/* <Typography variant="body2">ISBN: {cd.isbn}</Typography> */}
           </Box>
         </Box>
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose} disabled={loading} color="inherit">
-
           Cancel
         </Button>
         <Button
@@ -91,11 +79,9 @@ const CDDeleteDialog: React.FC<CDDeleteDialogProps> = ({
           color="error"
           variant="contained"
           disabled={loading}
-
           startIcon={
             loading ? <CircularProgress size={20} color="inherit" /> : null
           }
-
         >
           {loading ? "Deleting..." : "Delete"}
         </Button>
@@ -104,6 +90,4 @@ const CDDeleteDialog: React.FC<CDDeleteDialogProps> = ({
   );
 };
 
-
-export default CDDeleteDialog;
-
+export default ProductDeleteDialog;

@@ -106,5 +106,53 @@ export class ProductsController {  constructor(
     return this.adminProductsService.delete(userId, id);
   }
 
-  
+
+  @Get('history')
+  @ApiOperation({ summary: 'Get product alter history of user' })
+  async getHistory(@GetUserId() userId: string) {
+
+    return this.adminProductsService.findHistory(userId);
+  }
+
+  // findALL
+  @Get('general-info')
+  @ApiOperation({ summary: 'Get all books with pagination and filters' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'search', required: false, type: String })
+  @ApiQuery({ name: 'minPrice', required: false, type: Number })
+  @ApiQuery({ name: 'maxPrice', required: false, type: Number })
+  @ApiQuery({ name: 'inStock', required: false, type: Boolean })
+  @ApiQuery({ name: 'sortBy', required: false, type: String })
+  @ApiQuery({
+    name: 'sortOrder',
+    required: false,
+    type: String,
+    enum: ['asc', 'desc'],
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns all books with pagination',
+  })
+  async findAll(
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
+    @Query('search') search?: string,
+    @Query('minPrice') minPrice?: number,
+    @Query('maxPrice') maxPrice?: number,
+    @Query('inStock') inStock?: boolean,
+    @Query('sortBy') sortBy?: string,
+    @Query('sortOrder') sortOrder?: 'asc' | 'desc',
+  ) {
+    return this.adminProductsService.findAllGeneral({
+      page,
+      limit,
+      search,
+      minPrice,
+      maxPrice,
+      inStock,
+      sortBy,
+      sortOrder,
+    });
+  }
 }

@@ -13,6 +13,7 @@ import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { ProductActivityLogService } from '../activity-log/activity-log.service';
 import { ProductActivityLog,ProductActivityLogDocument,ProductActivityType } from '../activity-log/schemas/product-activity-log.schema';
+import { start } from 'repl';
 
 export interface ProductFilters {
   page: number;
@@ -64,6 +65,17 @@ export class AdminProductsService<T extends Product, D extends ProductDocument> 
       originalPrice,
       price,
     };
+  }
+
+
+  async findHistory(userId: string) {
+    const history = await this.productActivityLogService.findByUserId(userId);
+    if (!history || history.length === 0) {
+      throw new NotFoundException(`No activity history found for user ID ${userId}`);
+    }
+    // Process each history item to include product details
+    return history;
+    
   }
 
   // Create a new product
@@ -155,6 +167,14 @@ export class AdminProductsService<T extends Product, D extends ProductDocument> 
     );
     this.logger.log(`Product with ID ${id} deleted successfully`);
     return;
+  }
+
+
+  async getDeleteCountBYUser(userId: string) {
+    const now = new Date();
+    const deletedProductCount = await this.productActivityLogService.countDeletedProductsByUserIdAndDate(userId, now);
+    
+    return deletedProductCount;
   }
 
 
@@ -284,67 +304,74 @@ export class AdminProductsService<T extends Product, D extends ProductDocument> 
 
 
   // Find all products with filtering
-  // async findAll(filters: ProductFilters): Promise<ProductListResponse> {
-  //   const {
-  //     page = 1,
-  //     limit = 10,
-  //     search,
-  //     minPrice,
-  //     maxPrice,
-  //     inStock,
-  //     sortBy = 'createdAt',
-  //     sortOrder = 'desc',
-  //   } = filters;
+  async findAllGeneral(filters: ProductFilters): Promise<ProductListResponse> {
+    const {
+      page = 1,
+      limit = 10,
+      search,
+      minPrice,
+      maxPrice,
+      inStock,
+      sortBy = 'createdAt',
+      sortOrder = 'desc',
+    } = filters;
 
-  //   const query: any = {};
+    const query: any = {};
 
-  //   // Apply filters
-  //   if (search) {
-  //     query.$or = [
-  //       { title: { $regex: search, $options: 'i' } },
-  //     ];
-  //   }
+    // Apply filters
+    if (search) {
+      query.$or = [
+        { title: { $regex: search, $options: 'i' } },
+      ];
+    }
 
-  //   if (minPrice !== undefined || maxPrice !== undefined) {
-  //     query.price = {};
-  //     if (minPrice !== undefined) {
-  //       query.price.$gte = minPrice;
-  //     }
-  //     if (maxPrice !== undefined) {
-  //       query.price.$lte = maxPrice;
-  //     }
-  //   }
+    if (minPrice !== undefined || maxPrice !== undefined) {
+      query.price = {};
+      if (minPrice !== undefined) {
+        query.price.$gte = minPrice;
+      }
+      if (maxPrice !== undefined) {
+        query.price.$lte = maxPrice;
+      }
+    }
+    query.isAvailable = true; // Only fetch available products
 
-  //   if (inStock !== undefined) {
-  //     query.stock = inStock ? { $gt: 0 } : { $lte: 0 };
-  //   }
+    if (inStock !== undefined) {
+      // query.stock = inStock ? { $gt: 0 };
+      // neu true thi tim gt : 0 neu false thi khong cân thêm và query
+      if (inStock) {
+        query.stock = { $gt: 0 };
+      }
 
-  //   // Count total documents
-  //   const total = await this.productModel.countDocuments(query);
+    }
 
-  //   // Build sort object
-  //   const sort: any = {};
-  //   sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
+    // Count total documents
+    const total = await this.productModel.countDocuments(query);
 
-  //   // Fetch paginated products
-  //   const products = await this.productModel
-  //     .find(query)
-  //     .sort(sort)
-  //     .skip((page - 1) * limit)
-  //     .limit(limit)
-  //     .exec();
+    // Build sort object
+    const sort: any = {};
+    sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
 
-  //   // Process products with async image URL processing
-  //   const processedProducts = await Promise.all(
-  //     products.map(product => this.processProductData(product))
-  //   );
+    // Fetch paginated products
+    const products = await this.productModel
+      .find(query)
+      .sort(sort)
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .select('title coverImage price originalPrice productType createdAt updatedAt isAvailable stock')
+      .exec();
 
-  //   return {
-  //     products: processedProducts,
-  //     total,
-  //     page,
-  //     limit,
-  //     totalPages: Math.ceil(total / limit),
-  //   };
-  // }
+    // Process products with async image URL processing
+    const processedProducts = await Promise.all(
+      products.map(product => this.processProductData(product))
+    );
+
+    return {
+      products: processedProducts,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
 }

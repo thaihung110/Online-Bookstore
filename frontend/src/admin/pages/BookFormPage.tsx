@@ -92,12 +92,29 @@ const BookFormPage: React.FC = () => {
   };
 
   // Form state
-  const [formData, setFormData] = useState<BookFormData>({
+  // const [formData, setFormData] = useState<BookFormData>({
+  //   title: "",
+  //   author: "",
+  //   description: "",
+  //   originalPrice: 0,
+  //   discountRate: 0,
+  //   isbn: "",
+  //   publicationYear: new Date().getFullYear(),
+  //   publisher: "",
+  //   pageCount: 0,
+  //   genres: [],
+  //   language: "English",
+  //   stock: 0,
+  //   coverImage: null,
+  //   coverImageUrl: "",
+  // });
+
+const [formData, setFormData] = useState<BookFormData>({
     title: "",
     author: "",
     description: "",
     originalPrice: 0,
-    discountRate: 0,
+    price: 0, // Calculated field
     isbn: "",
     publicationYear: new Date().getFullYear(),
     publisher: "",
@@ -107,7 +124,10 @@ const BookFormPage: React.FC = () => {
     stock: 0,
     coverImage: null,
     coverImageUrl: "",
+    isAvailableRush: true, // New field for rush delivery
   });
+
+
 
   // Validation state
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -140,7 +160,8 @@ const BookFormPage: React.FC = () => {
           author: bookData.author || "",
           description: bookData.description || "",
           originalPrice: bookData.originalPrice || 0,
-          discountRate: bookData.discountRate || 0,
+          // price: calculateCurrentPrice(bookData.originalPrice, bookData.discountRate),
+          price: bookData.price || 0, // Use price directly if available
           isbn: bookData.isbn || "",
           publicationYear: bookData.publicationYear || new Date().getFullYear(),
           publisher: bookData.publisher || "",
@@ -149,6 +170,7 @@ const BookFormPage: React.FC = () => {
           language: bookData.language || "English",
           stock: bookData.stock || 0,
           coverImageUrl: bookData.coverImage || "",
+          isAvailableRush: bookData.isAvailableRush !== undefined ? bookData.isAvailableRush : true, // Default to true if not set
         });
 
         // Set preview URL for existing image
@@ -251,6 +273,24 @@ const BookFormPage: React.FC = () => {
     }
   };
 
+
+  const handleRushDeliveryChange = (e: SelectChangeEvent<string>) => {
+  const value = e.target.value === "true";
+  setFormData((prev) => ({ 
+    ...prev, 
+    isAvailableRush: value 
+  }));
+
+  // Clear error if exists
+  if (errors.isAvailableRush) {
+    setErrors((prev) => {
+      const newErrors = { ...prev };
+      delete newErrors.isAvailableRush;
+      return newErrors;
+    });
+  }
+};
+
   // Validate form
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -276,9 +316,9 @@ const BookFormPage: React.FC = () => {
     }
 
     // Discount rate validation
-    if (formData.discountRate < 0 || formData.discountRate > 100) {
-      newErrors.discountRate = "Discount rate must be between 0 and 100";
-    }
+    // if (formData.discountRate < 0 || formData.discountRate > 100) {
+    //   newErrors.discountRate = "Discount rate must be between 0 and 100";
+    // }
 
     // ISBN validation
     if (!formData.isbn.trim()) {
@@ -364,6 +404,8 @@ const BookFormPage: React.FC = () => {
             ...finalFormData,
             coverImage: null, // Remove file object
             coverImageUrl: s3Key, // Use S3 key
+            // tinh price = originalPrice * (1 - discountRate / 100)
+            // price: calculateCurrentPrice(finalFormData.originalPrice, finalFormData.discountRate),
           };
         } catch (uploadError) {
           console.error("Failed to upload image:", uploadError);
@@ -388,7 +430,8 @@ const BookFormPage: React.FC = () => {
           author: "",
           description: "",
           originalPrice: 0,
-          discountRate: 0,
+          // discountRate: 0,
+          price: 0, // Reset calculated price
           isbn: "",
           publicationYear: new Date().getFullYear(),
           publisher: "",
@@ -398,6 +441,7 @@ const BookFormPage: React.FC = () => {
           stock: 0,
           coverImage: null,
           coverImageUrl: "",
+          isAvailableRush: true, // Reset rush delivery option
         });
         setSelectedFile(null);
         setPreviewUrl("");
@@ -671,7 +715,24 @@ const BookFormPage: React.FC = () => {
                   />
                 </Grid>
 
+                {/* them tickbox chon isAvailableRush = true hoac false */}
                 <Grid size={6}>
+                  <FormControl fullWidth>
+                    <InputLabel id="rush-delivery-label">Rush Delivery</InputLabel>
+                    <Select
+                      labelId="rush-delivery-label"
+                      name="isAvailableRush"
+                      value={formData.isAvailableRush ? "true" : "false"}
+                      onChange={handleRushDeliveryChange}
+                      label="Rush Delivery"
+                    >
+                      <MenuItem value="true">Available</MenuItem>
+                      <MenuItem value="false">Not Available</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+
+                {/* <Grid size={6}>
                   <TextField
                     fullWidth
                     required
@@ -689,9 +750,9 @@ const BookFormPage: React.FC = () => {
                       errors.discountRate || "Percentage discount (0-100%)"
                     }
                   />
-                </Grid>
+                </Grid> */}
 
-                <Grid size={6}>
+                {/* <Grid size={6}>
                   <TextField
                     fullWidth
                     label="Current Price (Calculated)"
@@ -705,6 +766,25 @@ const BookFormPage: React.FC = () => {
                         backgroundColor: theme.palette.grey[100],
                       },
                     }}
+                  />
+                </Grid> */}
+
+                {/* nguoi dung nhap vao price */}
+                <Grid size={6}>
+                  <TextField
+                    fullWidth
+                    required
+                    label="Price"
+                    name="price"
+                    type="number"
+                    value={formData.price === 0 ? "" : formData.price}
+                    onChange={handleNumberInputChange}
+                    InputProps={{
+                      startAdornment: <Typography sx={{ mr: 1 }}>$</Typography>,
+                      inputProps: { min: 0, step: 0.01 },
+                    }}
+                    error={!!errors.price}
+                    helperText={errors.price || "The final price after any discounts"}
                   />
                 </Grid>
               </Grid>

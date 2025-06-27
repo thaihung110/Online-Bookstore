@@ -48,10 +48,13 @@ const CDManagementPage: React.FC = () => {
 
     try {
       const response = await getCDs(filters);
-      setCDs(response.cds);
+
+      setCDs(response.cds); // Fixed: Use 'cds' instead of 'cds'
       setTotalCDs(response.total);
-    } catch (err: any) {
-      setError(err.message || "Failed to load CDs");
+    } catch (err) {
+      console.error("Failed to load CDs:", err);
+      setError("Failed to load CDs. Please try again.");
+
     } finally {
       setLoading(false);
     }
@@ -63,119 +66,125 @@ const CDManagementPage: React.FC = () => {
 
   // Handle filter changes
   const handleFilterChange = (newFilters: Partial<CDFilters>) => {
-    setFilters(prev => ({
-      ...prev,
+
+    setFilters((prevFilters) => ({
+      ...prevFilters,
       ...newFilters,
-      page: newFilters.page || 1, // Reset to page 1 unless page is explicitly set
     }));
   };
 
-  // Handle pagination
-  const handlePageChange = (page: number) => {
-    setFilters(prev => ({ ...prev, page }));
+  // Reset filters to defaults
+  const handleResetFilters = () => {
+    setFilters(DEFAULT_FILTERS);
   };
 
-  // Handle edit CD
-  const handleEditCD = (cd: CD) => {
-    navigate(`/admin/cds/edit/${cd._id}`);
+  // Handle add CD
+  const handleAddCD = () => {
+    navigate("/admin/cds/add");
   };
 
   // Handle delete CD
-  const handleDeleteCD = (cd: CD) => {
+  const handleDeleteClick = (cd: CD) => {
+
     setCDToDelete(cd);
     setDeleteDialogOpen(true);
   };
 
-  // Confirm delete CD
-  const confirmDeleteCD = async () => {
+
+  const handleCloseDeleteDialog = () => {
+    setDeleteDialogOpen(false);
+    setCDToDelete(null);
+  };
+
+  const handleConfirmDelete = async () => {
     if (!cdToDelete) return;
 
     setDeleteLoading(true);
+
+
     try {
       await deleteCD(cdToDelete._id);
       setDeleteDialogOpen(false);
       setCDToDelete(null);
-      loadCDs(); // Refresh the list
-    } catch (err: any) {
-      setError(err.message || "Failed to delete CD");
+
+
+      // Refresh the CD list
+      loadCDs();
+    } catch (err) {
+      console.error("Failed to delete CD:", err);
+      setError("Failed to delete CD. Please try again.");
+
     } finally {
       setDeleteLoading(false);
     }
   };
 
-  // Cancel delete
-  const cancelDelete = () => {
-    setDeleteDialogOpen(false);
-    setCDToDelete(null);
-  };
-
-  // Calculate total pages
-  const totalPages = Math.ceil(totalCDs / (filters.limit || 10));
 
   return (
     <Box>
-      {/* Header */}
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h4" component="h1" fontWeight="bold">
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          mb: 3,
+        }}
+      >
+        <Typography variant="h4" component="h1">
+
           CD Management
         </Typography>
         <Button
           variant="contained"
+
+          color="primary"
           startIcon={<AddIcon />}
-          onClick={() => navigate("/admin/cds/add")}
-          size="large"
+          onClick={handleAddCD}
         >
-          Add New CD
+          Add CD
         </Button>
       </Box>
 
-      {/* Error Alert */}
       {error && (
-        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
+        <Alert severity="error" sx={{ mb: 3 }}>
+
           {error}
         </Alert>
       )}
 
-      {/* Filter Section */}
-      <Paper sx={{ p: 3, mb: 3 }}>
-        <CDFilter
-          filters={filters}
-          onFilterChange={handleFilterChange}
-          loading={loading}
-        />
-      </Paper>
+
+      {/* Filters */}
+      <CDFilter
+        filters={filters}
+        onFilterChange={handleFilterChange}
+        onResetFilters={handleResetFilters}
+      />
 
       {/* CD List */}
-      <Paper sx={{ p: 3 }}>
-        {loading ? (
-          <Box display="flex" justifyContent="center" py={4}>
-            <CircularProgress />
-          </Box>
-        ) : (
-          <CDList
-            cds={cds}
-            total={totalCDs}
-            page={filters.page || 1}
-            limit={filters.limit || 10}
-            totalPages={totalPages}
-            onPageChange={handlePageChange}
-            onEdit={handleEditCD}
-            onDelete={handleDeleteCD}
-            loading={loading}
-          />
-        )}
-      </Paper>
+      <CDList
+        cds={cds}
+        totalCDs={totalCDs}
+        loading={loading}
+        filters={filters}
+        onFilterChange={handleFilterChange}
+        onDeleteCD={handleDeleteClick}
+      />
+
 
       {/* Delete Confirmation Dialog */}
       <CDDeleteDialog
         open={deleteDialogOpen}
         cd={cdToDelete}
-        onConfirm={confirmDeleteCD}
-        onCancel={cancelDelete}
+
         loading={deleteLoading}
+        onClose={handleCloseDeleteDialog}
+        onConfirm={handleConfirmDelete}
+
       />
     </Box>
   );
 };
 
+
 export default CDManagementPage;
+

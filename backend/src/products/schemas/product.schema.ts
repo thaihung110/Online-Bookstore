@@ -37,6 +37,9 @@ export class Product {
     // isAvailable
   @Prop({ type: Boolean, default: true })
   isAvailable: boolean;
+
+  @Prop({ type: Boolean, default: true })
+  isAvailableRush: boolean
 }
 
 export const ProductSchema = SchemaFactory.createForClass(Product);

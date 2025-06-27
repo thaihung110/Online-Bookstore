@@ -1,57 +1,57 @@
-// CD type definitions for admin interface
 
 export interface CD {
   _id: string;
-  id: string;
-  productType: 'CD';
+  id?: string; // Optional for backward compatibility
   title: string;
-  artist: string;
-  albumTitle: string;
-  trackList: string;
-  category: string;
-  releaseddate: string | Date;
-  description?: string;
+  price: number; // Calculated from originalPrice and discountRate
   originalPrice: number;
-  discountRate: number;
-  price: number;
+  discountRate: number; // Percentage discount (0-100)
+  coverImage: string;
   stock: number;
-  coverImage?: string;
-  isAvailable?: boolean;
-  isFeatured?: boolean;
-  isAvailableForPreOrder?: boolean;
-  preOrderReleaseDate?: string | Date;
-  createdAt?: string | Date;
-  updatedAt?: string | Date;
+  createdAt: string;
+  updatedAt: string;
+    artist: string;
+    albumTitle: string; // Tên album
+    trackList: string; // Danh sách bài hát
+    category: string; // Thể loại: Pop, Rock, Jazz, Classical, etc.
+    releaseddate: string; // Ngày phát hành (dạng chuỗi ISO 8601)
+    isAvailableRush: boolean; // New field for rush delivery
 }
+
+
+
+
+
+
+
 
 export interface CDFormData {
   title: string;
-  artist: string;
-  albumTitle: string;
-  trackList: string;
-  category: string;
-  releaseddate: string;
-  description?: string;
-  originalPrice: number;
-  discountRate: number;
   price: number;
+  originalPrice: number; // Base price before discount
+  coverImage?: File | null;
+  coverImageUrl?: string;
   stock: number;
-  coverImage?: string;
-  isAvailable?: boolean;
-  isFeatured?: boolean;
-  isAvailableForPreOrder?: boolean;
-  preOrderReleaseDate?: string;
+    artist: string;
+    albumTitle: string; // Tên album
+    trackList: string; // Danh sách bài hát
+    category: string; // Thể loại: Pop, Rock, Jazz, Classical, etc.
+    releaseddate: string; // Ngày phát hành (dạng chuỗi ISO 8601)
+  isAvailableRush: boolean; // New field for rush delivery
+
 }
 
 export interface CDFilters {
   search?: string;
-  artist?: string;
-  albumTitle?: string;
-  category?: string;
+
+  minPrice?: number;
+  maxPrice?: number;
+  inStock?: boolean;
+  onSale?: boolean;
   sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
-  page?: number;
-  limit?: number;
+  sortOrder?: "asc" | "desc";
+  page: number;
+  limit: number;
 }
 
 export interface CDListResponse {
@@ -60,4 +60,6 @@ export interface CDListResponse {
   page: number;
   limit: number;
   totalPages: number;
+
 }
+

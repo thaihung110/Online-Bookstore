@@ -5,6 +5,7 @@ import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import DashboardPage from "./pages/DashboardPage";
+import DatabaseHistory from "./admin/pages/DatabaseHistory";
 import BooksPage from "./pages/BooksPage";
 import BookDetailPage from "./pages/BookDetailPage";
 import CartPage from "./pages/CartPage";
@@ -32,10 +33,11 @@ import {
   UserFormPage,
   OrdersManagementPage,
   PromotionsManagementPage,
-  CDManagementPage,
+
   CDFormPage,
-  DVDManagementPage,
   DVDFormPage,
+  ProductManagementPage
+
 } from "./admin/pages";
 import AdminProtectedRoute from "./admin/components/layout/AdminProtectedRoute";
 import AdminLayout from "./admin/components/layout/AdminLayout";
@@ -211,6 +213,7 @@ const App: React.FC = () => {
             <Route index element={<AdminDashboardPage />} />
             <Route path="books" element={<BookManagementPage />} />
             <Route path="books/add" element={<BookFormPage />} />
+            <Route path="books/history" element={<DatabaseHistory />} />
             <Route path="books/edit/:id" element={<BookFormPage />} />
             <Route path="cds" element={<CDManagementPage />} />
             <Route path="cds/add" element={<CDFormPage />} />
@@ -222,6 +225,13 @@ const App: React.FC = () => {
             <Route path="users/add" element={<UserFormPage />} />
             <Route path="users/edit/:id" element={<UserFormPage />} />
             <Route path="orders" element={<OrdersManagementPage />} />
+            <Route path="cds/add" element = {<CDFormPage />} />
+            <Route path="dvds/add" element = {<DVDFormPage />} />
+            <Route path="cds/edit/:id" element={<CDFormPage />} />
+            <Route path="dvds/edit/:id" element={<DVDFormPage />} />
+            
+            
+            
             <Route
               path="promotions"
               element={<PromotionsManagementPage />}

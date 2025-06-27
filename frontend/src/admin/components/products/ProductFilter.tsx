@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import {
   Box,
@@ -26,9 +25,9 @@ import {
   Close as CloseIcon,
   Refresh as RefreshIcon,
 } from "@mui/icons-material";
-import { CDFilters } from "../../types/cd.types";
+import { ProductFilters } from "../../types/product.types";
 
-// Available cd genres - same as in CDFormPage
+// Available product genres - same as in ProductFormPage
 const AVAILABLE_GENRES = [
   "Fiction",
   "Non-fiction",
@@ -63,7 +62,7 @@ const AVAILABLE_GENRES = [
 ];
 
 // Default filters
-const DEFAULT_FILTERS: CDFilters = {
+const DEFAULT_FILTERS: ProductFilters = {
   page: 1,
   limit: 10,
   search: "",
@@ -71,17 +70,15 @@ const DEFAULT_FILTERS: CDFilters = {
   sortOrder: "asc",
 };
 
-interface CDFilterProps {
-  filters: CDFilters;
-  onFilterChange: (newFilters: Partial<CDFilters>) => void;
+interface ProductFilterProps {
+  filters: ProductFilters;
+  onFilterChange: (newFilters: Partial<ProductFilters>) => void;
   onResetFilters: () => void;
-
 }
 
-const CDFilter: React.FC<CDFilterProps> = ({
+const ProductFilter: React.FC<ProductFilterProps> = ({
   filters,
   onFilterChange,
-
   onResetFilters,
 }) => {
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
@@ -103,11 +100,11 @@ const CDFilter: React.FC<CDFilterProps> = ({
     });
   };
 
-  // Handle multi-select changes (artists)
-//   const handleArtistChange = (e: SelectChangeEvent<string[]>) => {
+  // Handle multi-select changes (genres)
+//   const handleGenresChange = (e: SelectChangeEvent<string[]>) => {
 //     const { value } = e.target;
 //     onFilterChange({
-//       artist: typeof value === "string" ? [value] : value,
+//       genres: typeof value === "string" ? [value] : value,
 //       page: 1, // Reset to first page on filter change
 //     });
 //   };
@@ -182,7 +179,7 @@ const CDFilter: React.FC<CDFilterProps> = ({
         <Grid size={{ xs: 12, md: 8 }}>
           <TextField
             fullWidth
-            label="Search CDs"
+            label="Search Products"
             name="search"
             value={filters.search || ""}
             onChange={handleSearchChange}
@@ -220,11 +217,9 @@ const CDFilter: React.FC<CDFilterProps> = ({
               onChange={handleSelectChange}
             >
               <MenuItem value="title">Title</MenuItem>
-              <MenuItem value="author">Author</MenuItem>
               <MenuItem value="price">Price</MenuItem>
               <MenuItem value="stockQuantity">Stock</MenuItem>
-              <MenuItem value="publicationDate">Publication Date</MenuItem>
-              <MenuItem value="rating">Rating</MenuItem>
+              {/* <MenuItem value="publicationDate">Publication Date</MenuItem> */}
             </Select>
           </FormControl>
         </Grid>
@@ -282,8 +277,8 @@ const CDFilter: React.FC<CDFilterProps> = ({
                 label="On Sale Only"
               />
             </Grid>
-{/* 
-            <Grid size={12}>
+
+            {/* <Grid size={12}>
               <FormControl fullWidth size="small">
                 <InputLabel id="genres-label">Genres</InputLabel>
                 <Select
@@ -317,5 +312,4 @@ const CDFilter: React.FC<CDFilterProps> = ({
   );
 };
 
-export default CDFilter;
-
+export default ProductFilter;

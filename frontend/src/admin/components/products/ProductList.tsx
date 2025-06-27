@@ -1,19 +1,16 @@
 import React from "react";
 import {
-
   Box,
   Button,
   Chip,
   CircularProgress,
   IconButton,
   Paper,
-
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
-
   TablePagination,
   TableRow,
   TableSortLabel,
@@ -26,26 +23,24 @@ import {
   Delete as DeleteIcon,
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
-import { CD, CDFilters } from "../../types/cd.types";
+import { Product, ProductFilters } from "../../types/product.types";
 
-interface CDListProps {
-  cds: CD[];
-  totalCDs: number;
+interface ProductListProps {
+  products: Product[];
+  totalProducts: number;
   loading: boolean;
-  filters: CDFilters;
-  onFilterChange: (newFilters: Partial<CDFilters>) => void;
-  onDeleteCD: (cd: CD) => void;
-
+  filters: ProductFilters;
+  onFilterChange: (newFilters: Partial<ProductFilters>) => void;
+  onDeleteProduct: (product: Product) => void;
 }
 
-const CDList: React.FC<CDListProps> = ({
-  cds,
-
-  totalCDs,
+const ProductList: React.FC<ProductListProps> = ({
+  products,
+  totalProducts,
   loading,
   filters,
   onFilterChange,
-  onDeleteCD,
+  onDeleteProduct,
 }) => {
   const navigate = useNavigate();
 
@@ -81,15 +76,43 @@ const CDList: React.FC<CDListProps> = ({
     handleSortRequest(property);
   };
 
+  const handleEditProduct = (id: string, type: string) => {
+    // print to debig 
+    console.log(`Editing product with ID: ${id} and type: ${type}`);
+    if (type == "BOOK") {
+        navigate(`/admin/books/edit/${id}`);
+        }
+    else if (type == "CD") {
+        // print to debug
+        console.log(`Navigating to edit CD with ID: ${id}`);
+        navigate(`/admin/cds/edit/${id}`);
+    }
+    else if (type == "DVD") {
+        // print to debug
+        console.log(`Navigating to edit DVD with ID: ${id}`);
+        navigate(`/admin/dvds/edit/${id}`);
+    }
+    };
+
   // Handle actions
+  const handleEditBook = (id: string) => {
+    navigate(`/admin/books/edit/${id}`);
+  };
+
+
   const handleEditCD = (id: string) => {
     navigate(`/admin/cds/edit/${id}`);
+  };
+
+
+  const handleEditDVD = (id: string) => {
+    navigate(`/admin/dvds/edit/${id}`);
   };
 
   return (
     <Paper elevation={3}>
       <TableContainer>
-        <Table sx={{ minWidth: 650 }} aria-label="cds table">
+        <Table sx={{ minWidth: 650 }} aria-label="products table">
           <TableHead>
             <TableRow>
               <TableCell>
@@ -107,7 +130,7 @@ const CDList: React.FC<CDListProps> = ({
                   Title
                 </TableSortLabel>
               </TableCell>
-              <TableCell>
+              {/* <TableCell>
                 <TableSortLabel
                   active={filters.sortBy === "author"}
                   direction={
@@ -121,7 +144,26 @@ const CDList: React.FC<CDListProps> = ({
                 >
                   Author
                 </TableSortLabel>
-              </TableCell>
+              </TableCell> */}
+
+
+              {/* them cot product type */}
+                <TableCell>
+                    <TableSortLabel
+                    active={filters.sortBy === "type"}
+                    direction={
+                        filters.sortBy === "type"
+                        ? filters.sortOrder === "asc"
+                            ? "asc"
+                            : "desc"
+                        : "asc"
+                    }
+                    onClick={createSortHandler("type")}
+                    >
+                    Type
+                    </TableSortLabel>
+                </TableCell>
+                
               <TableCell>
                 <TableSortLabel
                   active={filters.sortBy === "price"}
@@ -137,7 +179,7 @@ const CDList: React.FC<CDListProps> = ({
                   Price
                 </TableSortLabel>
               </TableCell>
-              <TableCell>Genres</TableCell>
+              {/* <TableCell>Genres</TableCell> */}
               <TableCell>
                 <TableSortLabel
                   active={filters.sortBy === "stockQuantity"}
@@ -156,6 +198,9 @@ const CDList: React.FC<CDListProps> = ({
               <TableCell align="right">Actions</TableCell>
             </TableRow>
           </TableHead>
+
+
+
           <TableBody>
             {loading ? (
               <TableRow>
@@ -163,27 +208,27 @@ const CDList: React.FC<CDListProps> = ({
                   <CircularProgress size={40} />
                 </TableCell>
               </TableRow>
-            ) : cds.length === 0 ? (
+            ) : products.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} align="center" sx={{ py: 3 }}>
                   <Typography variant="body1">
-                    No cds found. Try adjusting your filters.
+                    No products found. Try adjusting your filters.
                   </Typography>
                   <Button
                     variant="contained"
                     color="primary"
                     startIcon={<AddIcon />}
                     sx={{ mt: 2 }}
-                    onClick={() => navigate("/admin/cds/add")}
+                    onClick={() => navigate("/admin/books/add")}
                   >
-                    Add New cds
+                    Add New Product
                   </Button>
                 </TableCell>
               </TableRow>
             ) : (
-              cds.map((cd) => (
+              products.map((product) => (
                 <TableRow
-                  key={cd._id}
+                  key={product._id}
                   sx={{
                     "&:hover": { backgroundColor: "rgba(0, 0, 0, 0.04)" },
                   }}
@@ -192,8 +237,8 @@ const CDList: React.FC<CDListProps> = ({
                     <Box sx={{ display: "flex", alignItems: "center" }}>
                       <Box
                         component="img"
-                        src={cd.coverImage || placeholderImage}
-                        alt={cd.title}
+                        src={product.coverImage || placeholderImage}
+                        alt={product.title}
                         sx={{
                           width: 40,
                           height: 60,
@@ -210,77 +255,64 @@ const CDList: React.FC<CDListProps> = ({
                           }
                         }}
                       />
-                      <Typography variant="body1">{cd.title}</Typography>
+                      <Typography variant="body1">{product.title}</Typography>
                     </Box>
                   </TableCell>
-                  <TableCell>{cd.artist}</TableCell>
+                  <TableCell>{product.productType}</TableCell>
                   <TableCell>
-                    {cd.discountRate > 0 ? (
-                      <>
+                    <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
+                        {/* Giá gốc - luôn hiển thị và bị gạch ngang */}
                         <Typography
-                          variant="body2"
-                          component="span"
-                          sx={{
+                        variant="body2"
+                        component="span"
+                        sx={{
                             textDecoration: "line-through",
                             color: "text.secondary",
-                            mr: 1,
-                          }}
+                        }}
                         >
-                          ${(cd.originalPrice || 0).toFixed(2)}
+                        ${(product.originalPrice || 0).toFixed(2)}
                         </Typography>
+                        
+                        {/* Giá hiện tại - luôn hiển thị */}
                         <Typography
-                          variant="body1"
-                          component="span"
-                          sx={{ color: "error.main", fontWeight: "bold" }}
+                        variant="body1"
+                        component="span"
+                        sx={{ 
+                            color: product.price < product.originalPrice ? "error.main" : "text.primary",
+                            fontWeight: "bold" 
+                        }}
                         >
-                          ${(cd.price || 0).toFixed(2)}
+                        ${(product.price || 0).toFixed(2)}
                         </Typography>
+                        
+                        {/* Hiển thị % giảm giá nếu có */}
+                        {product.price < product.originalPrice && (
                         <Typography
-                          variant="caption"
-                          component="span"
-                          sx={{ color: "success.main", ml: 1 }}
+                            variant="caption"
+                            component="span"
+                            sx={{ color: "success.main" }}
                         >
-                          ({cd.discountRate}% off)
+                            ({(((product.originalPrice - product.price) / product.originalPrice) * 100).toFixed(0)}% off)
                         </Typography>
-                      </>
-                    ) : (
-                      <Typography variant="body1">
-                        ${(cd.price || 0).toFixed(2)}
-                      </Typography>
-                    )}
-                  </TableCell>
-                  {/* <TableCell>
-                    <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
-                      {cd.genres.slice(0, 2).map((genre) => (
-                        <Chip
-                          key={genre}
-                          label={genre}
-                          size="small"
-                          variant="outlined"
-                        />
-                      ))}
-                      {book.genres.length > 2 && (
-                        <Chip
-                          label={`+${book.genres.length - 2}`}
-                          size="small"
-                          variant="outlined"
-                        />
-                      )}
+                        )}
                     </Box>
-                  </TableCell> */}
+                    </TableCell>
+
                   <TableCell>
                     <Chip
-                      label={cd.stock}
-                      color={cd.stock > 0 ? "success" : "error"}
+                      label={product.stock}
+                      color={product.stock > 0 ? "success" : "error"}
                       size="small"
                     />
                   </TableCell>
+
+
                   <TableCell align="right">
                     <Tooltip title="Edit">
                       <IconButton
                         aria-label="edit"
                         size="small"
-                        onClick={() => handleEditCD(cd._id)}
+                        onClick={() => handleEditProduct(product._id, product.productType)}
                       >
                         <EditIcon fontSize="small" />
                       </IconButton>
@@ -289,7 +321,7 @@ const CDList: React.FC<CDListProps> = ({
                       <IconButton
                         aria-label="delete"
                         size="small"
-                        onClick={() => onDeleteCD(cd)}
+                        onClick={() => onDeleteProduct(product)}
                         color="error"
                       >
                         <DeleteIcon fontSize="small" />
@@ -305,7 +337,7 @@ const CDList: React.FC<CDListProps> = ({
       <TablePagination
         rowsPerPageOptions={[5, 10, 25, 50]}
         component="div"
-        count={totalCDs}
+        count={totalProducts}
         rowsPerPage={filters.limit}
         page={filters.page - 1}
         onPageChange={handleChangePage}
@@ -315,5 +347,4 @@ const CDList: React.FC<CDListProps> = ({
   );
 };
 
-export default CDList;
-
+export default ProductList;

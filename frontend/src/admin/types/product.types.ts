@@ -1,5 +1,4 @@
-
-export interface DVD {
+export interface Product {
   _id: string;
   id?: string; // Optional for backward compatibility
   title: string;
@@ -11,41 +10,23 @@ export interface DVD {
   rating: number;
   createdAt: string;
   updatedAt: string;
-  disctype: string; // Type of disc (e.g., DVD, Blu-ray)
-  director: string; // Director of the DVD
-  runtime: number; // Runtime in minutes
-  studio: string; // Studio that produced the DVD
-  subtitles: string; // List of subtitles available
-  releaseddate: string; // Release date of the DVD
-  filmtype: string; // Type of film (e.g., movie, series)
   isAvailableRush: boolean; // Whether the DVD is available for rush delivery
-
-
+    productType: string; // Type of product (e.g., product, cd, dvd)
 
 }
 
-export interface DVDFormData {
+export interface ProductFormData {
   title: string;
-
   originalPrice: number; // Base price before discount
   price: number; // Calculated field
   coverImage?: File | null;
   coverImageUrl?: string;
   stock: number;
-  disctype: string; // Type of disc (e.g., DVD, Blu-ray)
-  director: string; // Director of the DVD
-  runtime: number; // Runtime in minutes
-  studio: string; // Studio that produced the DVD
-  subtitles: string; // List of subtitles available
-  releaseddate: string; // Release date of the DVD
-  filmtype: string; // Type of film (e.g., movie, series)
   isAvailableRush: boolean; // Whether the DVD is available for rush delivery
-
 }
 
-export interface DVDFilters {
+export interface ProductFilters {
   search?: string;
-
   minPrice?: number;
   maxPrice?: number;
   inStock?: boolean;
@@ -56,13 +37,10 @@ export interface DVDFilters {
   limit: number;
 }
 
-export interface DVDListResponse {
-  books: DVD[];
-
+export interface ProductListResponse {
+  products: Product[];
   total: number;
   page: number;
   limit: number;
   totalPages: number;
-
 }
-
