@@ -43,9 +43,17 @@ export const useCDStore = create<CDState>()(
 
       fetchCDs: async (query: CDQuery = {}) => {
         try {
+          console.log('CDStore: fetchCDs called with query:', query);
           set({ isLoading: true, error: null });
           
           const response: CDResponse = await getCDs(query);
+          console.log('CDStore: Got response:', {
+            cdsCount: response.cds.length,
+            total: response.total,
+            page: response.page,
+            limit: response.limit,
+            totalPages: Math.ceil(response.total / response.limit)
+          });
           
           set({
             cds: response.cds,

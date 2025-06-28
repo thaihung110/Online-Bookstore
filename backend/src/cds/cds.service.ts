@@ -66,14 +66,19 @@ export class CDsService {
     try {
       const filter: any = { productType: 'CD' };
 
+      // Build $and conditions to handle multiple $or clauses
+      const andConditions = [];
+
       // Search term (match title, artist, or album title)
       if (queryDto.search) {
-        filter['$or'] = [
-          { title: { $regex: queryDto.search, $options: 'i' } },
-          { artist: { $regex: queryDto.search, $options: 'i' } },
-          { albumTitle: { $regex: queryDto.search, $options: 'i' } },
-          { trackList: { $regex: queryDto.search, $options: 'i' } },
-        ];
+        andConditions.push({
+          $or: [
+            { title: { $regex: queryDto.search, $options: 'i' } },
+            { artist: { $regex: queryDto.search, $options: 'i' } },
+            { albumTitle: { $regex: queryDto.search, $options: 'i' } },
+            { trackList: { $regex: queryDto.search, $options: 'i' } },
+          ]
+        });
       }
 
       // Artist filter (case-insensitive)
@@ -96,9 +101,16 @@ export class CDsService {
           ? queryDto.categories
           : [queryDto.categories];
 
-        filter.$or = categoriesArray.map((category) => ({
-          category: { $regex: new RegExp(`^${category}$`, 'i') },
-        }));
+        andConditions.push({
+          $or: categoriesArray.map((category) => ({
+            category: { $regex: new RegExp(`^${category}$`, 'i') },
+          }))
+        });
+      }
+
+      // Apply $and conditions if any exist
+      if (andConditions.length > 0) {
+        filter.$and = andConditions;
       }
 
       // Price range filter (prices are stored in USD)

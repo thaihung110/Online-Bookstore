@@ -48,7 +48,10 @@ export class BooksService {
     // Remove coverImageUrl from the data as it's not part of the schema
     delete bookData.coverImageUrl;
 
-    const newBook = new this.bookModel(bookData);
+    // Set productType explicitly
+    const bookWithType = { ...bookData, productType: 'BOOK' };
+
+    const newBook = new this.bookModel(bookWithType);
     const savedBook = await newBook.save();
     return await this.processBookData(savedBook);
   }
@@ -61,12 +64,14 @@ export class BooksService {
     try {
       const filter: any = { productType: 'BOOK' };
 
-      // Search term (match title or description or author)
+      // Search term (match title, author, description, publisher, or isbn)
       if (queryDto.search) {
         filter['$or'] = [
           { title: { $regex: queryDto.search, $options: 'i' } },
-          { description: { $regex: queryDto.search, $options: 'i' } },
           { author: { $regex: queryDto.search, $options: 'i' } },
+          { description: { $regex: queryDto.search, $options: 'i' } },
+          { publisher: { $regex: queryDto.search, $options: 'i' } },
+          { isbn: { $regex: queryDto.search, $options: 'i' } },
         ];
       }
 
@@ -75,111 +80,19 @@ export class BooksService {
         filter.author = { $regex: queryDto.author, $options: 'i' };
       }
 
-      // Genres filter (match any of the provided genres)
+      // Genre filter (match any of the provided genres)
       if (queryDto.genres && queryDto.genres.length > 0) {
         this.logger.log(
           `BooksService: Filtering by genres: ${JSON.stringify(queryDto.genres)}`,
         );
 
-        // DEBUG: In ra một số sách mẫu để xem thực sự có các thể loại này không
-        this.logger.log('DEBUGGING GENRES FILTER:');
-
-        // Đảm bảo queryDto.genres là array
         const genresArray = Array.isArray(queryDto.genres)
           ? queryDto.genres
           : [queryDto.genres];
 
-        // Lấy tất cả sách để xem cấu trúc genres và nội dung
-        const allBooks = await this.bookModel
-          .find()
-          .select('title genres')
-          .lean();
-        this.logger.log(`Total books found: ${allBooks.length}`);
-
-        // Log the first 10 books with their genres for debugging
-        const sampleBooks = allBooks.slice(0, 10);
-        this.logger.log(`Sample books: ${JSON.stringify(sampleBooks)}`);
-
-        // Look for exact genre matches in the dataset
-        for (const genre of genresArray) {
-          const exactMatches = allBooks.filter((book) =>
-            book.genres && Array.isArray(book.genres) && book.genres.some(
-              (bookGenre) => bookGenre.toLowerCase() === genre.toLowerCase(),
-            ),
-          );
-          this.logger.log(
-            `Books with EXACT match for genre "${genre}": ${exactMatches.length}`,
-          );
-          if (exactMatches.length > 0) {
-            this.logger.log(
-              `Example matches: ${JSON.stringify(exactMatches.slice(0, 3).map((b) => b.title))}`,
-            );
-          }
-
-          // Compare with partial matches
-          const partialMatches = allBooks.filter((book) =>
-            book.genres && Array.isArray(book.genres) && book.genres.some((bookGenre) =>
-              bookGenre.toLowerCase().includes(genre.toLowerCase()),
-            ),
-          );
-          this.logger.log(
-            `Books with PARTIAL match for genre "${genre}": ${partialMatches.length}`,
-          );
-          if (
-            partialMatches.length > 0 &&
-            partialMatches.length !== exactMatches.length
-          ) {
-            this.logger.log(
-              `Example partial matches: ${JSON.stringify(partialMatches.slice(0, 3).map((b) => b.title))}`,
-            );
-          }
-        }
-
-        // Thử các cách khác nhau để query
-        for (const genre of genresArray) {
-          // Exact match
-          const exactCount = await this.bookModel.countDocuments({
-            genres: genre,
-          });
-          // Case insensitive exact
-          const caseInsensitiveCount = await this.bookModel.countDocuments({
-            genres: { $regex: new RegExp(`^${genre}$`, 'i') },
-          });
-          // Case insensitive contains
-          const containsCount = await this.bookModel.countDocuments({
-            genres: { $regex: new RegExp(genre, 'i') },
-          });
-
-          this.logger.log(
-            `Genre "${genre}": exact=${exactCount}, case-insensitive exact=${caseInsensitiveCount}, contains=${containsCount}`,
-          );
-        }
-
-        // Sử dụng phương pháp tìm kiếm phù hợp nhất dựa trên kết quả thử nghiệm
-        const caseInsensitiveExactMatchCount =
-          await this.bookModel.countDocuments({
-            $or: genresArray.map((genre) => ({
-              genres: { $regex: new RegExp(`^${genre}$`, 'i') },
-            })),
-          });
-
-        this.logger.log(
-          `Case-insensitive exact match count: ${caseInsensitiveExactMatchCount}`,
-        );
-
-        // Nếu không tìm thấy kết quả chính xác, sử dụng tìm kiếm một phần
-        if (caseInsensitiveExactMatchCount === 0) {
-          this.logger.log('No exact matches found, trying partial matching');
-          filter.$or = genresArray.map((genre) => ({
-            genres: { $regex: new RegExp(genre, 'i') },
-          }));
-        } else {
-          filter.$or = genresArray.map((genre) => ({
-            genres: { $regex: new RegExp(`^${genre}$`, 'i') },
-          }));
-        }
-
-        this.logger.log(`Final filter object: ${JSON.stringify(filter)}`);
+        filter.genres = {
+          $in: genresArray.map((genre) => new RegExp(`^${genre}$`, 'i')),
+        };
       }
 
       // Price range filter (prices are stored in USD)
@@ -343,7 +256,7 @@ export class BooksService {
   }
 
   async remove(id: string): Promise<{ deleted: boolean; message?: string }> {
-    const result = await this.bookModel.deleteOne({ _id: id }).exec();
+    const result = await this.bookModel.deleteOne({ _id: id, productType: 'BOOK' }).exec();
     if (result.deletedCount === 0) {
       throw new NotFoundException(`Book with ID "${id}" not found`);
     }
@@ -351,15 +264,10 @@ export class BooksService {
   }
 
   async getAllGenres(): Promise<string[]> {
-    this.logger.log('Getting all unique genres');
+    this.logger.log('Getting all unique book genres');
     try {
       const booksCount = await this.bookModel.countDocuments({ productType: 'BOOK' });
       this.logger.log(`Total books in collection: ${booksCount}`);
-
-      const sampleBooks = await this.bookModel.find({ productType: 'BOOK' }).limit(5).select('genres');
-      this.logger.log(
-        `Sample books genres: ${JSON.stringify(sampleBooks.map((book) => book.genres))}`,
-      );
 
       const rawGenres = await this.bookModel.distinct('genres', { productType: 'BOOK' }).exec();
       this.logger.log(
@@ -390,15 +298,6 @@ export class BooksService {
         `Normalized ${genres.length} unique genres: ${JSON.stringify(genres)}`,
       );
 
-      const commonGenres = genres.slice(0, Math.min(5, genres.length));
-      for (const genre of commonGenres) {
-        const count = await this.bookModel.countDocuments({
-          productType: 'BOOK',
-          genres: { $regex: new RegExp(`^${genre}$`, 'i') },
-        });
-        this.logger.log(`Genre "${genre}" has ${count} books`);
-      }
-
       return genres;
     } catch (error) {
       this.logger.error(`Error getting genres: ${error.message}`, error.stack);
@@ -406,14 +305,43 @@ export class BooksService {
         'Fiction',
         'Non-Fiction',
         'Science Fiction',
-        'Fantasy',
         'Mystery',
+        'Romance',
+        'Biography',
+        'Fantasy',
+        'History',
+        'Children',
+        'Self-Help',
+        'Business',
+        'Education',
+        'Health',
+        'Travel',
+        'Cooking',
       ];
+    }
+  }
+
+  async getBooksByIds(ids: string[]): Promise<Book[]> {
+    this.logger.log(`Getting books by IDs: ${JSON.stringify(ids)}`);
+    try {
+      const books = await this.bookModel
+        .find({
+          _id: { $in: ids },
+          productType: 'BOOK',
+        })
+        .exec();
+
+      return await Promise.all(
+        books.map((book) => this.processBookData(book))
+      );
+    } catch (error) {
+      this.logger.error(`Error getting books by IDs: ${error.message}`, error.stack);
+      throw error;
     }
   }
 }
 
-// Helper function để kiểm tra xem chuỗi có được viết hoa chữ cái đầu không
+// Helper function to check if string is capitalized
 function isCapitalized(str: string | undefined): boolean {
   if (!str) return false;
   return /^[A-Z]/.test(str);

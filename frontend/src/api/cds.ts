@@ -8,8 +8,10 @@ interface RawCDData {
   productType: 'CD';
   title: string;
   artist: string;
-  albumTitle: string;
-  trackList: string;
+  albumTitle?: string;
+  albumtitle?: string; // Backend uses lowercase
+  trackList?: string;
+  tracklist?: string; // Backend uses lowercase
   category: string;
   releaseddate: string | Date;
   description?: string;
@@ -39,8 +41,8 @@ const isValidCD = (cd: any): cd is RawCDData => {
     cd.productType === 'CD' &&
     typeof cd.title === "string" &&
     typeof cd.artist === "string" &&
-    typeof cd.albumTitle === "string" &&
-    typeof cd.trackList === "string" &&
+    (typeof cd.albumTitle === "string" || typeof cd.albumtitle === "string") &&
+    (typeof cd.trackList === "string" || typeof cd.tracklist === "string") &&
     typeof cd.category === "string" &&
     typeof cd.price === "number"
   );
@@ -51,6 +53,10 @@ const transformCDData = (cdData: RawCDData): CD => {
   // Convert _id to id if necessary, but preserve _id for backend operations
   const id = cdData._id || cdData.id || "";
   const _id = cdData._id || cdData.id || "";
+
+  // Handle both field name formats (camelCase and lowercase)
+  const albumTitle = cdData.albumTitle || cdData.albumtitle || "";
+  const trackList = cdData.trackList || cdData.tracklist || "";
 
   // Ensure numeric values
   const originalPrice = Number(cdData.originalPrice) || cdData.price;
@@ -64,8 +70,8 @@ const transformCDData = (cdData: RawCDData): CD => {
     productType: 'CD',
     title: cdData.title.trim(),
     artist: cdData.artist.trim(),
-    albumTitle: cdData.albumTitle.trim(),
-    trackList: cdData.trackList,
+    albumTitle: albumTitle.trim(),
+    trackList: trackList,
     category: cdData.category.trim(),
     releaseddate: cdData.releaseddate,
     description: cdData.description?.trim(),
@@ -136,12 +142,31 @@ export const getCDs = async (query: CDQuery = {}): Promise<CDResponse> => {
 
     // Validate and transform response data
     if (!response.data || !Array.isArray(response.data.cds)) {
+      console.error("API: Invalid response format:", response.data);
       throw new Error("Invalid response format from CDs API");
     }
 
-    const transformedCDs = response.data.cds
-      .filter(isValidCD)
-      .map(transformCDData);
+    console.log("API: Raw response data:", {
+      totalCDs: response.data.cds.length,
+      total: response.data.total,
+      page: response.data.page,
+      limit: response.data.limit
+    });
+
+    const validCDs = response.data.cds.filter(isValidCD);
+    console.log("API: Valid CDs after filtering:", validCDs.length, "out of", response.data.cds.length);
+    
+    if (validCDs.length !== response.data.cds.length) {
+      console.warn("API: Some CDs filtered out during validation:", 
+        response.data.cds.filter((cd: RawCDData) => !isValidCD(cd)).map((cd: RawCDData) => ({
+          id: cd._id,
+          title: cd.title,
+          reason: "Failed validation"
+        }))
+      );
+    }
+
+    const transformedCDs = validCDs.map(transformCDData);
 
     return {
       cds: transformedCDs,

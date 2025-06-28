@@ -91,4 +91,16 @@ export class CreateProductDto {
   @IsOptional()
   @IsDate()
   updatedAt?: Date;
+
+
+  // weight
+  @ApiPropertyOptional({
+    description: 'Weight of the product in grams',
+    example: 500,
+    default: 0,
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  weight?: number;
 }

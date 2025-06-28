@@ -288,6 +288,16 @@ export class AdminProductsService<T extends Product, D extends ProductDocument> 
       throw new NotFoundException(`Product with ID ${id} not found`);
     }
 
+
+    var isPriceUpdated = false;
+    if(productToUpdate.price !== updateProductDto.price){
+      isPriceUpdated = true;
+      const countNumberOfUpdates = await this.productActivityLogService.countUpdatedPriceProductsByUserIdAndDate(userId, new Date(), id);
+      if (countNumberOfUpdates >= 2) {
+        throw new BadRequestException('You can only update the price of a product up to 2 times per day');
+      }
+    }
+
     // Update the product with new data
     Object.assign(productToUpdate, updateData);
     const updatedProduct = await productToUpdate.save();
@@ -295,7 +305,8 @@ export class AdminProductsService<T extends Product, D extends ProductDocument> 
     this.productActivityLogService.logActivity(
       userId,
       updatedProduct._id.toString(),
-      ProductActivityType.UPDATE,
+      // ProductActivityType.UPDATE,
+      isPriceUpdated ? ProductActivityType.UPDATE_PRICE : ProductActivityType.UPDATE,
       new Date()
     )
 
