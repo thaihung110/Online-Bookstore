@@ -22,12 +22,14 @@ export class CDsService {
     const cdObj = cd.toObject ? cd.toObject() : { ...cd };
 
     // Process image URL using UploadService
-    const coverImage = await this.uploadService.processImageUrl(cdObj.coverImage);
+    const coverImage = await this.uploadService.processImageUrl(
+      cdObj.coverImage,
+    );
 
     // Ensure price values are valid numbers
     const originalPrice = cdObj.originalPrice || 0;
     const discountRate = cdObj.discountRate || 0;
-    const price = cdObj.price || (originalPrice * (1 - discountRate / 100));
+    const price = cdObj.price || originalPrice * (1 - discountRate / 100);
 
     return {
       ...cdObj,
@@ -157,13 +159,11 @@ export class CDsService {
         this.cdModel.countDocuments(filter).exec(),
       ]);
 
-      this.logger.log(
-        `Found ${cds.length} CDs out of ${total} total matches`,
-      );
+      this.logger.log(`Found ${cds.length} CDs out of ${total} total matches`);
 
       // Process image URLs before returning
       const transformedCDs = await Promise.all(
-        cds.map((cd) => this.processCDData(cd))
+        cds.map((cd) => this.processCDData(cd)),
       );
 
       return {
@@ -201,9 +201,7 @@ export class CDsService {
       this.logger.log(`Found ${cds.length} featured CDs`);
 
       // Process image URLs before returning
-      return await Promise.all(
-        cds.map((cd) => this.processCDData(cd))
-      );
+      return await Promise.all(cds.map((cd) => this.processCDData(cd)));
     } catch (error) {
       this.logger.error(
         `Error finding featured CDs: ${error.message}`,
@@ -219,8 +217,13 @@ export class CDsService {
     console.log('[CDs Service] ID length:', id.length);
 
     try {
-      const cd = await this.cdModel.findOne({ _id: id, productType: 'CD' }).exec();
-      console.log('[CDs Service] MongoDB query result:', cd ? 'Found' : 'Not found');
+      const cd = await this.cdModel
+        .findOne({ _id: id, productType: 'CD' })
+        .exec();
+      console.log(
+        '[CDs Service] MongoDB query result:',
+        cd ? 'Found' : 'Not found',
+      );
 
       if (!cd) {
         console.log('[CDs Service] CD not found, throwing NotFoundException');
@@ -248,7 +251,9 @@ export class CDsService {
     delete updateData.coverImageUrl;
 
     // Use findById + save to trigger pre-save hooks
-    const cdToUpdate = await this.cdModel.findOne({ _id: id, productType: 'CD' }).exec();
+    const cdToUpdate = await this.cdModel
+      .findOne({ _id: id, productType: 'CD' })
+      .exec();
     if (!cdToUpdate) {
       throw new NotFoundException(`CD with ID "${id}" not found`);
     }
@@ -260,7 +265,9 @@ export class CDsService {
   }
 
   async remove(id: string): Promise<{ deleted: boolean; message?: string }> {
-    const result = await this.cdModel.deleteOne({ _id: id, productType: 'CD' }).exec();
+    const result = await this.cdModel
+      .deleteOne({ _id: id, productType: 'CD' })
+      .exec();
     if (result.deletedCount === 0) {
       throw new NotFoundException(`CD with ID "${id}" not found`);
     }
@@ -273,7 +280,9 @@ export class CDsService {
       const cdsCount = await this.cdModel.countDocuments({ productType: 'CD' });
       this.logger.log(`Total CDs in collection: ${cdsCount}`);
 
-      const rawCategories = await this.cdModel.distinct('category', { productType: 'CD' }).exec();
+      const rawCategories = await this.cdModel
+        .distinct('category', { productType: 'CD' })
+        .exec();
       this.logger.log(
         `Found ${rawCategories.length} raw categories: ${JSON.stringify(rawCategories)}`,
       );
@@ -281,7 +290,9 @@ export class CDsService {
       const categoryMap = new Map<string, string>();
       const validCategories = rawCategories.filter(
         (category) =>
-          category && typeof category === 'string' && category.trim().length > 0,
+          category &&
+          typeof category === 'string' &&
+          category.trim().length > 0,
       );
 
       validCategories.forEach((category) => {
@@ -304,7 +315,10 @@ export class CDsService {
 
       return categories;
     } catch (error) {
-      this.logger.error(`Error getting categories: ${error.message}`, error.stack);
+      this.logger.error(
+        `Error getting categories: ${error.message}`,
+        error.stack,
+      );
       return [
         'Pop',
         'Rock',

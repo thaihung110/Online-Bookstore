@@ -54,7 +54,6 @@ const CDManagementPage: React.FC = () => {
     } catch (err) {
       console.error("Failed to load CDs:", err);
       setError("Failed to load CDs. Please try again.");
-
     } finally {
       setLoading(false);
     }
@@ -66,7 +65,6 @@ const CDManagementPage: React.FC = () => {
 
   // Handle filter changes
   const handleFilterChange = (newFilters: Partial<CDFilters>) => {
-
     setFilters((prevFilters) => ({
       ...prevFilters,
       ...newFilters,
@@ -85,11 +83,9 @@ const CDManagementPage: React.FC = () => {
 
   // Handle delete CD
   const handleDeleteClick = (cd: CD) => {
-
     setCDToDelete(cd);
     setDeleteDialogOpen(true);
   };
-
 
   const handleCloseDeleteDialog = () => {
     setDeleteDialogOpen(false);
@@ -101,24 +97,20 @@ const CDManagementPage: React.FC = () => {
 
     setDeleteLoading(true);
 
-
     try {
       await deleteCD(cdToDelete._id);
       setDeleteDialogOpen(false);
       setCDToDelete(null);
-
 
       // Refresh the CD list
       loadCDs();
     } catch (err) {
       console.error("Failed to delete CD:", err);
       setError("Failed to delete CD. Please try again.");
-
     } finally {
       setDeleteLoading(false);
     }
   };
-
 
   return (
     <Box>
@@ -131,12 +123,10 @@ const CDManagementPage: React.FC = () => {
         }}
       >
         <Typography variant="h4" component="h1">
-
           CD Management
         </Typography>
         <Button
           variant="contained"
-
           color="primary"
           startIcon={<AddIcon />}
           onClick={handleAddCD}
@@ -147,11 +137,9 @@ const CDManagementPage: React.FC = () => {
 
       {error && (
         <Alert severity="error" sx={{ mb: 3 }}>
-
           {error}
         </Alert>
       )}
-
 
       {/* Filters */}
       <CDFilter
@@ -170,21 +158,16 @@ const CDManagementPage: React.FC = () => {
         onDeleteCD={handleDeleteClick}
       />
 
-
       {/* Delete Confirmation Dialog */}
       <CDDeleteDialog
         open={deleteDialogOpen}
         cd={cdToDelete}
-
         loading={deleteLoading}
         onClose={handleCloseDeleteDialog}
         onConfirm={handleConfirmDelete}
-
       />
     </Box>
   );
 };
 
-
 export default CDManagementPage;
-

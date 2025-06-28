@@ -1,19 +1,16 @@
 import React from "react";
 import {
-
   Box,
   Button,
   Chip,
   CircularProgress,
   IconButton,
   Paper,
-
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
-
   TablePagination,
   TableRow,
   TableSortLabel,
@@ -35,7 +32,6 @@ interface CDListProps {
   filters: CDFilters;
   onFilterChange: (newFilters: Partial<CDFilters>) => void;
   onDeleteCD: (cd: CD) => void;
-
 }
 
 const CDList: React.FC<CDListProps> = ({
@@ -50,7 +46,8 @@ const CDList: React.FC<CDListProps> = ({
   const navigate = useNavigate();
 
   // Placeholder image as data URL to avoid network requests
-  const placeholderImage = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA0MCA2MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjRjVGNUY1Ii8+CjxwYXRoIGQ9Ik0xNiAxOEgyNFYyMkgxNlYxOFoiIGZpbGw9IiNDQ0NDQ0MiLz4KPHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA0MCA2MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjRjVGNUY1Ii8+CjxwYXRoIGQ9Ik0xNiAxOEgyNFYyMkgxNlYxOFoiIGZpbGw9IiNDQ0NDQ0MiLz4KPHBhdGggZD0iTTEyIDI2SDI4VjI4SDEyVjI2WiIgZmlsbD0iI0NDQ0NDQyIvPgo8cGF0aCBkPSJNMTIgMzBIMjhWMzJIMTJWMzBaIiBmaWxsPSIjQ0NDQ0NDIi8+Cjx0ZXh0IHg9IjIwIiB5PSI0NCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzk5OTk5OSIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjgiPk5vIEltYWdlPC90ZXh0Pgo8L3N2Zz4K";
+  const placeholderImage =
+    "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA0MCA2MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjRjVGNUY1Ii8+CjxwYXRoIGQ9Ik0xNiAxOEgyNFYyMkgxNlYxOFoiIGZpbGw9IiNDQ0NDQ0MiLz4KPHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA0MCA2MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjRjVGNUY1Ii8+CjxwYXRoIGQ9Ik0xNiAxOEgyNFYyMkgxNlYxOFoiIGZpbGw9IiNDQ0NDQ0MiLz4KPHBhdGggZD0iTTEyIDI2SDI4VjI4SDEyVjI2WiIgZmlsbD0iI0NDQ0NDQyIvPgo8cGF0aCBkPSJNMTIgMzBIMjhWMzJIMTJWMzBaIiBmaWxsPSIjQ0NDQ0NDIi8+Cjx0ZXh0IHg9IjIwIiB5PSI0NCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzk5OTk5OSIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjgiPk5vIEltYWdlPC90ZXh0Pgo8L3N2Zz4K";
 
   // Handle pagination
   const handleChangePage = (_event: unknown, newPage: number) => {
@@ -316,4 +313,3 @@ const CDList: React.FC<CDListProps> = ({
 };
 
 export default CDList;
-

@@ -33,11 +33,11 @@ import {
   UserFormPage,
   OrdersManagementPage,
   PromotionsManagementPage,
-
+  CDManagementPage,
+  DVDManagementPage,
   CDFormPage,
   DVDFormPage,
-  ProductManagementPage
-
+  ProductManagementPage,
 } from "./admin/pages";
 import AdminProtectedRoute from "./admin/components/layout/AdminProtectedRoute";
 import AdminLayout from "./admin/components/layout/AdminLayout";
@@ -225,17 +225,12 @@ const App: React.FC = () => {
             <Route path="users/add" element={<UserFormPage />} />
             <Route path="users/edit/:id" element={<UserFormPage />} />
             <Route path="orders" element={<OrdersManagementPage />} />
-            <Route path="cds/add" element = {<CDFormPage />} />
-            <Route path="dvds/add" element = {<DVDFormPage />} />
+            <Route path="cds/add" element={<CDFormPage />} />
+            <Route path="dvds/add" element={<DVDFormPage />} />
             <Route path="cds/edit/:id" element={<CDFormPage />} />
             <Route path="dvds/edit/:id" element={<DVDFormPage />} />
-            
-            
-            
-            <Route
-              path="promotions"
-              element={<PromotionsManagementPage />}
-            />
+
+            <Route path="promotions" element={<PromotionsManagementPage />} />
           </Route>
 
           {/* Redirect any unknown routes to home */}
