@@ -244,7 +244,7 @@ const DashboardPage: React.FC = () => {
                     {allOrders.map((order) => {
                       const statusDisplay = getOrderStatusDisplay(order.status);
                       return (
-                        <ListItem key={order._id} sx={{ px: 0 }}>
+                        <ListItem key={order._id || order.id} sx={{ px: 0 }}>
                           <ListItemIcon>{statusDisplay.icon}</ListItemIcon>
                           <ListItemText
                             primary={
@@ -256,7 +256,10 @@ const DashboardPage: React.FC = () => {
                                 }}
                               >
                                 <Typography variant="body2" fontWeight="medium">
-                                  Order #{order._id.slice(-6)}
+                                  Order #
+                                  {order.id || order._id
+                                    ? (order.id || order._id).slice(-8)
+                                    : "N/A"}
                                 </Typography>
                                 <Chip
                                   label={order.status}
