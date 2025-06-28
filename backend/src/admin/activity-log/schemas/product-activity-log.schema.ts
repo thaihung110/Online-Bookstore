@@ -9,7 +9,8 @@ export enum ProductActivityType {
   CREATE = 'create',
   UPDATE = 'update',
   DELETE = 'delete',
-  BULK_DELETE = 'bulk_delete'
+  BULK_DELETE = 'bulk_delete',
+  UPDATE_PRICE = 'update_price',
 }
 
 @Schema({ collection: 'admin_activity_log'})

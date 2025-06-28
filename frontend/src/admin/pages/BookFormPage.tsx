@@ -33,6 +33,7 @@ import {
   updateBook,
   uploadBookCover,
 } from "../api/bookApi";
+import axios, { AxiosError } from "axios";
 
 // Available book genres
 const AVAILABLE_GENRES = [
@@ -133,6 +134,7 @@ const BookFormPage: React.FC = () => {
     coverImage: null,
     coverImageUrl: "",
     isAvailableRush: true, // New field for rush delivery
+    weight: 0, // New field for weight
   });
 
   // Validation state
@@ -178,6 +180,7 @@ const BookFormPage: React.FC = () => {
             bookData.isAvailableRush !== undefined
               ? bookData.isAvailableRush
               : true, // Default to true if not set
+          weight: bookData.weight || 0, // Default to 0 if not set
         });
 
         // Set preview URL for existing image
@@ -451,6 +454,7 @@ const BookFormPage: React.FC = () => {
           coverImage: null,
           coverImageUrl: "",
           isAvailableRush: true, // Reset rush delivery option
+          weight: 0, // Reset weight
         });
         setSelectedFile(null);
         setPreviewUrl("");
@@ -463,6 +467,26 @@ const BookFormPage: React.FC = () => {
     } catch (err) {
       console.error("Failed to save book:", err);
       setError("Failed to save book. Please try again.");
+
+      if (axios.isAxiosError(err)) {
+              const error = err as AxiosError<{ message: string }>;
+      
+              if (
+                error.response?.data?.message?.includes("2 times per day")
+              ) {
+                setError(error.response.data.message);
+              } else {
+                setError(
+                  `Failed to delete product. ${
+                    error.response?.data?.message || "Please try again."
+                  }`
+                );
+              }
+            } else {
+              setError("An unknown error occurred");
+            }
+
+
     } finally {
       setSaving(false);
     }
@@ -708,7 +732,28 @@ const BookFormPage: React.FC = () => {
                     helperText={errors.stock}
                   />
                 </Grid>
+
+
+
+                <Grid size={6}>
+                  <TextField
+                    fullWidth
+                    required
+                    label="Weight (grams)"
+                    name="weight"
+                    type="number"
+                    value={formData.weight === 0 ? "" : formData.weight}
+                    onChange={handleNumberInputChange}
+                    InputProps={{ inputProps: { min: 0 } }}
+                    error={!!errors.weight}
+                    helperText={errors.weight}
+                  />
+                </Grid>
+                
               </Grid>
+
+        
+  
 
               <Typography variant="h6" gutterBottom sx={{ mt: 4 }}>
                 Pricing

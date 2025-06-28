@@ -40,6 +40,10 @@ export class Product {
 
   @Prop({ type: Boolean, default: true })
   isAvailableRush: boolean
+
+  // weight
+  @Prop({ type: Number, default: 0 })
+  weight: number;
 }
 
 export const ProductSchema = SchemaFactory.createForClass(Product);

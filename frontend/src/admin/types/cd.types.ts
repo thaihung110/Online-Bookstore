@@ -16,6 +16,7 @@ export interface CD {
     category: string; // Thể loại: Pop, Rock, Jazz, Classical, etc.
     releaseddate: string; // Ngày phát hành (dạng chuỗi ISO 8601)
     isAvailableRush: boolean; // New field for rush delivery
+  weight: number; // New field for weight
 }
 
 
@@ -38,6 +39,7 @@ export interface CDFormData {
     category: string; // Thể loại: Pop, Rock, Jazz, Classical, etc.
     releaseddate: string; // Ngày phát hành (dạng chuỗi ISO 8601)
   isAvailableRush: boolean; // New field for rush delivery
+  weight: number; // New field for weight
 
 }
 
