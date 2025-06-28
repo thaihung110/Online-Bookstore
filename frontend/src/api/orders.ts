@@ -89,6 +89,7 @@ export interface PaymentInfo {
 
 export interface Order {
   _id: string;
+  id?: string; // Virtual field from backend transform
   user: string;
   items: OrderItem[];
   shippingAddress: ShippingAddress;
@@ -216,7 +217,8 @@ export interface OrderListResponse {
 const transformOrderData = (orderData: any): Order => {
   return {
     ...orderData,
-    _id: orderData._id || orderData.id,
+    _id: orderData._id || orderData.id || "unknown",
+    id: orderData.id || orderData._id || "unknown", // Ensure id field is available
     items:
       orderData.items?.map((item: any) => ({
         ...item,

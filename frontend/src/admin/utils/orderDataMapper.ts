@@ -7,9 +7,11 @@ import { Order, OrderItem, OrderListResponse } from "../types/order.types";
 
 // Backend order structure (from API response)
 interface BackendOrder {
-  _id: string;
+  id?: string; // After transform
+  _id?: string; // Before transform
   user: {
-    _id?: string;
+    id?: string; // After transform
+    _id?: string; // Before transform
     username: string;
     email: string;
   };
@@ -44,8 +46,9 @@ interface BackendOrder {
 }
 
 interface BackendOrderItem {
-  book: {
-    _id: string;
+  product: {
+    id?: string; // After transform
+    _id?: string; // Before transform
     title: string;
     author: string;
     price: number;
@@ -70,13 +73,16 @@ interface BackendOrderListResponse {
  * Transform backend order item to frontend format
  */
 export const mapOrderItem = (backendItem: BackendOrderItem): OrderItem => {
+  // Handle both populated product and fallback to item-level data
+  const product = backendItem.product;
+
   return {
     book: {
-      id: backendItem.book._id,
-      title: backendItem.book.title || backendItem.title,
-      author: backendItem.book.author || backendItem.author,
-      price: backendItem.book.price || backendItem.price,
-      coverImage: backendItem.book.coverImage || "",
+      id: product?.id || product?._id || "unknown",
+      title: product?.title || backendItem.title || "Unknown Product",
+      author: product?.author || backendItem.author || "Unknown Author",
+      price: product?.price || backendItem.price || 0,
+      coverImage: product?.coverImage || "",
     },
     quantity: backendItem.quantity,
     price: backendItem.price,
@@ -86,7 +92,9 @@ export const mapOrderItem = (backendItem: BackendOrderItem): OrderItem => {
 /**
  * Transform backend shipping address to frontend string format
  */
-export const mapShippingAddress = (backendAddress: BackendOrder['shippingAddress']): string => {
+export const mapShippingAddress = (
+  backendAddress: BackendOrder["shippingAddress"]
+): string => {
   const parts = [
     backendAddress.addressLine1,
     backendAddress.addressLine2,
@@ -95,7 +103,7 @@ export const mapShippingAddress = (backendAddress: BackendOrder['shippingAddress
     backendAddress.postalCode,
     backendAddress.country,
   ].filter(Boolean);
-  
+
   return parts.join(", ");
 };
 
@@ -104,9 +112,13 @@ export const mapShippingAddress = (backendAddress: BackendOrder['shippingAddress
  */
 export const mapOrder = (backendOrder: BackendOrder): Order => {
   return {
-    id: backendOrder._id,
+    id: backendOrder.id || backendOrder._id || "unknown",
     user: {
-      id: backendOrder.user._id || backendOrder.user.username, // Fallback to username if _id not available
+      id:
+        backendOrder.user.id ||
+        backendOrder.user._id ||
+        backendOrder.user.username ||
+        "unknown",
       name: backendOrder.user.username,
       email: backendOrder.user.email,
     },
@@ -129,7 +141,9 @@ export const mapOrder = (backendOrder: BackendOrder): Order => {
 /**
  * Transform backend order list response to frontend format
  */
-export const mapOrderListResponse = (backendResponse: BackendOrderListResponse): OrderListResponse => {
+export const mapOrderListResponse = (
+  backendResponse: BackendOrderListResponse
+): OrderListResponse => {
   return {
     orders: backendResponse.orders.map(mapOrder),
     total: backendResponse.total,
@@ -144,14 +158,14 @@ export const mapOrderListResponse = (backendResponse: BackendOrderListResponse):
  */
 export const mapOrderDataToBackend = (frontendData: any) => {
   const backendData: any = { ...frontendData };
-  
+
   // Ensure notes is always a string
   if (Array.isArray(frontendData.notes)) {
-    backendData.notes = frontendData.notes.join('; ');
-  } else if (typeof frontendData.notes !== 'string') {
-    backendData.notes = '';
+    backendData.notes = frontendData.notes.join("; ");
+  } else if (typeof frontendData.notes !== "string") {
+    backendData.notes = "";
   }
-  
+
   return backendData;
 };
 
@@ -163,7 +177,7 @@ export const handleApiError = (error: any): string => {
     // Server responded with error status
     const status = error.response.status;
     const message = error.response.data?.message || error.response.data?.error;
-    
+
     switch (status) {
       case 401:
         return "Authentication failed. Please log in again.";

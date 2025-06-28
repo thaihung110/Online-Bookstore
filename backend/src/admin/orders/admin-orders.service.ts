@@ -46,12 +46,12 @@ export class AdminOrdersService {
     }
 
     if (minTotal !== undefined || maxTotal !== undefined) {
-      query.totalAmount = {};
+      query.total = {};
       if (minTotal !== undefined) {
-        query.totalAmount.$gte = minTotal;
+        query.total.$gte = minTotal;
       }
       if (maxTotal !== undefined) {
-        query.totalAmount.$lte = maxTotal;
+        query.total.$lte = maxTotal;
       }
     }
 
@@ -79,7 +79,7 @@ export class AdminOrdersService {
       .skip((page - 1) * limit)
       .limit(limit)
       .populate('user', 'username email')
-      .populate('items.book', 'title author price')
+      .populate('items.product', 'title author price coverImage')
       .exec();
 
     return {
@@ -95,7 +95,7 @@ export class AdminOrdersService {
     const order = await this.orderModel
       .findById(id)
       .populate('user', 'username email')
-      .populate('items.book', 'title author price')
+      .populate('items.product', 'title author price coverImage')
       .exec();
 
     if (!order) {
@@ -125,7 +125,7 @@ export class AdminOrdersService {
     const updatedOrder = await this.orderModel
       .findByIdAndUpdate(id, updateOrderDto, { new: true })
       .populate('user', 'username email')
-      .populate('items.book', 'title author price')
+      .populate('items.product', 'title author price coverImage')
       .exec();
 
     if (!updatedOrder) {

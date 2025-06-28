@@ -321,6 +321,8 @@ export class OrdersService {
     return this.orderModel
       .find({ user: new Types.ObjectId(userId) as any })
       .sort({ createdAt: -1 })
+      .populate('user', 'username email')
+      .populate('items.product', 'title author price coverImage')
       .exec();
   }
 
