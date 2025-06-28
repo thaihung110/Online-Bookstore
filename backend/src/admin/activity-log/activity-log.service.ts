@@ -110,4 +110,18 @@ export class ProductActivityLogService {
   }
 
 
+  // countUpdatedPriceProductsByUserIdAndDate
+  async countUpdatedPriceProductsByUserIdAndDate(userId: string, date: Date, productId: string): Promise<number> {
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+
+    return this.productActivityLogModel.countDocuments({
+      userId: new Types.ObjectId(userId),
+      productId: new Types.ObjectId(productId),
+      action: ProductActivityType.UPDATE_PRICE,
+      timestamp: { $gte: startOfDay }
+    }).exec();
+  }
+
+
 }

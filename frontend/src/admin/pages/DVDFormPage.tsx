@@ -89,6 +89,7 @@ const DVDFormPage: React.FC = () => {
     subtitles: "", // List of subtitles available
     releaseddate: new Date().toISOString().split("T")[0], // Default to today
     filmtype:"",
+    weight: 0, // New field for weight
 
 
   });
@@ -133,6 +134,7 @@ const DVDFormPage: React.FC = () => {
             subtitles: dvdData.subtitles || "", // List of subtitles available
             releaseddate: dvdData.releaseddate.slice(0,10) || new Date().toISOString().split("T")[0], // Default to today
             filmtype: dvdData.filmtype || "", // New field for film type
+            weight: dvdData.weight || 0, // New field for weight
 
         });
 
@@ -364,6 +366,7 @@ const DVDFormPage: React.FC = () => {
             subtitles: "", // Reset subtitles
             releaseddate: new Date().toISOString().split("T")[0], // Reset to today
             filmtype: "", // Reset film type
+            weight: 0, // Reset weight
         });
         setSelectedFile(null);
         setPreviewUrl("");
@@ -580,6 +583,25 @@ const DVDFormPage: React.FC = () => {
                     helperText={errors.stock}
                   />
                 </Grid>
+                <Grid size={6}>
+                  <TextField
+                    fullWidth
+                    required
+                    label="Weight (grams)"
+                    name="weight"
+                    type="number"
+                    value={
+                      formData.weight === 0 ? "" : formData.weight
+                    }
+                    onChange={handleNumberInputChange}
+                    InputProps={{ inputProps: { min: 0 } }}
+                    error={!!errors.weight}
+                    helperText={errors.weight}
+                  />
+                </Grid>
+
+
+
               </Grid>
 
               <Typography variant="h6" gutterBottom sx={{ mt: 4 }}>

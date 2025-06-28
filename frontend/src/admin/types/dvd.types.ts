@@ -21,6 +21,7 @@ export interface DVD {
   isFeatured: boolean; // Whether the DVD is featured
   isAvailable: boolean; // Whether the DVD is available
   isAvailableForPreOrder: boolean; // Whether the DVD is available for pre-order
+  weight: number; // Weight of the DVD for shipping
 }
 
 export interface DVDFormData {
@@ -41,6 +42,7 @@ export interface DVDFormData {
   isFeatured?: boolean; // Whether the DVD is featured
   isAvailable?: boolean; // Whether the DVD is available
   isAvailableForPreOrder?: boolean; // Whether the DVD is available for pre-order
+  weight: number; // Weight of the DVD for shipping
 }
 
 export interface DVDFilters {

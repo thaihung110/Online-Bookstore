@@ -90,6 +90,7 @@ const CDFormPage: React.FC = () => {
     category: "Pop", // Default category
     releaseddate: new Date().toISOString().split("T")[0], // Default to today
     isAvailableRush: true, // New field for rush delivery
+    weight: 0, // New field for weight
   });
 
   // Validation state
@@ -131,6 +132,7 @@ const CDFormPage: React.FC = () => {
           category: cdData.category || "Pop", // Default to Pop if not set
           releaseddate: cdData.releaseddate.slice(0,10) || new Date().toISOString().split("T")[0], // Default to today
           isAvailableRush: cdData.isAvailableRush !== undefined ? cdData.isAvailableRush : true, // Default to true if not set
+          weight: cdData.weight || 0, // Default to 0 if not set
         });
 
         // Set preview URL for existing image
@@ -361,6 +363,7 @@ const CDFormPage: React.FC = () => {
             category: "Pop", // Default to Pop if not set
             releaseddate:new Date().toISOString().split("T")[0], // Default to today
           isAvailableRush: true, // Reset rush delivery option
+          weight: 0, // Reset weight
         });
         setSelectedFile(null);
         setPreviewUrl("");
@@ -552,6 +555,21 @@ const CDFormPage: React.FC = () => {
                     InputProps={{ inputProps: { min: 0 } }}
                     error={!!errors.stock}
                     helperText={errors.stock}
+                  />
+                </Grid>
+
+                <Grid size={6}>
+                  <TextField
+                    fullWidth
+                    required
+                    label="Weight (grams)"
+                    name="weight"
+                    type="number"
+                    value={formData.weight === 0 ? "" : formData.weight}
+                    onChange={handleNumberInputChange}
+                    InputProps={{ inputProps: { min: 0 } }}
+                    error={!!errors.weight}
+                    helperText={errors.weight || "Weight in grams"}
                   />
                 </Grid>
               </Grid>

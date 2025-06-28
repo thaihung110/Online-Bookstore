@@ -19,6 +19,7 @@ export interface Book {
   createdAt: string;
   updatedAt: string;
   isAvailableRush: boolean;
+  weight: number; // New field for weight
 }
 
 // export interface BookFormData {
@@ -55,6 +56,8 @@ export interface BookFormData {
   language: string;
   stock: number;
   isAvailableRush: boolean; // New field for rush delivery
+  weight: number; // New field for weight);
+  
 }
 
 export interface BookFilters {
