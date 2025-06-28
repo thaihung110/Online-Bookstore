@@ -33,7 +33,10 @@ export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
   @Post()
-  @ApiOperation({ summary: 'Create a new order' })
+  @ApiOperation({
+    summary: 'Create a new order',
+    description: 'Creates a new order. Supports rush delivery for Hanoi addresses with eligible products (additional $4 per item surcharge applies).'
+  })
   @ApiBody({ type: CreateOrderDto })
   @ApiResponse({
     status: 201,
@@ -42,7 +45,7 @@ export class OrdersController {
   })
   @ApiResponse({
     status: 400,
-    description: 'Bad Request (e.g., item not found, insufficient stock).',
+    description: 'Bad Request (e.g., item not found, insufficient stock, rush delivery not available for address or products).',
   })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   async createOrder(@Request() req, @Body() createOrderDto: CreateOrderDto) {
@@ -50,7 +53,10 @@ export class OrdersController {
   }
 
   @Post('from-cart')
-  @ApiOperation({ summary: 'Create a new order from user cart' })
+  @ApiOperation({
+    summary: 'Create a new order from user cart',
+    description: 'Creates a new order from selected cart items. Supports rush delivery for Hanoi addresses with eligible products (additional $4 per item surcharge applies).'
+  })
   @ApiBody({ type: CreateOrderFromCartDto })
   @ApiResponse({
     status: 201,
@@ -60,7 +66,7 @@ export class OrdersController {
   @ApiResponse({
     status: 400,
     description:
-      'Bad Request (e.g., cart empty, no items selected, insufficient stock).',
+      'Bad Request (e.g., cart empty, no items selected, insufficient stock, rush delivery not available for address or products).',
   })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   async createOrderFromCart(

@@ -32,6 +32,7 @@ export class AdminOrdersService {
       endDate,
       sortBy = 'createdAt',
       sortOrder = 'desc',
+      isRushOrder,
     } = filters;
 
     const query: OrderFilterQuery = {};
@@ -65,12 +66,31 @@ export class AdminOrdersService {
       }
     }
 
+    // Rush order filter
+    if (isRushOrder !== undefined) {
+      query.isRushOrder = isRushOrder;
+    }
+
     // Count total documents
     const total = await this.orderModel.countDocuments(query);
 
-    // Build sort object
+    // Count rush orders for statistics (only if not already filtering by rush orders)
+    let rushOrderCount: number | undefined;
+    if (isRushOrder === undefined) {
+      const rushQuery = { ...query, isRushOrder: true };
+      rushOrderCount = await this.orderModel.countDocuments(rushQuery);
+    }
+
+    // Build sort object with priority for rush orders
     const sort: OrderSortOptions = {};
-    sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
+
+    // If sorting by priority (rush orders first), use compound sort
+    if (sortBy === 'priority' || sortBy === 'rushPriority') {
+      sort.isRushOrder = -1; // Rush orders first (true = 1, false = 0, so -1 puts true first)
+      sort.createdAt = sortOrder === 'asc' ? 1 : -1; // Then by creation date
+    } else {
+      sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
+    }
 
     // Fetch paginated orders
     const orders = await this.orderModel
@@ -88,6 +108,7 @@ export class AdminOrdersService {
       page,
       limit,
       totalPages: Math.ceil(total / limit),
+      rushOrderCount,
     };
   }
 

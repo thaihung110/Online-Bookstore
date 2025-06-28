@@ -10,6 +10,7 @@ import {
   IsMongoId,
   IsEnum,
   IsBoolean,
+  IsDate,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -150,6 +151,22 @@ export class CreateOrderDto {
   @IsOptional()
   @IsString()
   giftMessage?: string;
+
+  @ApiPropertyOptional({ description: 'Is this a rush delivery order?', default: false })
+  @IsOptional()
+  @IsBoolean()
+  isRushOrder?: boolean;
+
+  @ApiPropertyOptional({ description: 'Requested delivery time for rush orders' })
+  @IsOptional()
+  @Type(() => Date)
+  @IsDate()
+  rushDeliveryTime?: Date;
+
+  @ApiPropertyOptional({ description: 'Special delivery instructions for rush orders' })
+  @IsOptional()
+  @IsString()
+  rushInstructions?: string;
 }
 
 export class CreateOrderFromCartDto {
@@ -178,4 +195,20 @@ export class CreateOrderFromCartDto {
   @IsOptional()
   @IsString()
   giftMessage?: string;
+
+  @ApiPropertyOptional({ description: 'Is this a rush delivery order?', default: false })
+  @IsOptional()
+  @IsBoolean()
+  isRushOrder?: boolean;
+
+  @ApiPropertyOptional({ description: 'Requested delivery time for rush orders' })
+  @IsOptional()
+  @Type(() => Date)
+  @IsDate()
+  rushDeliveryTime?: Date;
+
+  @ApiPropertyOptional({ description: 'Special delivery instructions for rush orders' })
+  @IsOptional()
+  @IsString()
+  rushInstructions?: string;
 }

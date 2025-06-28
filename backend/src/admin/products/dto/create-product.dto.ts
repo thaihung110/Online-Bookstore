@@ -26,9 +26,9 @@ export class CreateProductDto {
   title: string;
 
   @ApiPropertyOptional({
-    description: 'Whether the book is available for rush delivery',
-    example: false,
-    default: false,
+    description: 'Whether the product is available for rush delivery',
+    example: true,
+    default: true,
   })
   @IsOptional()
   @IsBoolean()

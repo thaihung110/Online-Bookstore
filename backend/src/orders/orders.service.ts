@@ -17,6 +17,7 @@ import { ProductDocument } from '../products/schemas/product.schema';
 import { CartItem } from '../carts/schemas/cart.schema';
 import { UploadService } from '../upload/upload.service';
 import { calculateOrderTotal } from '../shared/price-calculator';
+import { validateRushOrder, isRushDeliveryAvailable } from '../utils/rush-order-validator';
 
 @Injectable()
 export class OrdersService {
@@ -41,6 +42,20 @@ export class OrdersService {
     console.log('[Orders Service] Order items:', createOrderDto.items);
 
     await this.usersService.findById(userId); // Ensure user exists
+
+    // Validate rush order if requested
+    if (createOrderDto.isRushOrder) {
+      console.log('[Orders Service] Validating rush order...');
+
+      // Check if address is eligible for rush delivery
+      if (!isRushDeliveryAvailable(createOrderDto.shippingAddress.city)) {
+        throw new BadRequestException(
+          'Rush delivery is only available in Hanoi. Please check your shipping address or choose regular delivery.'
+        );
+      }
+
+      console.log('[Orders Service] Address validation passed for rush order');
+    }
 
     const processedOrderItems: OrderItem[] = [];
 
@@ -101,6 +116,30 @@ export class OrdersService {
       throw new BadRequestException('Order must contain at least one item.');
     }
 
+    // Additional rush order validation for product eligibility
+    if (createOrderDto.isRushOrder) {
+      console.log('[Orders Service] Validating product eligibility for rush order...');
+
+      // Check if all products are eligible for rush delivery
+      const ineligibleProducts = [];
+      for (const item of processedOrderItems) {
+        // Get the full product to check isAvailableRush
+        const product = await this.productsService.findOne(item.product.toString());
+        // Default to true if isAvailableRush is undefined (for backward compatibility)
+        if (product.isAvailableRush === false) {
+          ineligibleProducts.push(product.title);
+        }
+      }
+
+      if (ineligibleProducts.length > 0) {
+        throw new BadRequestException(
+          `Some items are not eligible for rush delivery: ${ineligibleProducts.join(', ')}. Please remove these items or choose regular delivery.`
+        );
+      }
+
+      console.log('[Orders Service] All products are eligible for rush delivery');
+    }
+
     // Prepare cart items for universal calculation
     const cartItems: Array<{ quantity: number; priceAtAdd: number }> = [];
     let totalItemDiscount = 0;
@@ -118,15 +157,22 @@ export class OrdersService {
     }
 
     // Use universal price calculator - SINGLE SOURCE OF TRUTH
-    const calculation = calculateOrderTotal(cartItems);
+    const calculation = calculateOrderTotal(
+      cartItems,
+      undefined, // Use default config
+      createOrderDto.isRushOrder || false,
+      createOrderDto.shippingAddress
+    );
 
     // Log calculation details for debugging
     console.log('[Orders Service] Universal calculation:');
     console.log('- Subtotal:', calculation.subtotal);
     console.log('- Total items:', calculation.totalItems);
     console.log('- Shipping cost:', calculation.shippingCost);
+    console.log('- Rush surcharge:', calculation.rushSurcharge);
     console.log('- Tax amount:', calculation.taxAmount);
     console.log('- Final total:', calculation.total);
+    console.log('- Is rush order:', createOrderDto.isRushOrder || false);
 
     // Determine initial status based on payment method
     let initialStatus: string;
@@ -171,6 +217,9 @@ export class OrdersService {
       pendingExpiry,
       isGift: Boolean(createOrderDto.isGift || false), // Ensure boolean type
       giftMessage: createOrderDto.giftMessage || undefined,
+      isRushOrder: Boolean(createOrderDto.isRushOrder || false),
+      rushDeliveryTime: createOrderDto.rushDeliveryTime || undefined,
+      rushInstructions: createOrderDto.rushInstructions || undefined,
       loyaltyPointsEarned: 0,
     });
 
@@ -291,6 +340,36 @@ export class OrdersService {
       );
     }
 
+    // Early rush order validation for cart items
+    if (createOrderFromCartDto.isRushOrder) {
+      console.log('[Orders Service] Validating rush order from cart...');
+
+      // Check address eligibility
+      if (!isRushDeliveryAvailable(createOrderFromCartDto.shippingAddress.city)) {
+        throw new BadRequestException(
+          'Rush delivery is only available in Hanoi. Please check your shipping address or choose regular delivery.'
+        );
+      }
+
+      // Check product eligibility for cart items
+      const ineligibleProducts = [];
+      for (const cartItem of tickedItems) {
+        const product = cartItem.product as any;
+        // Default to true if isAvailableRush is undefined (for backward compatibility)
+        if (product.isAvailableRush === false) {
+          ineligibleProducts.push(product.title);
+        }
+      }
+
+      if (ineligibleProducts.length > 0) {
+        throw new BadRequestException(
+          `Some items in your cart are not eligible for rush delivery: ${ineligibleProducts.join(', ')}. Please remove these items or choose regular delivery.`
+        );
+      }
+
+      console.log('[Orders Service] Cart items validated for rush delivery');
+    }
+
     // Convert cart items to order items format
     const orderItemsDto = tickedItems.map((cartItem) => ({
       productId: (cartItem.product as any)._id
@@ -306,6 +385,9 @@ export class OrdersService {
       paymentInfo: createOrderFromCartDto.paymentInfo,
       isGift: createOrderFromCartDto.isGift,
       giftMessage: createOrderFromCartDto.giftMessage,
+      isRushOrder: createOrderFromCartDto.isRushOrder,
+      rushDeliveryTime: createOrderFromCartDto.rushDeliveryTime,
+      rushInstructions: createOrderFromCartDto.rushInstructions,
     };
 
     // Use existing createOrder method

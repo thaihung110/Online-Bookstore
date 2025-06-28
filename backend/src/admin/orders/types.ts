@@ -12,6 +12,7 @@ export interface OrderQueryParams {
   endDate?: string;
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
+  isRushOrder?: boolean;
 }
 
 export interface OrderListResponse {
@@ -20,6 +21,7 @@ export interface OrderListResponse {
   page: number;
   limit: number;
   totalPages: number;
+  rushOrderCount?: number;
 }
 
 export interface OrderFilters extends Omit<OrderQueryParams, 'page' | 'limit'> {
@@ -42,4 +44,5 @@ export interface OrderFilterQuery extends FilterQuery<Order> {
     $gte?: Date;
     $lte?: Date;
   };
+  isRushOrder?: boolean;
 }

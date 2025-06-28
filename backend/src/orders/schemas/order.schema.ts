@@ -183,6 +183,16 @@ export class Order {
   @Prop({ type: [String], default: [] })
   notes: string[];
 
+  // Rush delivery fields
+  @Prop({ default: false })
+  isRushOrder: boolean;
+
+  @Prop()
+  rushDeliveryTime: Date;
+
+  @Prop()
+  rushInstructions: string;
+
   // Virtual fields
   id: string;
   createdAt: Date;
@@ -265,6 +275,9 @@ OrderSchema.pre('save', async function (next) {
     if (typeof this.isGift !== 'boolean') {
       this.isGift = false;
     }
+    if (typeof this.isRushOrder !== 'boolean') {
+      this.isRushOrder = false;
+    }
 
     // Ensure arrays are properly set
     if (!Array.isArray(this.notes)) {
@@ -286,3 +299,4 @@ OrderSchema.index({ trackingNumber: 1 });
 OrderSchema.index({ isGift: 1 });
 OrderSchema.index({ 'paymentInfo.method': 1 });
 OrderSchema.index({ total: -1 });
+OrderSchema.index({ isRushOrder: 1, createdAt: -1 });
