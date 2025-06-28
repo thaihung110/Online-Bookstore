@@ -27,27 +27,27 @@ export class UpdateOrderDto {
   @ApiProperty({
     description: 'Order status',
     enum: [
-      'pending',
-      'processing',
-      'shipped',
-      'delivered',
-      'returned',
-      'cancelled',
-      'refunded',
-      'completed',
+      'PENDING',
+      'RECEIVED',
+      'CONFIRMED',
+      'PREPARED',
+      'SHIPPED',
+      'DELIVERED',
+      'CANCELED',
+      'REFUNDED',
     ],
     required: false,
   })
   @IsOptional()
   @IsEnum([
-    'pending',
-    'processing',
-    'shipped',
-    'delivered',
-    'returned',
-    'cancelled',
-    'refunded',
-    'completed',
+    'PENDING',
+    'RECEIVED',
+    'CONFIRMED',
+    'PREPARED',
+    'SHIPPED',
+    'DELIVERED',
+    'CANCELED',
+    'REFUNDED',
   ])
   readonly status?: string;
 

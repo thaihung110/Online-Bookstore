@@ -567,9 +567,7 @@ export class OrdersService {
     }
 
     if (
-      ['COMPLETED', 'SHIPPED', 'DELIVERED', 'REFUNDED', 'CANCELED'].includes(
-        order.status,
-      )
+      ['SHIPPED', 'DELIVERED', 'REFUNDED', 'CANCELED'].includes(order.status)
     ) {
       throw new BadRequestException(
         `Cannot cancel order with status: ${order.status}`,
@@ -603,16 +601,40 @@ export class OrdersService {
     return this.orderModel.findById(new Types.ObjectId(orderId));
   }
 
-  // Update order status method - simplified version
+  // Update order status method - with proper validation
   async updateOrderStatus(
     orderId: string,
     status: string,
     updatedBy?: string,
   ): Promise<OrderDocument> {
+    console.log(
+      '[Orders Service] Updating order status:',
+      orderId,
+      'to',
+      status,
+    );
+
     const order = await this.orderModel.findById(new Types.ObjectId(orderId));
     if (!order) {
       throw new NotFoundException(`Order with ID "${orderId}" not found.`);
     }
+
+    console.log('[Orders Service] Current order status:', order.status);
+
+    // Validate status transition using the same logic as admin service
+    if (!this.isValidStatusTransition(order.status, status)) {
+      console.log(
+        '[Orders Service] Invalid status transition from',
+        order.status,
+        'to',
+        status,
+      );
+      throw new BadRequestException(
+        `Invalid status transition from ${order.status} to ${status}`,
+      );
+    }
+
+    console.log('[Orders Service] Status transition is valid');
 
     await this.orderModel.updateOne(
       { _id: new Types.ObjectId(orderId) },
@@ -625,7 +647,48 @@ export class OrdersService {
       },
     );
 
-    return this.orderModel.findById(new Types.ObjectId(orderId));
+    const updatedOrder = await this.orderModel.findById(
+      new Types.ObjectId(orderId),
+    );
+    console.log(
+      '[Orders Service] Order status updated successfully:',
+      updatedOrder.status,
+    );
+
+    return updatedOrder;
+  }
+
+  // Status transition validation - same as admin service
+  private isValidStatusTransition(
+    currentStatus: string,
+    newStatus: string,
+  ): boolean {
+    // Use UPPERCASE statuses to match schema
+    const validTransitions = {
+      PENDING: ['CONFIRMED', 'CANCELED'],
+      RECEIVED: ['CONFIRMED', 'CANCELED'],
+      CONFIRMED: ['PREPARED', 'CANCELED'],
+      PREPARED: ['SHIPPED', 'CANCELED'],
+      SHIPPED: ['DELIVERED'],
+      DELIVERED: ['REFUNDED'],
+      CANCELED: [],
+      REFUNDED: [],
+    };
+
+    console.log(
+      '[Orders Service] Checking transition from',
+      currentStatus,
+      'to',
+      newStatus,
+    );
+    console.log(
+      '[Orders Service] Valid transitions for',
+      currentStatus,
+      ':',
+      validTransitions[currentStatus],
+    );
+
+    return validTransitions[currentStatus]?.includes(newStatus) || false;
   }
 
   // Find orders by status

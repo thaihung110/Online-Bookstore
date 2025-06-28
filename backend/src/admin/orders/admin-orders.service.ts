@@ -106,21 +106,37 @@ export class AdminOrdersService {
   }
 
   async update(id: string, updateOrderDto: UpdateOrderDto): Promise<Order> {
+    console.log('[Admin Orders Service] Updating order:', id);
+    console.log('[Admin Orders Service] Update data:', updateOrderDto);
+
     // Fetch existing order and check if it exists
     const existingOrder = await this.orderModel.findById(id).exec();
     if (!existingOrder) {
       throw new NotFoundException(`Order with ID ${id} not found`);
     }
 
+    console.log(
+      '[Admin Orders Service] Current order status:',
+      existingOrder.status,
+    );
+
     // Validate status transition
     if (
       updateOrderDto.status &&
       !this.isValidStatusTransition(existingOrder.status, updateOrderDto.status)
     ) {
+      console.log(
+        '[Admin Orders Service] Invalid status transition from',
+        existingOrder.status,
+        'to',
+        updateOrderDto.status,
+      );
       throw new BadRequestException(
         `Invalid status transition from ${existingOrder.status} to ${updateOrderDto.status}`,
       );
     }
+
+    console.log('[Admin Orders Service] Status transition is valid');
 
     const updatedOrder = await this.orderModel
       .findByIdAndUpdate(id, updateOrderDto, { new: true })
@@ -131,6 +147,11 @@ export class AdminOrdersService {
     if (!updatedOrder) {
       throw new NotFoundException(`Order with ID ${id} not found`);
     }
+
+    console.log(
+      '[Admin Orders Service] Order updated successfully:',
+      updatedOrder.status,
+    );
 
     return updatedOrder;
   }
@@ -149,18 +170,31 @@ export class AdminOrdersService {
     currentStatus: string,
     newStatus: string,
   ): boolean {
+    // Use UPPERCASE statuses to match schema
     const validTransitions = {
-      pending: ['processing', 'cancelled'],
-      processing: ['shipped', 'cancelled'],
-      shipped: ['delivered', 'returned'],
-      delivered: ['returned', 'completed'],
-      returned: ['refunded'],
-      cancelled: [],
-      refunded: [],
-      completed: [],
+      PENDING: ['CONFIRMED', 'CANCELED'],
+      RECEIVED: ['CONFIRMED', 'CANCELED'],
+      CONFIRMED: ['PREPARED', 'CANCELED'],
+      PREPARED: ['SHIPPED', 'CANCELED'],
+      SHIPPED: ['DELIVERED'],
+      DELIVERED: ['REFUNDED'],
+      CANCELED: [],
+      REFUNDED: [],
     };
 
-    // @ts-ignore - we know the currentStatus is a key in validTransitions
+    console.log(
+      '[Admin Orders Service] Checking transition from',
+      currentStatus,
+      'to',
+      newStatus,
+    );
+    console.log(
+      '[Admin Orders Service] Valid transitions for',
+      currentStatus,
+      ':',
+      validTransitions[currentStatus],
+    );
+
     return validTransitions[currentStatus]?.includes(newStatus) || false;
   }
 }
