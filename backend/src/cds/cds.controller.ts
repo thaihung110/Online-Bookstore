@@ -35,8 +35,7 @@ export class CDsController {
   @ApiOperation({ summary: 'Create a new CD' })
   @ApiResponse({
     status: 201,
-    description:
-      'The CD has been successfully created. All prices are in USD.',
+    description: 'The CD has been successfully created. All prices are in USD.',
     type: CD,
   })
   @ApiResponse({ status: 400, description: 'Bad Request.' })
@@ -91,8 +90,7 @@ export class CDsController {
   @Get()
   @ApiOperation({
     summary: 'Get all CDs with advanced filtering, searching and sorting',
-    description:
-      'All prices in request and response are in USD.',
+    description: 'All prices in request and response are in USD.',
   })
   @ApiResponse({
     status: 200,
@@ -108,7 +106,9 @@ export class CDsController {
     if (queryDto.categories) {
       console.log(
         'CDsController: Received categories filter:',
-        Array.isArray(queryDto.categories) ? queryDto.categories : [queryDto.categories],
+        Array.isArray(queryDto.categories)
+          ? queryDto.categories
+          : [queryDto.categories],
       );
     }
 
