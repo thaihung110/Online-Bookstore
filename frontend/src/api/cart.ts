@@ -31,6 +31,7 @@ const transformProductData = (productData: any): Product => {
     stock: Number(productData.stock) || 0,
     isAvailable: productData.isAvailable !== false,
     isFeatured: productData.isFeatured || false,
+    isAvailableRush: productData.isAvailableRush !== false, // Default to true for backward compatibility
     createdAt: productData.createdAt,
     updatedAt: productData.updatedAt,
   };

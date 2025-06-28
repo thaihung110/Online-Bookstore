@@ -26,6 +26,7 @@ interface RawDVDData {
   preOrderReleaseDate?: string | Date;
   createdAt?: string | Date;
   updatedAt?: string | Date;
+  isAvailableRush?: boolean; // Rush delivery eligibility
 }
 
 // Cache for memoizing DVD data
@@ -86,6 +87,7 @@ const transformDVDData = (dvdData: RawDVDData): DVD => {
     preOrderReleaseDate: dvdData.preOrderReleaseDate,
     createdAt: dvdData.createdAt,
     updatedAt: dvdData.updatedAt,
+    isAvailableRush: dvdData.isAvailableRush, // Include rush delivery eligibility
   };
 };
 

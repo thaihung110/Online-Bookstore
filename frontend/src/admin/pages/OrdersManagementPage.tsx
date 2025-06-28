@@ -42,6 +42,7 @@ const OrdersManagementPage: React.FC = () => {
   const {
     orders,
     totalOrders,
+    rushOrderCount,
     currentPage,
     totalPages,
     isLoading,
@@ -240,6 +241,14 @@ const OrdersManagementPage: React.FC = () => {
           </Box>
           <Box sx={{ minWidth: 120 }}>
             <Typography variant="body2" color="text.secondary">
+              Rush Orders
+            </Typography>
+            <Typography variant="h6" sx={{ color: "#d32f2f" }}>
+              {rushOrderCount}
+            </Typography>
+          </Box>
+          <Box sx={{ minWidth: 120 }}>
+            <Typography variant="body2" color="text.secondary">
               Current Page
             </Typography>
             <Typography variant="h6">
@@ -282,6 +291,34 @@ const OrdersManagementPage: React.FC = () => {
           </Select>
         </FormControl>
 
+        <FormControl sx={{ minWidth: 200, mr: 2 }}>
+          <InputLabel>Order Type</InputLabel>
+          <Select
+            value={
+              filters.isRushOrder === undefined
+                ? ""
+                : filters.isRushOrder
+                ? "rush"
+                : "regular"
+            }
+            label="Order Type"
+            onChange={(e) => {
+              const value = e.target.value as string;
+              if (value === "") {
+                handleFilterChange("isRushOrder", undefined);
+              } else if (value === "rush") {
+                handleFilterChange("isRushOrder", true);
+              } else if (value === "regular") {
+                handleFilterChange("isRushOrder", false);
+              }
+            }}
+          >
+            <MenuItem value="">All Orders</MenuItem>
+            <MenuItem value="rush">Rush Orders Only</MenuItem>
+            <MenuItem value="regular">Regular Orders Only</MenuItem>
+          </Select>
+        </FormControl>
+
         <FormControl sx={{ minWidth: 200 }}>
           <InputLabel>Sort By</InputLabel>
           <Select
@@ -294,6 +331,7 @@ const OrdersManagementPage: React.FC = () => {
               setFilters({ sortBy, sortOrder: sortOrder as "asc" | "desc" });
             }}
           >
+            <MenuItem value="priority-desc">Priority (Rush Orders First)</MenuItem>
             <MenuItem value="createdAt-desc">Date (Newest First)</MenuItem>
             <MenuItem value="createdAt-asc">Date (Oldest First)</MenuItem>
             <MenuItem value="total-desc">Total (Highest First)</MenuItem>
@@ -341,9 +379,24 @@ const OrdersManagementPage: React.FC = () => {
                   orders.map((order) => (
                     <TableRow key={order.id}>
                       <TableCell>
-                        <Typography variant="body2" fontWeight="medium">
-                          #{order.id ? order.id.slice(-8) : "N/A"}
-                        </Typography>
+                        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                          <Typography variant="body2" fontWeight="medium">
+                            #{order.id ? order.id.slice(-8) : "N/A"}
+                          </Typography>
+                          {order.isRushOrder && (
+                            <Chip
+                              label="RUSH"
+                              size="small"
+                              sx={{
+                                backgroundColor: "#d32f2f",
+                                color: "white",
+                                fontWeight: "bold",
+                                fontSize: "0.7rem",
+                                height: "20px",
+                              }}
+                            />
+                          )}
+                        </Box>
                       </TableCell>
                       <TableCell>{formatDate(order.createdAt)}</TableCell>
                       <TableCell>

@@ -259,11 +259,20 @@ const CDFormPage: React.FC = () => {
       newErrors.title = "Title is required";
     }
 
-    // Author validation
+    // Artist validation
     if (!formData.artist.trim()) {
-      newErrors.author = "Artist is required";
+      newErrors.artist = "Artist is required";
     }
 
+    // Album title validation
+    if (!formData.albumTitle.trim()) {
+      newErrors.albumTitle = "Album title is required";
+    }
+
+    // Track list validation
+    if (!formData.trackList.trim()) {
+      newErrors.trackList = "Track list is required";
+    }
 
     // Original price validation
     if (formData.originalPrice <= 0) {
@@ -273,7 +282,6 @@ const CDFormPage: React.FC = () => {
     if (formData.price <= 0) {
       newErrors.originalPrice = "Original price must be greater than 0";
     }
-
 
     if( (formData.price / formData.originalPrice) < 0.3 || (formData.price / formData.originalPrice) > 1.5) {
       newErrors.originalPrice = "Price must be between 30% and 150% of the original price";
@@ -340,6 +348,8 @@ const CDFormPage: React.FC = () => {
         }
       }
 
+      console.log("Submitting CD data:", finalFormData);
+
       if (isEditMode) {
         await updateCD(id, finalFormData);
         setSuccess("CD updated successfully");
@@ -370,9 +380,19 @@ const CDFormPage: React.FC = () => {
       setTimeout(() => {
         navigate("/admin/books");
       }, 1500);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to save cd:", err);
-      setError("Failed to save cd. Please try again.");
+
+      // Handle validation errors from backend
+      if (err.response?.data?.message) {
+        if (Array.isArray(err.response.data.message)) {
+          setError(`Validation errors: ${err.response.data.message.join(', ')}`);
+        } else {
+          setError(err.response.data.message);
+        }
+      } else {
+        setError("Failed to save cd. Please try again.");
+      }
 
     } finally {
       setSaving(false);
@@ -472,8 +492,8 @@ const CDFormPage: React.FC = () => {
                     name="artist"
                     value={formData.artist}
                     onChange={handleInputChange}
-                    error={!!errors.author}
-                    helperText={errors.author}
+                    error={!!errors.artist}
+                    helperText={errors.artist}
                   />
                 </Grid>
 
@@ -486,6 +506,8 @@ const CDFormPage: React.FC = () => {
                     name="albumTitle"
                     value={formData.albumTitle}
                     onChange={handleInputChange}
+                    error={!!errors.albumTitle}
+                    helperText={errors.albumTitle}
                   />
                 </Grid>
                 <Grid size={12}>
@@ -498,6 +520,8 @@ const CDFormPage: React.FC = () => {
                     multiline
                     rows={4}
                     placeholder="Enter track names separated by commas"
+                    error={!!errors.trackList}
+                    helperText={errors.trackList}
                   />
                 </Grid>
                 <Grid size={6}>

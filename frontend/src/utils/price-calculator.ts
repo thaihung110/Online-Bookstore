@@ -8,11 +8,15 @@
 export interface CartItem {
   quantity: number;
   priceAtAdd: number; // Price per item in USD
+  product?: {
+    isAvailableRush?: boolean; // Optional, defaults to true for backward compatibility
+  };
 }
 
 export interface PriceCalculation {
   subtotal: number;
   shippingCost: number;
+  rushSurcharge: number;
   taxAmount: number;
   total: number;
   totalItems: number;
@@ -25,6 +29,9 @@ export interface PriceCalculatorConfig {
 
   // Tax rules
   taxRate: number; // Tax rate as decimal (0.08 = 8%)
+
+  // Rush delivery rules
+  rushSurchargePerItem: number; // Rush surcharge per item in USD
 }
 
 // Default configuration - SINGLE SOURCE OF TRUTH
@@ -32,6 +39,7 @@ export const DEFAULT_PRICE_CONFIG: PriceCalculatorConfig = {
   freeShippingThreshold: 50.0, // Free shipping over $50
   standardShippingCost: 2.99, // $2.99 standard shipping
   taxRate: 0.08, // 8% tax rate
+  rushSurchargePerItem: 4.0, // $4 rush surcharge per item
 };
 
 /**
@@ -85,7 +93,9 @@ export function calculateTaxAmount(
  */
 export function calculateOrderTotal(
   items: CartItem[],
-  config: PriceCalculatorConfig = DEFAULT_PRICE_CONFIG
+  config: PriceCalculatorConfig = DEFAULT_PRICE_CONFIG,
+  isRushOrder: boolean = false,
+  address?: any,
 ): PriceCalculation {
   // Step 1: Calculate subtotal
   const subtotal = calculateSubtotal(items);
@@ -96,19 +106,83 @@ export function calculateOrderTotal(
   // Step 3: Calculate shipping cost
   const shippingCost = calculateShippingCost(subtotal, totalItems, config);
 
-  // Step 4: Calculate tax (on subtotal only, not shipping)
+  // Step 4: Calculate rush surcharge
+  const rushSurcharge = calculateRushSurcharge(items, isRushOrder, address, config);
+
+  // Step 5: Calculate tax (on subtotal only, not shipping or rush)
   const taxAmount = calculateTaxAmount(subtotal, config);
 
-  // Step 5: Calculate final total
-  const total = parseFloat((subtotal + shippingCost + taxAmount).toFixed(2));
+  // Step 6: Calculate final total
+  const total = parseFloat((subtotal + shippingCost + rushSurcharge + taxAmount).toFixed(2));
 
   return {
     subtotal,
     shippingCost,
+    rushSurcharge,
     taxAmount,
     total,
     totalItems,
   };
+}
+
+/**
+ * Simple Hanoi address validation for rush delivery
+ */
+function isHanoiAddress(city: string): boolean {
+  if (!city || typeof city !== 'string') {
+    return false;
+  }
+
+  const normalizedCity = city
+    .toLowerCase()
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ');
+
+  const hanoiVariations = ['hanoi', 'ha noi', 'hn'];
+
+  return hanoiVariations.some(variation =>
+    normalizedCity === variation || normalizedCity.includes(variation)
+  );
+}
+
+/**
+ * Calculate rush delivery surcharge
+ */
+export function calculateRushSurcharge(
+  items: CartItem[],
+  isRushOrder: boolean,
+  address?: any,
+  config: PriceCalculatorConfig = DEFAULT_PRICE_CONFIG,
+): number {
+  // No surcharge if not a rush order
+  if (!isRushOrder) {
+    return 0;
+  }
+
+  // Validate address for rush delivery
+  if (address && !isHanoiAddress(address.city)) {
+    throw new Error('Rush delivery is only available in Hanoi');
+  }
+
+  // Check if all items are rush-eligible
+  // Default to true if isAvailableRush is undefined (for backward compatibility)
+  const ineligibleItems = items.filter(item =>
+    item.product && item.product.isAvailableRush === false
+  );
+
+  if (ineligibleItems.length > 0) {
+    throw new Error('Some items are not eligible for rush delivery');
+  }
+
+  // Calculate surcharge: $4 per item
+  const totalItems = calculateTotalItems(items);
+  const surcharge = totalItems * config.rushSurchargePerItem;
+
+
+
+  return parseFloat(surcharge.toFixed(2));
 }
 
 /**

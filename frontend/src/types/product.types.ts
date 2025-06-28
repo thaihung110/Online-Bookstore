@@ -20,6 +20,7 @@ export interface BaseProduct {
   preOrderReleaseDate?: Date | string;
   createdAt?: Date | string;
   updatedAt?: Date | string;
+  isAvailableRush?: boolean; // Rush delivery eligibility
 }
 
 // Book-specific interface

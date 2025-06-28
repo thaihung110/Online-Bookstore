@@ -21,6 +21,7 @@ import {
   getProductDisplayData,
   getProductPlaceholder,
 } from "../../utils/productDisplayHelper";
+import { calculateRushSurcharge, DEFAULT_PRICE_CONFIG } from "../../utils/price-calculator";
 
 const OrderSummary: React.FC = () => {
   const {
@@ -28,6 +29,7 @@ const OrderSummary: React.FC = () => {
     billingAddress,
     useShippingAsBilling,
     paymentMethod,
+    isRushOrder,
     getShippingCost,
   } = useCheckoutStore();
 
@@ -39,7 +41,27 @@ const OrderSummary: React.FC = () => {
   const subtotal = cart?.subtotal || 0;
   const shippingCost = cart?.shippingCost || 0;
   const taxAmount = cart?.taxAmount || 0;
-  const total = cart?.total || 0;
+  const backendTotal = cart?.total || 0;
+
+  // Calculate rush surcharge using the universal price calculator
+  // Convert cart items to the format expected by the price calculator
+  const priceCalculatorItems = selectedItems.map(item => ({
+    quantity: item.quantity,
+    priceAtAdd: item.priceAtAdd,
+    product: {
+      isAvailableRush: item.product?.isAvailableRush, // Use actual product data
+    }
+  }));
+
+  const rushSurcharge = isRushOrder
+    ? calculateRushSurcharge(priceCalculatorItems, isRushOrder, shippingAddress, DEFAULT_PRICE_CONFIG)
+    : 0;
+
+
+
+  // Calculate the final total including rush surcharge
+  const total = parseFloat((subtotal + shippingCost + rushSurcharge + taxAmount).toFixed(2));
+
   const totalQuantity = selectedItems.reduce(
     (sum, item) => sum + item.quantity,
     0
@@ -137,9 +159,19 @@ const OrderSummary: React.FC = () => {
 
         <Box sx={{ flex: { xs: "1 1 100%", md: "1 1 35%" } }}>
           <Paper variant="outlined" sx={{ p: 2 }}>
-            <Typography variant="subtitle1" gutterBottom>
-              Your Order ({totalQuantity} items)
-            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+              <Typography variant="subtitle1">
+                Your Order ({totalQuantity} items)
+              </Typography>
+              {isRushOrder && (
+                <Chip
+                  label="Rush Delivery"
+                  color="warning"
+                  size="small"
+                  icon={<LocalShippingIcon />}
+                />
+              )}
+            </Box>
 
             <List disablePadding>
               {selectedItems.map((item: CartItem, idx: number) => {
@@ -182,6 +214,18 @@ const OrderSummary: React.FC = () => {
                   ${shippingCost.toFixed(2)}
                 </Typography>
               </ListItem>
+
+              {isRushOrder && (
+                <ListItem sx={{ py: 1, px: 0 }}>
+                  <ListItemText
+                    primary="Rush Delivery"
+                    secondary="2-hour delivery ($4 per item)"
+                  />
+                  <Typography variant="body1" sx={{ color: 'warning.main' }}>
+                    ${rushSurcharge.toFixed(2)}
+                  </Typography>
+                </ListItem>
+              )}
 
               {taxAmount > 0 && (
                 <ListItem sx={{ py: 1, px: 0 }}>

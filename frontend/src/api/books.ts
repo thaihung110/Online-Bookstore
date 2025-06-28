@@ -23,6 +23,7 @@ export interface Book {
   publishedDate?: string;
   pageCount?: number;
   converImage?: string;
+  isAvailableRush?: boolean; // Rush delivery eligibility
 }
 
 export interface BookQuery {
@@ -70,6 +71,7 @@ interface RawBookData {
   category?: string[];
   publishedDate?: string;
   pageCount?: number;
+  isAvailableRush?: boolean; // Rush delivery eligibility
 }
 
 // Validate book data
@@ -135,6 +137,7 @@ const transformBookData = (bookData: RawBookData): Book => {
     category,
     publishedDate: bookData.publishedDate,
     pageCount,
+    isAvailableRush: bookData.isAvailableRush, // Include rush delivery eligibility
   };
 };
 

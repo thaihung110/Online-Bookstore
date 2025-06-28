@@ -176,6 +176,22 @@ const priceUsd = book.discountRate > 0 ? originalPriceUsd * (1 - book.discountRa
             }}
           />
         )}
+
+        {/* Rush delivery badge */}
+        {book.isAvailableRush && (
+          <Chip
+            label="Rush Available"
+            color="warning"
+            size="small"
+            sx={{
+              position: "absolute",
+              top: isDiscounted ? 48 : 8, // Position below discount badge if both exist
+              left: 8,
+              fontWeight: "bold",
+              fontSize: "0.7rem",
+            }}
+          />
+        )}
       </Box>
 
       <CardContent

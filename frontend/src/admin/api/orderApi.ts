@@ -43,6 +43,8 @@ const buildQueryParams = (filters: OrderFilters): string => {
   if (filters.endDate) params.append("endDate", filters.endDate);
   if (filters.sortBy) params.append("sortBy", filters.sortBy);
   if (filters.sortOrder) params.append("sortOrder", filters.sortOrder);
+  if (filters.isRushOrder !== undefined)
+    params.append("isRushOrder", filters.isRushOrder.toString());
 
   params.append("page", filters.page.toString());
   params.append("limit", filters.limit.toString());

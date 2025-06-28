@@ -65,10 +65,6 @@ dev-debug.log
 *.sln
 *.sw?
 # OS specific
-# Task files
-tasks.json
-tasks/ 
-
 .cursor/
 .roo/
 scripts/
@@ -83,3 +79,7 @@ mongodb-setup-commands.md
 test-vnpay-integration.md
 
 backend/*.http
+
+# Task files
+# tasks.json
+# tasks/ 

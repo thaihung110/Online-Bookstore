@@ -154,6 +154,9 @@ export interface CreateOrderFromCartRequest {
   };
   isGift?: boolean;
   giftMessage?: string;
+  isRushOrder?: boolean;
+  rushDeliveryTime?: Date;
+  rushInstructions?: string;
 }
 
 export interface OrderViewResponse {

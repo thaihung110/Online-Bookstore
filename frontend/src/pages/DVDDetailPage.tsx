@@ -351,6 +351,23 @@ const DVDDetailPage: React.FC = () => {
                 </Box>
               </Stack>
 
+              {/* Rush delivery indicator */}
+              {selectedDVD.isAvailableRush && (
+                <Box sx={{ mt: 2, mb: 1 }}>
+                  <Chip
+                    label="🚀 Rush Delivery Available - 2 Hour Delivery in Hanoi"
+                    color="warning"
+                    variant="outlined"
+                    sx={{
+                      fontWeight: "bold",
+                      fontSize: "0.9rem",
+                      py: 1,
+                      px: 2,
+                    }}
+                  />
+                </Box>
+              )}
+
               <Divider sx={{ my: 3 }} />
 
               <Typography

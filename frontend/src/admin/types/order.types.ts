@@ -29,6 +29,10 @@ export interface Order {
   tax: number;
   shippingCost: number;
   discount: number;
+  // Rush delivery fields
+  isRushOrder?: boolean;
+  rushDeliveryTime?: string;
+  rushInstructions?: string;
 }
 
 export interface OrderFilters {
@@ -42,6 +46,7 @@ export interface OrderFilters {
   endDate?: string;
   sortBy?: string;
   sortOrder?: "asc" | "desc";
+  isRushOrder?: boolean;
 }
 
 export interface OrderListResponse {
@@ -50,6 +55,7 @@ export interface OrderListResponse {
   page: number;
   limit: number;
   totalPages: number;
+  rushOrderCount?: number;
 }
 
 export interface OrderFormData {

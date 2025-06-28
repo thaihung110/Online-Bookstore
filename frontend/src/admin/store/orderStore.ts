@@ -11,6 +11,7 @@ interface OrderState {
   // Orders list
   orders: Order[];
   totalOrders: number;
+  rushOrderCount: number;
   currentPage: number;
   totalPages: number;
   limit: number;
@@ -54,6 +55,7 @@ export const useOrderStore = create<OrderState>((set, get) => ({
   // State
   orders: [],
   totalOrders: 0,
+  rushOrderCount: 0,
   currentPage: 1,
   totalPages: 1,
   limit: 10,
@@ -84,6 +86,7 @@ export const useOrderStore = create<OrderState>((set, get) => ({
       set({
         orders: response.orders,
         totalOrders: response.total,
+        rushOrderCount: response.rushOrderCount || 0,
         currentPage: response.page,
         totalPages: response.totalPages,
         limit: response.limit,

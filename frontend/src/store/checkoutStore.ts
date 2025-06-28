@@ -37,6 +37,7 @@ interface CheckoutState {
   paymentDetails: VNPayDetails | null;
   order: Order | null;
   payment: Payment | null;
+  isRushOrder: boolean;
 
   // Trạng thái
   isLoading: boolean;
@@ -50,6 +51,7 @@ interface CheckoutState {
   setPaymentMethod: (method: any) => void;
   setPaymentDetails: (details: any) => void;
   setActiveStep: (step: number) => void;
+  setIsRushOrder: (value: boolean) => void;
   getShippingCost: () => number;
 
   // Thao tác với API
@@ -73,6 +75,7 @@ interface CheckoutState {
 const createOrderFromCartApi = async (data: {
   shippingAddress: Address;
   paymentMethod: string;
+  isRushOrder?: boolean;
 }): Promise<Order> => {
   try {
     console.log(
@@ -97,6 +100,7 @@ const createOrderFromCartApi = async (data: {
         method: data.paymentMethod as PaymentMethod,
       },
       isGift: false,
+      isRushOrder: data.isRushOrder || false,
     };
 
     console.log("[Checkout Store] API Request payload:", orderRequest);
@@ -125,6 +129,7 @@ export const useCheckoutStore = create<CheckoutState>()(
       paymentDetails: null,
       order: null,
       payment: null,
+      isRushOrder: false,
 
       // Trạng thái
       isLoading: false,
@@ -151,6 +156,8 @@ export const useCheckoutStore = create<CheckoutState>()(
 
       setActiveStep: (step: number) => set({ activeStep: step }),
 
+      setIsRushOrder: (value: boolean) => set({ isRushOrder: value }),
+
       // Get shipping cost from cart data (backend calculated)
       getShippingCost: () => {
         const cartStore = useCartStore.getState();
@@ -163,13 +170,14 @@ export const useCheckoutStore = create<CheckoutState>()(
         try {
           set({ isLoading: true, error: null });
 
-          const { shippingAddress, paymentMethod } = get();
+          const { shippingAddress, paymentMethod, isRushOrder } = get();
 
           console.log(
             "[Checkout Store] Placing order with shipping address:",
             shippingAddress
           );
           console.log("[Checkout Store] Payment method:", paymentMethod);
+          console.log("[Checkout Store] Rush order:", isRushOrder);
 
           if (!shippingAddress) {
             throw new Error("Shipping address is required");
@@ -183,6 +191,7 @@ export const useCheckoutStore = create<CheckoutState>()(
           const order = await createOrderFromCartApi({
             shippingAddress,
             paymentMethod,
+            isRushOrder,
           });
 
           console.log(
@@ -398,6 +407,7 @@ export const useCheckoutStore = create<CheckoutState>()(
           paymentDetails: null,
           order: null,
           payment: null,
+          isRushOrder: false,
           error: null,
           activeStep: 0,
         }),

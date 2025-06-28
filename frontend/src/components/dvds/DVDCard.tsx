@@ -171,6 +171,22 @@ const DVDCard: React.FC<DVDCardProps> = memo(({ dvd }) => {
             }}
           />
         )}
+
+        {/* Rush delivery badge */}
+        {dvd.isAvailableRush && (
+          <Chip
+            label="Rush Available"
+            color="warning"
+            size="small"
+            sx={{
+              position: "absolute",
+              top: isDiscounted ? 48 : 8, // Position below discount badge if both exist
+              left: 8,
+              fontWeight: "bold",
+              fontSize: "0.7rem",
+            }}
+          />
+        )}
         
         {/* DVD Type indicator */}
         <Box

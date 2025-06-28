@@ -24,6 +24,7 @@ interface RawCDData {
   preOrderReleaseDate?: string | Date;
   createdAt?: string | Date;
   updatedAt?: string | Date;
+  isAvailableRush?: boolean; // Rush delivery eligibility
 }
 
 // Cache for memoizing CD data
@@ -79,6 +80,7 @@ const transformCDData = (cdData: RawCDData): CD => {
     preOrderReleaseDate: cdData.preOrderReleaseDate,
     createdAt: cdData.createdAt,
     updatedAt: cdData.updatedAt,
+    isAvailableRush: cdData.isAvailableRush, // Include rush delivery eligibility
   };
 };
 
