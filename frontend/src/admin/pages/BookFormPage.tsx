@@ -27,7 +27,12 @@ import {
   CloudUpload as CloudUploadIcon,
 } from "@mui/icons-material";
 import { BookFormData } from "../types/book.types";
-import { getBook, createBook, updateBook, uploadBookCover } from "../api/bookApi";
+import {
+  getBook,
+  createBook,
+  updateBook,
+  uploadBookCover,
+} from "../api/bookApi";
 
 // Available book genres
 const AVAILABLE_GENRES = [
@@ -87,7 +92,10 @@ const BookFormPage: React.FC = () => {
   const isEditMode = !!id;
 
   // Calculate current price based on original price and discount rate
-  const calculateCurrentPrice = (originalPrice: number, discountRate: number): number => {
+  const calculateCurrentPrice = (
+    originalPrice: number,
+    discountRate: number
+  ): number => {
     return originalPrice * (1 - discountRate / 100);
   };
 
@@ -109,7 +117,7 @@ const BookFormPage: React.FC = () => {
   //   coverImageUrl: "",
   // });
 
-const [formData, setFormData] = useState<BookFormData>({
+  const [formData, setFormData] = useState<BookFormData>({
     title: "",
     author: "",
     description: "",
@@ -126,8 +134,6 @@ const [formData, setFormData] = useState<BookFormData>({
     coverImageUrl: "",
     isAvailableRush: true, // New field for rush delivery
   });
-
-
 
   // Validation state
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -153,8 +159,6 @@ const [formData, setFormData] = useState<BookFormData>({
         setLoading(true);
         const bookData = await getBook(id);
 
-
-
         setFormData({
           title: bookData.title || "",
           author: bookData.author || "",
@@ -170,7 +174,10 @@ const [formData, setFormData] = useState<BookFormData>({
           language: bookData.language || "English",
           stock: bookData.stock || 0,
           coverImageUrl: bookData.coverImage || "",
-          isAvailableRush: bookData.isAvailableRush !== undefined ? bookData.isAvailableRush : true, // Default to true if not set
+          isAvailableRush:
+            bookData.isAvailableRush !== undefined
+              ? bookData.isAvailableRush
+              : true, // Default to true if not set
         });
 
         // Set preview URL for existing image
@@ -233,22 +240,20 @@ const [formData, setFormData] = useState<BookFormData>({
     }
   };
 
-
-
   // Handle file selection (only preview, don't upload yet)
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
 
       // Validate file type
-      if (!file.type.startsWith('image/')) {
-        setError('Please select a valid image file');
+      if (!file.type.startsWith("image/")) {
+        setError("Please select a valid image file");
         return;
       }
 
       // Validate file size (max 5MB)
       if (file.size > 5 * 1024 * 1024) {
-        setError('Image file size must be less than 5MB');
+        setError("Image file size must be less than 5MB");
         return;
       }
 
@@ -273,23 +278,22 @@ const [formData, setFormData] = useState<BookFormData>({
     }
   };
 
-
   const handleRushDeliveryChange = (e: SelectChangeEvent<string>) => {
-  const value = e.target.value === "true";
-  setFormData((prev) => ({ 
-    ...prev, 
-    isAvailableRush: value 
-  }));
+    const value = e.target.value === "true";
+    setFormData((prev) => ({
+      ...prev,
+      isAvailableRush: value,
+    }));
 
-  // Clear error if exists
-  if (errors.isAvailableRush) {
-    setErrors((prev) => {
-      const newErrors = { ...prev };
-      delete newErrors.isAvailableRush;
-      return newErrors;
-    });
-  }
-};
+    // Clear error if exists
+    if (errors.isAvailableRush) {
+      setErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors.isAvailableRush;
+        return newErrors;
+      });
+    }
+  };
 
   // Validate form
   const validateForm = (): boolean => {
@@ -336,8 +340,13 @@ const [formData, setFormData] = useState<BookFormData>({
       newErrors.publicationYear = "Publication year is required";
     } else {
       const currentYear = new Date().getFullYear();
-      if (formData.publicationYear < 1000 || formData.publicationYear > currentYear + 5) {
-        newErrors.publicationYear = `Publication year must be between 1000 and ${currentYear + 5}`;
+      if (
+        formData.publicationYear < 1000 ||
+        formData.publicationYear > currentYear + 5
+      ) {
+        newErrors.publicationYear = `Publication year must be between 1000 and ${
+          currentYear + 5
+        }`;
       }
     }
 
@@ -497,7 +506,7 @@ const [formData, setFormData] = useState<BookFormData>({
           startIcon={<ArrowBackIcon />}
           onClick={handleBack}
         >
-          Back to Books
+          Back to Products
         </Button>
       </Box>
 
@@ -585,11 +594,23 @@ const [formData, setFormData] = useState<BookFormData>({
                     label="Publication Year"
                     name="publicationYear"
                     type="number"
-                    value={formData.publicationYear === 0 ? "" : formData.publicationYear}
+                    value={
+                      formData.publicationYear === 0
+                        ? ""
+                        : formData.publicationYear
+                    }
                     onChange={handleNumberInputChange}
-                    InputProps={{ inputProps: { min: 1000, max: new Date().getFullYear() + 5 } }}
+                    InputProps={{
+                      inputProps: {
+                        min: 1000,
+                        max: new Date().getFullYear() + 5,
+                      },
+                    }}
                     error={!!errors.publicationYear}
-                    helperText={errors.publicationYear || "Enter the year the book was published"}
+                    helperText={
+                      errors.publicationYear ||
+                      "Enter the year the book was published"
+                    }
                   />
                 </Grid>
 
@@ -680,9 +701,7 @@ const [formData, setFormData] = useState<BookFormData>({
                     label="Stock Quantity"
                     name="stock"
                     type="number"
-                    value={
-                      formData.stock === 0 ? "" : formData.stock
-                    }
+                    value={formData.stock === 0 ? "" : formData.stock}
                     onChange={handleNumberInputChange}
                     InputProps={{ inputProps: { min: 0 } }}
                     error={!!errors.stock}
@@ -704,21 +723,28 @@ const [formData, setFormData] = useState<BookFormData>({
                     label="Original Price"
                     name="originalPrice"
                     type="number"
-                    value={formData.originalPrice === 0 ? "" : formData.originalPrice}
+                    value={
+                      formData.originalPrice === 0 ? "" : formData.originalPrice
+                    }
                     onChange={handleNumberInputChange}
                     InputProps={{
                       startAdornment: <Typography sx={{ mr: 1 }}>$</Typography>,
                       inputProps: { min: 0, step: 0.01 },
                     }}
                     error={!!errors.originalPrice}
-                    helperText={errors.originalPrice || "The original price before any discounts"}
+                    helperText={
+                      errors.originalPrice ||
+                      "The original price before any discounts"
+                    }
                   />
                 </Grid>
 
                 {/* them tickbox chon isAvailableRush = true hoac false */}
                 <Grid size={6}>
                   <FormControl fullWidth>
-                    <InputLabel id="rush-delivery-label">Rush Delivery</InputLabel>
+                    <InputLabel id="rush-delivery-label">
+                      Rush Delivery
+                    </InputLabel>
                     <Select
                       labelId="rush-delivery-label"
                       name="isAvailableRush"
@@ -784,7 +810,9 @@ const [formData, setFormData] = useState<BookFormData>({
                       inputProps: { min: 0, step: 0.01 },
                     }}
                     error={!!errors.price}
-                    helperText={errors.price || "The final price after any discounts"}
+                    helperText={
+                      errors.price || "The final price after any discounts"
+                    }
                   />
                 </Grid>
               </Grid>
@@ -855,10 +883,17 @@ const [formData, setFormData] = useState<BookFormData>({
 
               {uploading && (
                 <Box sx={{ mt: 2 }}>
-                  <Typography variant="body2" color="text.secondary" gutterBottom>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    gutterBottom
+                  >
                     Uploading image... {uploadProgress}%
                   </Typography>
-                  <LinearProgress variant="determinate" value={uploadProgress} />
+                  <LinearProgress
+                    variant="determinate"
+                    value={uploadProgress}
+                  />
                 </Box>
               )}
 
@@ -882,7 +917,13 @@ const [formData, setFormData] = useState<BookFormData>({
               variant="contained"
               color="primary"
               disabled={saving || uploading}
-              startIcon={(saving || uploading) ? <CircularProgress size={20} /> : <SaveIcon />}
+              startIcon={
+                saving || uploading ? (
+                  <CircularProgress size={20} />
+                ) : (
+                  <SaveIcon />
+                )
+              }
             >
               {uploading
                 ? "Uploading..."
@@ -890,8 +931,7 @@ const [formData, setFormData] = useState<BookFormData>({
                 ? "Saving..."
                 : isEditMode
                 ? "Update Book"
-                : "Add Book"
-              }
+                : "Add Book"}
             </Button>
           </Box>
         </Box>

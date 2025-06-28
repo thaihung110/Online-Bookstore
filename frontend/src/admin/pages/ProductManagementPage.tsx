@@ -88,9 +88,9 @@ const ProductManagementPage: React.FC = () => {
 
   const handleAddDVD = () => {
     navigate("/admin/dvds/add");
-  }
+  };
 
-//   Handle delete product
+  //   Handle delete product
   const handleDeleteClick = (product: Product) => {
     setProductToDelete(product);
     setDeleteDialogOpen(true);
@@ -140,9 +140,8 @@ const ProductManagementPage: React.FC = () => {
           startIcon={<AddIcon />}
           onClick={handleAddBook}
         >
-          Add Book
+          Add Product
         </Button>
-
 
         <Button
           variant="contained"
@@ -188,14 +187,13 @@ const ProductManagementPage: React.FC = () => {
         onDeleteProduct={handleDeleteClick}
       />
 
-
-{/* View History Button - Add this section */}
-      <Box 
-        sx={{ 
-          display: "flex", 
-          justifyContent: "center", 
-          mt: 3, 
-          mb: 2 
+      {/* View History Button - Add this section */}
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          mt: 3,
+          mb: 2,
         }}
       >
         <Button
@@ -221,9 +219,6 @@ const ProductManagementPage: React.FC = () => {
         onClose={handleCloseDeleteDialog}
         onConfirm={handleConfirmDelete}
       />
-      
-
-
     </Box>
   );
 };

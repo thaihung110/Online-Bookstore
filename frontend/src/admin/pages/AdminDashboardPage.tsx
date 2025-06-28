@@ -223,7 +223,7 @@ const AdminDashboardPage: React.FC = () => {
         </Grid>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatCard
-            title="Total Books"
+            title="Total Products"
             value={totalBooks}
             icon={<BookIcon />}
             color="#4CAF50"
@@ -348,7 +348,7 @@ const AdminDashboardPage: React.FC = () => {
           </Paper>
         </Grid>
 
-        {/* Top Selling Books */}
+        {/* Top Selling Products */}
         <Grid size={{ xs: 12, lg: 4 }}>
           <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
             <Box
@@ -360,7 +360,7 @@ const AdminDashboardPage: React.FC = () => {
               }}
             >
               <Typography variant="h6" component="h2">
-                Top Selling Books
+                Top Selling Products
               </Typography>
               <Button
                 variant="text"

@@ -46,7 +46,7 @@ const DRAWER_WIDTH = 240;
 // Menu items for the sidebar
 const MENU_ITEMS = [
   { text: "Dashboard", icon: <DashboardIcon />, path: "/admin" },
-  { text: "Books", icon: <BookIcon />, path: "/admin/books" },
+  { text: "Products", icon: <BookIcon />, path: "/admin/books" },
   { text: "Orders", icon: <OrdersIcon />, path: "/admin/orders" },
   { text: "Users", icon: <PeopleIcon />, path: "/admin/users" },
 ];
@@ -54,7 +54,7 @@ const MENU_ITEMS = [
 // Route mapping for breadcrumbs
 const ROUTE_MAPPING: Record<string, string> = {
   admin: "Dashboard",
-  books: "Books",
+  books: "Products",
   users: "Users",
   categories: "Categories",
   orders: "Orders",

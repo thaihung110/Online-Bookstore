@@ -58,7 +58,7 @@ export const getOrders = async (
   filters: OrderFilters
 ): Promise<OrderListResponse> => {
   try {
-    console.log('[Admin API] Fetching orders with filters:', filters);
+    console.log("[Admin API] Fetching orders with filters:", filters);
 
     // Make real API call to backend
     const response = await axios.get(
@@ -66,12 +66,12 @@ export const getOrders = async (
       getAuthHeaders()
     );
 
-    console.log('[Admin API] Raw backend response:', response.data);
+    console.log("[Admin API] Raw backend response:", response.data);
 
     // Transform backend response to frontend format
     const transformedResponse = mapOrderListResponse(response.data);
 
-    console.log('[Admin API] Transformed response:', transformedResponse);
+    console.log("[Admin API] Transformed response:", transformedResponse);
 
     return transformedResponse;
   } catch (error) {
@@ -135,8 +135,10 @@ export const updateOrder = async (
     console.log(`[Admin API] Transformed updated order:`, transformedOrder);
 
     return transformedOrder;
-  } catch (error) {
-    console.error(`Error updating order ${id}:`, error);
+  } catch (error: any) {
+    console.error(`[Admin API] Error updating order ${id}:`, error);
+    console.error(`[Admin API] Error response:`, error.response?.data);
+    console.error(`[Admin API] Error status:`, error.response?.status);
     const errorMessage = handleApiError(error);
     throw new Error(errorMessage);
   }
@@ -148,10 +150,7 @@ export const deleteOrder = async (id: string): Promise<void> => {
     console.log(`[Admin API] Deleting order ${id}`);
 
     // Make real API call to backend
-    await axios.delete(
-      `${API_URL}/admin/orders/${id}`,
-      getAuthHeaders()
-    );
+    await axios.delete(`${API_URL}/admin/orders/${id}`, getAuthHeaders());
 
     console.log(`[Admin API] Order ${id} deleted successfully`);
   } catch (error) {

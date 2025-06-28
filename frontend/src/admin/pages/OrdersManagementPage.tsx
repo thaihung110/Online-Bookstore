@@ -134,11 +134,15 @@ const OrdersManagementPage: React.FC = () => {
   const handleEditSubmit = async () => {
     if (!selectedOrder) return;
 
+    console.log("[Admin Orders] Submitting edit form:", editForm);
+    console.log("[Admin Orders] Selected order:", selectedOrder);
+
     try {
       await updateOrderStatus(selectedOrder.id, editForm);
       setEditDialogOpen(false);
       showSnackbar("Order updated successfully", "success");
     } catch (error) {
+      console.error("[Admin Orders] Update failed:", error);
       showSnackbar("Failed to update order", "error");
     }
   };
@@ -168,22 +172,22 @@ const OrdersManagementPage: React.FC = () => {
   // Get status chip color
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "pending":
+      case "PENDING":
         return "default";
-      case "processing":
+      case "RECEIVED":
         return "info";
-      case "shipped":
+      case "CONFIRMED":
+        return "info";
+      case "PREPARED":
         return "primary";
-      case "delivered":
+      case "SHIPPED":
+        return "primary";
+      case "DELIVERED":
         return "success";
-      case "cancelled":
+      case "CANCELED":
         return "error";
-      case "returned":
-        return "warning";
-      case "refunded":
+      case "REFUNDED":
         return "secondary";
-      case "completed":
-        return "success";
       default:
         return "default";
     }
@@ -267,11 +271,14 @@ const OrdersManagementPage: React.FC = () => {
             onChange={(e) => handleFilterChange("status", e.target.value)}
           >
             <MenuItem value="">All Statuses</MenuItem>
-            <MenuItem value="pending">Pending</MenuItem>
-            <MenuItem value="processing">Processing</MenuItem>
-            <MenuItem value="shipped">Shipped</MenuItem>
-            <MenuItem value="delivered">Delivered</MenuItem>
-            <MenuItem value="cancelled">Cancelled</MenuItem>
+            <MenuItem value="PENDING">Pending</MenuItem>
+            <MenuItem value="RECEIVED">Received</MenuItem>
+            <MenuItem value="CONFIRMED">Confirmed</MenuItem>
+            <MenuItem value="PREPARED">Prepared</MenuItem>
+            <MenuItem value="SHIPPED">Shipped</MenuItem>
+            <MenuItem value="DELIVERED">Delivered</MenuItem>
+            <MenuItem value="CANCELED">Canceled</MenuItem>
+            <MenuItem value="REFUNDED">Refunded</MenuItem>
           </Select>
         </FormControl>
 
@@ -289,8 +296,8 @@ const OrdersManagementPage: React.FC = () => {
           >
             <MenuItem value="createdAt-desc">Date (Newest First)</MenuItem>
             <MenuItem value="createdAt-asc">Date (Oldest First)</MenuItem>
-            <MenuItem value="totalAmount-desc">Total (Highest First)</MenuItem>
-            <MenuItem value="totalAmount-asc">Total (Lowest First)</MenuItem>
+            <MenuItem value="total-desc">Total (Highest First)</MenuItem>
+            <MenuItem value="total-asc">Total (Lowest First)</MenuItem>
           </Select>
         </FormControl>
       </Paper>
@@ -385,7 +392,7 @@ const OrdersManagementPage: React.FC = () => {
                               <Edit fontSize="small" />
                             </IconButton>
                           </Tooltip>
-                          {order.status === "shipped" && (
+                          {order.status === "SHIPPED" && (
                             <Tooltip title="Tracking">
                               <IconButton size="small">
                                 <LocalShipping fontSize="small" />
@@ -554,12 +561,14 @@ const OrdersManagementPage: React.FC = () => {
                   setEditForm({ ...editForm, status: e.target.value })
                 }
               >
-                <MenuItem value="pending">Pending</MenuItem>
-                <MenuItem value="processing">Processing</MenuItem>
-                <MenuItem value="shipped">Shipped</MenuItem>
-                <MenuItem value="delivered">Delivered</MenuItem>
-                <MenuItem value="cancelled">Cancelled</MenuItem>
-                <MenuItem value="refunded">Refunded</MenuItem>
+                <MenuItem value="PENDING">Pending</MenuItem>
+                <MenuItem value="RECEIVED">Received</MenuItem>
+                <MenuItem value="CONFIRMED">Confirmed</MenuItem>
+                <MenuItem value="PREPARED">Prepared</MenuItem>
+                <MenuItem value="SHIPPED">Shipped</MenuItem>
+                <MenuItem value="DELIVERED">Delivered</MenuItem>
+                <MenuItem value="CANCELED">Canceled</MenuItem>
+                <MenuItem value="REFUNDED">Refunded</MenuItem>
               </Select>
             </FormControl>
             <TextField
