@@ -13,6 +13,7 @@ import CDsPage from "./pages/CDsPage";
 import CDDetailPage from "./pages/CDDetailPage";
 import DVDsPage from "./pages/DVDsPage";
 import DVDDetailPage from "./pages/DVDDetailPage";
+import SearchResultsPage from "./pages/SearchResultsPage";
 
 import ProtectedRoute from "./routes/ProtectedRoute";
 import { useAuthStore } from "./store/authStore";
@@ -181,6 +182,7 @@ const App: React.FC = () => {
           <Route path="/cds/:id" element={<CDDetailPage />} />
           <Route path="/dvds" element={<DVDsPage />} />
           <Route path="/dvds/:id" element={<DVDDetailPage />} />
+          <Route path="/search" element={<SearchResultsPage />} />
           <Route path="/cart" element={<CartPage />} />
           <Route path="/api-test" element={<TestApiComponent />} />
           <Route path="/checkout" element={<CheckoutPage />} />

@@ -60,7 +60,7 @@ const CDsPage: React.FC = () => {
 
   const [filters, setFilters] = useState<CDQuery>({
     page: 1,
-    limit: 12,
+    limit: 20,
     sortBy: "createdAt",
     sortOrder: "desc",
   });
@@ -99,7 +99,12 @@ const CDsPage: React.FC = () => {
   useEffect(() => {
     const urlFilters = parseFiltersFromUrl();
     if (Object.keys(urlFilters).length > 0) {
-      setFilters({ ...filters, ...urlFilters });
+      setFilters((prevFilters) => ({ ...prevFilters, ...urlFilters }));
+      
+      // Update sort dropdown state if sortBy and sortOrder are in URL
+      if (urlFilters.sortBy && urlFilters.sortOrder) {
+        setSort(`${urlFilters.sortBy}:${urlFilters.sortOrder}`);
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Only run on mount

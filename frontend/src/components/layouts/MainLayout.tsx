@@ -87,7 +87,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      navigate(`/books?search=${encodeURIComponent(searchQuery)}`);
+      navigate(`/search?q=${encodeURIComponent(searchQuery)}`);
       setSearchQuery("");
       setDrawerOpen(false);
     }
@@ -295,7 +295,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
               <SearchIcon />
             </Box>
             <InputBase
-              placeholder="Search books…"
+              placeholder="Search products…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               sx={{

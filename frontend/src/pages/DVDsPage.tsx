@@ -63,7 +63,7 @@ const DVDsPage: React.FC = () => {
 
   const [filters, setFilters] = useState<DVDQuery>({
     page: 1,
-    limit: 12,
+    limit: 20,
     sortBy: "createdAt",
     sortOrder: "desc",
   });
