@@ -1,15 +1,41 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { ProductsService } from './products.service';
+import { ConfigService } from '@nestjs/config';
+import { AdminProductsService } from './products.service';
+import { UploadService } from '../../upload/upload.service';
+import { ProductActivityLogService } from '../activity-log/activity-log.service';
 
-describe('ProductsService', () => {
-  let service: ProductsService;
+describe('AdminProductsService', () => {
+  let service: AdminProductsService<any, any>;
 
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [ProductsService],
-    }).compile();
+  const mockProductModel = {
+    find: jest.fn(),
+    findById: jest.fn(),
+    findByIdAndUpdate: jest.fn(),
+    findByIdAndDelete: jest.fn(),
+    create: jest.fn(),
+    countDocuments: jest.fn(),
+    aggregate: jest.fn(),
+  } as any;
 
-    service = module.get<ProductsService>(ProductsService);
+  const mockConfigService = {
+    get: jest.fn(),
+  } as any;
+
+  const mockUploadService = {
+    uploadFile: jest.fn(),
+    deleteFile: jest.fn(),
+  } as any;
+
+  const mockProductActivityLogService = {
+    logActivity: jest.fn(),
+  } as any;
+
+  beforeEach(() => {
+    service = new AdminProductsService(
+      mockProductModel,
+      mockConfigService,
+      mockUploadService,
+      mockProductActivityLogService
+    );
   });
 
   it('should be defined', () => {
