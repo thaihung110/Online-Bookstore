@@ -1,3 +1,5 @@
+declare const module: any;
+
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -40,5 +42,10 @@ async function bootstrap() {
   // Start the server
   await app.listen(port);
   console.log(`Application running on: http://localhost:${port}`);
+
+  if (module.hot) {
+    module.hot.accept();
+    module.hot.dispose(() => app.close());
+  }
 }
 bootstrap();

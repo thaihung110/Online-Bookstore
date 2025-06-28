@@ -26,11 +26,17 @@ interface BookState {
   setPage: (page: number) => Promise<void>;
   clearError: () => void;
   loadGenres: () => Promise<void>;
+  
+  // New actions for SOLID compliance
+  clearCurrentProduct: () => void;
+  
+  // Aliases for compatibility with ProductStore interface
+  get currentProduct(): Book | null;
 }
 
 const defaultFilters: BookQuery = {
   page: 1,
-  limit: 12,
+  limit: 20,
   sortBy: "title",
   sortOrder: "asc",
 };
@@ -40,7 +46,7 @@ export const useBookStore = create<BookState>((set, get) => ({
   featuredBooks: [],
   currentBook: null,
   totalBooks: 0,
-  limit: 10,
+  limit: 20,
   isLoading: false,
   error: null,
   filters: defaultFilters,
@@ -170,5 +176,13 @@ export const useBookStore = create<BookState>((set, get) => ({
         error: error instanceof Error ? error.message : "Failed to load genres",
       });
     }
+  },
+
+  // New methods for SOLID compliance
+  clearCurrentProduct: () => set({ currentBook: null }),
+
+  // Compatibility properties for ProductStore interface
+  get currentProduct() {
+    return get().currentBook;
   },
 }));

@@ -20,14 +20,11 @@ import AutoStoriesIcon from "@mui/icons-material/AutoStories";
 import WhatshotIcon from "@mui/icons-material/Whatshot";
 import EmojiObjectsIcon from "@mui/icons-material/EmojiObjects";
 import MainLayout from "../components/layouts/MainLayout";
-import BookCard from "../components/books/BookCard";
 import ProductCard from "../components/common/ProductCard";
 import {
-  Book,
-  getFeaturedBooks,
   getAllGenres,
 } from "../api/books";
-import { Product, getMixedFeaturedProducts } from "../api/products";
+import { Product, getRandomMixedProducts } from "../api/products";
 
 const FEATURED_GENRES = [
   "Fiction",
@@ -46,46 +43,28 @@ const HomePage: React.FC = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const isTablet = useMediaQuery(theme.breakpoints.down("md"));
 
-  const [featuredBooks, setFeaturedBooks] = useState<Book[]>([]);
-  const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [randomProducts, setRandomProducts] = useState<Product[]>([]);
   const [isLoadingProducts, setIsLoadingProducts] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
   const [errorProducts, setErrorProducts] = useState<string | null>(null);
   const [genres, setGenres] = useState<string[]>([]);
   const [loadingGenres, setLoadingGenres] = useState(false);
 
   useEffect(() => {
-    const loadFeaturedBooks = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-        const books = await getFeaturedBooks(6); // Get 6 featured books
-        setFeaturedBooks(books);
-      } catch (err) {
-        setError("Failed to load featured books");
-        console.error(err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    const loadFeaturedProducts = async () => {
+    const loadRandomProducts = async () => {
       try {
         setIsLoadingProducts(true);
         setErrorProducts(null);
-        const products = await getMixedFeaturedProducts(12); // Get 12 mixed featured products
-        setFeaturedProducts(products);
+        const products = await getRandomMixedProducts(20); // Get 20 random mixed products
+        setRandomProducts(products);
       } catch (err) {
-        setErrorProducts("Failed to load featured products");
+        setErrorProducts("Failed to load products");
         console.error(err);
       } finally {
         setIsLoadingProducts(false);
       }
     };
 
-    loadFeaturedBooks();
-    loadFeaturedProducts();
+    loadRandomProducts();
   }, []);
 
   useEffect(() => {
@@ -269,7 +248,7 @@ const HomePage: React.FC = () => {
         </Box>
       </Container>
 
-      {/* Featured Products Section */}
+      {/* Random Products Section */}
       <Container maxWidth="lg" sx={{ mb: 8, px: { xs: 2, md: 3 } }}>
         <Box sx={{ display: "flex", alignItems: "center", mb: 4 }}>
           <AutoStoriesIcon color="primary" sx={{ fontSize: 32, mr: 2 }} />
@@ -285,7 +264,7 @@ const HomePage: React.FC = () => {
               mb: 0,
             }}
           >
-            Featured Products
+            Discover Products
             <Box
               sx={{
                 position: "absolute",
@@ -322,7 +301,7 @@ const HomePage: React.FC = () => {
           </Box>
         ) : (
           <Box sx={{ display: "flex", flexWrap: "wrap", mx: -1.5 }}>
-            {featuredProducts.map((product) => (
+            {randomProducts.map((product) => (
               <Box
                 key={`${product.productType}-${product.id}`}
                 sx={{ width: { xs: "100%", sm: "50%", md: "33.33%", lg: "25%" }, p: 1.5 }}
