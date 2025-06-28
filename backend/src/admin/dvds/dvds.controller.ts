@@ -22,6 +22,7 @@ import { RolesGuard } from '../../auth/guards/roles.guard';
 import { Roles } from '../../auth/decorators/roles.decorator';
 import { AdminDVDsService } from './dvds.service';
 import { AdminCreateDVDDto } from './dto/admin-create-dvd.dto';
+import { AdminUpdateDVDDto } from './dto/admin-update-dvd.dto';
 // import { UpdateDVDDto } from './dto/update-dvd.dto';
 import { DVD } from '../../dvds/schemas/dvd.schema';
 import { UploadService } from '../../upload/upload.service';
@@ -103,7 +104,7 @@ export class DvdsController {
   async update(
     @Param('id') id: string,
     @GetUserId() userId: string, // Assuming userId is needed for logging or auditing
-    @Body() updateDVDDto: AdminCreateDVDDto, // Assuming CreateDVDDto is used for updates as well
+    @Body() updateDVDDto: AdminUpdateDVDDto, // Assuming CreateDVDDto is used for updates as well
   ): Promise<DVD> {
     return this.adminDVDsService.update(userId, id, updateDVDDto);
   }
