@@ -185,7 +185,7 @@ export class AdminProductsService<T extends Product, D extends ProductDocument> 
     }
 
     if(ids.length > 10){
-      throw new BadRequestException('You can only delete up to 10 products at a time');
+      throw new BadRequestException('You can only delete up to 30 products at a time');
     }
     // check if all products exist
     const existingProducts = await this.productModel
@@ -200,7 +200,7 @@ export class AdminProductsService<T extends Product, D extends ProductDocument> 
 
     const deletedProductCount = await this.productActivityLogService.countDeletedProductsByUserIdAndDate(userId,now);
     if (deletedProductCount + ids.length > 30) {
-      throw new BadRequestException('You can only delete up to 10 products per day');
+      throw new BadRequestException('You can only delete up to 30 products per day');
     }
 
     const products = await this.productModel
