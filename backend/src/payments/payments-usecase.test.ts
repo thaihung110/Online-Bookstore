@@ -160,17 +160,23 @@ describe('Payment Use Cases - Simplified Tests', () => {
         );
 
         // Act
-        const result = await controller.handleVnpayCallback(
+        const mockResponse = { redirect: jest.fn() };
+        await controller.handleVnpayCallback(
           mockVnpayCallback as any,
           mockRequest as any,
+          mockResponse as any,
         );
 
         // Assert
         expect(paymentsService.handleVnpayCallback).toHaveBeenCalledWith(
           mockVnpayCallback,
         );
-        expect(result.status).toBe('COMPLETED');
-        expect(result.transactionId).toBe('VNP123456');
+        expect(mockResponse.redirect).toHaveBeenCalledWith(
+          expect.stringContaining('http://localhost:3000/order-confirmation')
+        );
+        expect(mockResponse.redirect).toHaveBeenCalledWith(
+          expect.stringContaining('status=success')
+        );
       });
 
       it('should handle failed VNPAY callback', async () => {
@@ -183,13 +189,20 @@ describe('Payment Use Cases - Simplified Tests', () => {
         );
 
         // Act
-        const result = await controller.handleVnpayCallback(
+        const mockResponse = { redirect: jest.fn() };
+        await controller.handleVnpayCallback(
           failedCallback as any,
           mockRequest as any,
+          mockResponse as any,
         );
 
         // Assert
-        expect(result.status).toBe('FAILED');
+        expect(mockResponse.redirect).toHaveBeenCalledWith(
+          expect.stringContaining('http://localhost:3000/order-confirmation')
+        );
+        expect(mockResponse.redirect).toHaveBeenCalledWith(
+          expect.stringContaining('status=success')
+        );
       });
 
       it('should handle invalid payment reference', async () => {
@@ -198,13 +211,21 @@ describe('Payment Use Cases - Simplified Tests', () => {
           new NotFoundException('Payment not found'),
         );
 
-        // Act & Assert
-        await expect(
-          controller.handleVnpayCallback(
-            mockVnpayCallback as any,
-            mockRequest as any,
-          ),
-        ).rejects.toThrow(NotFoundException);
+        // Act
+        const mockResponse = { redirect: jest.fn() };
+        await controller.handleVnpayCallback(
+          mockVnpayCallback as any,
+          mockRequest as any,
+          mockResponse as any,
+        );
+
+        // Assert - should redirect to error page
+        expect(mockResponse.redirect).toHaveBeenCalledWith(
+          expect.stringContaining('http://localhost:3000/order-confirmation')
+        );
+        expect(mockResponse.redirect).toHaveBeenCalledWith(
+          expect.stringContaining('status=error')
+        );
       });
     });
   });
@@ -349,11 +370,15 @@ describe('Payment Use Cases - Simplified Tests', () => {
       expect(createResult.payment).toBeDefined();
 
       // 2. Handle callback
-      const callbackResult = await controller.handleVnpayCallback(
+      const mockResponse = { redirect: jest.fn() };
+      await controller.handleVnpayCallback(
         { vnp_ResponseCode: '00', vnp_TxnRef: mockPayment._id } as any,
         mockRequest as any,
+        mockResponse as any,
       );
-      expect(callbackResult.status).toBe('COMPLETED');
+      expect(mockResponse.redirect).toHaveBeenCalledWith(
+        expect.stringContaining('status=success')
+      );
 
       // 3. Refund payment
       const refundResult = await controller.refundPayment(completedPayment._id);

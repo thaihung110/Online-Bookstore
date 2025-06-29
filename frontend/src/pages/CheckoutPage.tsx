@@ -101,10 +101,8 @@ const CheckoutPage: React.FC = () => {
 
       // If need to redirect to payment gateway (VNPAY)
       if (result.redirectUrl) {
-        // Open VNPay in new tab
-        window.open(result.redirectUrl, "_blank", "noopener,noreferrer");
-        // Navigate to order confirmation page
-        navigate("/order-confirmation");
+        // Redirect to VNPay in same tab
+        window.location.href = result.redirectUrl;
         return;
       }
 

@@ -5,6 +5,7 @@ import {
   Param,
   Get,
   Req,
+  Res,
   HttpStatus,
   HttpCode,
   UseGuards,
@@ -128,7 +129,7 @@ export class PaymentsController {
       },
     },
   })
-  handleVnpayCallback(@Query() query: any, @Req() req: Request) {
+  async handleVnpayCallback(@Query() query: any, @Req() req: Request, @Res() res: any) {
     // Log raw callback data for debugging
     console.log('=== VNPay Callback Raw Data ===');
     console.log('Query params:', JSON.stringify(query, null, 2));
@@ -142,7 +143,21 @@ export class PaymentsController {
     );
     console.log('================================');
 
-    return this.paymentsService.handleVnpayCallback(query);
+    try {
+      const payment = await this.paymentsService.handleVnpayCallback(query);
+
+      // Redirect to frontend success page with payment info
+      const frontendUrl = `http://localhost:3000/order-confirmation?paymentId=${payment.id}&orderId=${payment.orderId}&status=success`;
+      console.log('Redirecting to frontend success page:', frontendUrl);
+      return res.redirect(frontendUrl);
+    } catch (error) {
+      console.error('VNPay callback error:', error.message);
+
+      // Redirect to frontend error page
+      const frontendUrl = `http://localhost:3000/order-confirmation?status=error&message=${encodeURIComponent(error.message)}`;
+      console.log('Redirecting to frontend error page:', frontendUrl);
+      return res.redirect(frontendUrl);
+    }
   }
 
   @Get('vnpay/ipn')

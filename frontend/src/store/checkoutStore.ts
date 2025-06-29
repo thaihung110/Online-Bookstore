@@ -295,19 +295,6 @@ export const useCheckoutStore = create<CheckoutState>()(
           // Save payment to store
           set({ payment: paymentResponse.payment, isLoading: false });
 
-          // If payment method is VNPAY and redirectUrl is provided, open in new tab
-          if (paymentMethod === "VNPAY" && paymentResponse.redirectUrl) {
-            console.log(
-              "[Payment] Opening VNPAY payment URL in new tab:",
-              paymentResponse.redirectUrl
-            );
-            window.open(
-              paymentResponse.redirectUrl,
-              "_blank",
-              "noopener,noreferrer"
-            );
-          }
-
           return paymentResponse;
         } catch (error) {
           set({

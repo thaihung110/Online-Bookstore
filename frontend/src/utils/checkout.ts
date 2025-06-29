@@ -66,10 +66,11 @@ export const processCheckoutPayment = async (
       return { success: true };
     }
 
-    // VNPAY: if redirectUrl is provided from createPayment, use it directly (tab already opened in createPayment)
+    // VNPAY: if redirectUrl is provided from createPayment, use it directly
     if (paymentMethod === "VNPAY" && paymentResponse.redirectUrl) {
       console.log(
-        "[DEBUG] VNPAY redirectUrl received from createPayment, payment flow completed"
+        "[DEBUG] VNPAY redirectUrl received from createPayment:",
+        paymentResponse.redirectUrl
       );
       return {
         success: true,
@@ -85,16 +86,6 @@ export const processCheckoutPayment = async (
     console.log("[DEBUG] Call processPayment with id:", payment.id);
     const result = await processPayment(payment.id);
     console.log("Payment processed:", result);
-
-    // If VNPay, open VNPay payment page in new tab
-    if (paymentMethod === "VNPAY" && result.redirectUrl) {
-      // Open VNPay in new tab
-      window.open(result.redirectUrl, "_blank", "noopener,noreferrer");
-      return {
-        success: true,
-        redirectUrl: result.redirectUrl,
-      };
-    }
 
     // If payment successful
     if (result.success) {
