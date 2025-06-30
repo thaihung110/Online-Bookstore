@@ -288,6 +288,14 @@ const DVDFormPage: React.FC = () => {
       newErrors.stock = "Stock quantity cannot be negative";
     }
 
+    if (!Number.isInteger(formData.stock)) {
+      newErrors.stock = "Stock quantity must be an integer";
+    }
+
+    if (formData.weight < 0) {
+      newErrors.weight = "Weight quantity cannot be negative";
+    }
+
     // // Cover image validation for new dvds
     // if (!isEditMode && !selectedFile && !previewUrl) {
     //   newErrors.coverImage = "Cover image is required";
@@ -427,7 +435,7 @@ const DVDFormPage: React.FC = () => {
           startIcon={<ArrowBackIcon />}
           onClick={handleBack}
         >
-          Back to DVD
+          Back to Products
         </Button>
       </Box>
 

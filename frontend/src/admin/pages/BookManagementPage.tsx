@@ -165,7 +165,7 @@ const BookManagementPage: React.FC = () => {
           startIcon={<AddIcon />}
           onClick={handleAddBook}
         >
-          Add Product
+          Add Book
         </Button>
 
         <Button

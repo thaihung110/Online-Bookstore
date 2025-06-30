@@ -324,6 +324,10 @@ const BookFormPage: React.FC = () => {
       newErrors.originalPrice = "Original price must be greater than 0";
     }
 
+    if (formData.price <= 0) {
+      newErrors.price = "Price must be greater than 0";
+    }
+
     // Discount rate validation
     // if (formData.discountRate < 0 || formData.discountRate > 100) {
     //   newErrors.discountRate = "Discount rate must be between 0 and 100";
@@ -364,6 +368,10 @@ const BookFormPage: React.FC = () => {
     if (formData.pageCount <= 0) {
       newErrors.pageCount = "Page count must be greater than 0";
     }
+    if (!Number.isInteger(formData.pageCount)) {
+      newErrors.pageCount = "Page count must be an integer";
+    }
+
 
     // Genres validation
     if (formData.genres.length === 0) {
@@ -375,9 +383,19 @@ const BookFormPage: React.FC = () => {
       newErrors.stock = "Stock quantity cannot be negative";
     }
 
+
+    //kiem tra stock la so nguyen
+    if (!Number.isInteger(formData.stock)) {
+      newErrors.stock = "Stock quantity must be an integer";
+    }
+
     // Cover image validation for new books
     if (!isEditMode && !selectedFile && !previewUrl) {
       newErrors.coverImage = "Cover image is required";
+    }
+
+    if (formData.weight < 0) {
+      newErrors.weight = "Weight quantity cannot be negative";
     }
 
     setErrors(newErrors);
@@ -668,7 +686,7 @@ const BookFormPage: React.FC = () => {
                   />
                 </Grid>
 
-                <Grid size={12}>
+                {/* <Grid size={12}>
                   <FormControl fullWidth error={!!errors.genres}>
                     <InputLabel id="genres-label">Genres</InputLabel>
                     <Select
@@ -699,7 +717,46 @@ const BookFormPage: React.FC = () => {
                       <FormHelperText>{errors.genres}</FormHelperText>
                     )}
                   </FormControl>
+                </Grid> */}
+
+
+                <Grid size={12}>
+                  <FormControl fullWidth error={!!errors.genres}>
+                    <InputLabel id="genres-label">Genres</InputLabel>
+                    <Select
+                    labelId="genres-label"
+                    multiple
+                    required
+                    name="genres"
+                    value={formData.genres}
+                    onChange={handleSelectChange}
+                    input={<OutlinedInput label="Genres" />}
+                    renderValue={(selected) => {
+                      const selectedArray = Array.isArray(selected) ? selected : [];
+                      return (
+                        <Box
+                          sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}
+                        >
+                          {selectedArray.map((value) => (
+                            <Chip key={value} label={value} />
+                          ))}
+                        </Box>
+                      );
+                    }}
+                  >
+                    {AVAILABLE_GENRES.map((genre) => (
+                      <MenuItem key={genre} value={genre}>
+                        {genre}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                    {errors.genres && (
+                      <FormHelperText>{errors.genres}</FormHelperText>
+                    )}
+                  </FormControl>
                 </Grid>
+
+
 
                 <Grid size={6}>
                   <FormControl fullWidth>

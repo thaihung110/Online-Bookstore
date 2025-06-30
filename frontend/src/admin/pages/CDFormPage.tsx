@@ -282,8 +282,10 @@ const CDFormPage: React.FC = () => {
     }
 
     if (formData.price <= 0) {
-      newErrors.originalPrice = "Original price must be greater than 0";
+      newErrors.price = "Original price must be greater than 0";
     }
+
+
 
     if( (formData.price / formData.originalPrice) < 0.3 || (formData.price / formData.originalPrice) > 1.5) {
       newErrors.originalPrice = "Price must be between 30% and 150% of the original price";
@@ -292,6 +294,14 @@ const CDFormPage: React.FC = () => {
     // Stock quantity validation
     if (formData.stock < 0) {
       newErrors.stock = "Stock quantity cannot be negative";
+    }
+
+    if (!Number.isInteger(formData.stock)) {
+      newErrors.stock = "Stock quantity must be an integer";
+    }
+
+    if (formData.weight < 0) {
+      newErrors.weight = "Weight quantity cannot be negative";
     }
 
     // // Cover image validation for new cds
@@ -445,7 +455,7 @@ const CDFormPage: React.FC = () => {
           startIcon={<ArrowBackIcon />}
           onClick={handleBack}
         >
-          Back to CD
+          Back to Products
         </Button>
       </Box>
 

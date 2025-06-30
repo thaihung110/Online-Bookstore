@@ -280,7 +280,7 @@ const BookFilter: React.FC<BookFilterProps> = ({
               />
             </Grid>
 
-            <Grid size={12}>
+            {/* <Grid size={12}>
               <FormControl fullWidth size="small">
                 <InputLabel id="genres-label">Genres</InputLabel>
                 <Select
@@ -291,13 +291,16 @@ const BookFilter: React.FC<BookFilterProps> = ({
                   value={filters.genres || []}
                   onChange={handleGenresChange}
                   label="Genres"
-                  renderValue={(selected) => (
-                    <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
-                      {selected.map((value) => (
-                        <Chip key={value} label={value} size="small" />
-                      ))}
-                    </Box>
-                  )}
+                  renderValue={(selected) => {
+                    const selectedArray = Array.isArray(selected) ? selected : [];
+                    return (
+                      <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
+                        {selectedArray.map((value) => (
+                          <Chip key={value} label={value} size="small" />
+                        ))}
+                      </Box>
+                    );
+                  }}
                 >
                   {AVAILABLE_GENRES.map((genre) => (
                     <MenuItem key={genre} value={genre}>
@@ -306,7 +309,7 @@ const BookFilter: React.FC<BookFilterProps> = ({
                   ))}
                 </Select>
               </FormControl>
-            </Grid>
+            </Grid> */}
           </Grid>
         </Collapse>
       </Grid>
